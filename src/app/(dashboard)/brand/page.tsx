@@ -218,8 +218,9 @@ export default function BrandPage() {
           <span>
             <span className="block text-sm font-medium">Allow slang &amp; Roman Urdu</span>
             <span className="block text-xs text-slate-500">
-              Don&rsquo;t flag casual slang or Roman Urdu (e.g. &ldquo;bohat acha&rdquo;, &ldquo;yaar&rdquo;,
-              &ldquo;bhai&rdquo;) as typos or grammar errors. Good for social-media and street-casual copy.
+              Spellings are allowed to be loose and casual (e.g. &ldquo;bohat acha&rdquo;, &ldquo;yaar&rdquo;,
+              &ldquo;bhai&rdquo;). Wallnut won&rsquo;t flag words for being informally spelled — it checks that
+              each sentence makes sense and flags only genuine gibberish or broken text.
             </span>
           </span>
         </label>

@@ -3,7 +3,6 @@ import { normalizeImage } from "@/lib/image";
 import { renderPdfFirstPage } from "@/lib/pdf";
 import { getProvider } from "@/lib/ai";
 import { spellcheck } from "./spellcheck";
-import { SLANG_ROMAN_URDU } from "./slang";
 import { sanitizeText } from "@/lib/text";
 import type { BrandContext, PreviousProofContext, RawIssue, RawReport } from "@/lib/ai";
 
@@ -236,6 +235,11 @@ function mergeSpellcheck(
   brand: BrandContext | null,
   assetName: string,
 ) {
+  // Casual language mode: Roman Urdu spellings are intentionally loose, so a
+  // dictionary spellcheck produces false positives. Semantic coherence is
+  // handled by the AI provider instead (see the prompt's CASUAL LANGUAGE MODE).
+  if (brand?.allow_slang_roman_urdu) return;
+
   const source = sanitizeText((ocrText || report.extractedText || "").trim());
   if (!source) return;
 
@@ -244,7 +248,6 @@ function mergeSpellcheck(
     brand?.company_name ?? "",
     ...(brand?.preferred_terminology ?? []),
     ...(brand?.fonts ?? []),
-    ...(brand?.allow_slang_roman_urdu ? SLANG_ROMAN_URDU : []),
   ].filter(Boolean);
 
   const alreadyFlagged = new Set<string>();
