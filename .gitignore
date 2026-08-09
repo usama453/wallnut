@@ -31,7 +31,8 @@ yarn-error.log*
 client_secret_*.json
 *.pem
 
-# unrelated / leftover files in the working folder
+# local assets / unrelated files in the working folder
+pfp.*
 *.glb
 loupe-mvp_1.html
 eng.traineddata
