@@ -39,7 +39,7 @@ RULES:
 
 ${ocrText ? `OCR TEXT EXTRACTED FROM THE IMAGE (use it to double-check spelling, but trust your vision over OCR noise):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : "No OCR text provided."}
 
-${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured."}
+${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured."}${brand?.allow_slang_roman_urdu ? `\nNOTE: This brand's copy may intentionally use casual slang and Roman Urdu (Urdu written in Latin script, e.g. "bohat acha", "yaar", "bhai"). Treat such words and phrases as intentional — do NOT flag them as spelling or grammar errors. Still flag genuinely misspelled English words.` : ""}
 
 ${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n${previous.issues.map((i) => `- [${i.category}] ${i.title}`).join("\n")}\n${previous.ocr_text ? `Previous OCR text:\n"""\n${previous.ocr_text.slice(0, 4000)}\n"""` : ""}` : "No previous version."}`;
 }

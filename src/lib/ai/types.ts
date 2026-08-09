@@ -28,6 +28,8 @@ export interface BrandContext {
   preferred_terminology?: string[];
   banned_words?: string[];
   style_guide?: string | null;
+  /** When true, casual slang and Roman Urdu words are treated as intentional. */
+  allow_slang_roman_urdu?: boolean;
 }
 
 /** Previous proof (consistency checks against older versions). */

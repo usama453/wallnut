@@ -13,6 +13,7 @@ interface BrandData {
   preferred_terminology: string[];
   banned_words: string[];
   style_guide: string;
+  allow_slang_roman_urdu: boolean;
 }
 
 const EMPTY: BrandData = {
@@ -24,6 +25,7 @@ const EMPTY: BrandData = {
   preferred_terminology: [],
   banned_words: [],
   style_guide: "",
+  allow_slang_roman_urdu: false,
 };
 
 export default function BrandPage() {
@@ -44,7 +46,7 @@ export default function BrandPage() {
       const supabase = createClient();
       const { data } = await supabase
         .from("brand_profiles")
-        .select("id, company_name, colors, fonts, tone_of_voice, preferred_terminology, banned_words, style_guide")
+        .select("id, company_name, colors, fonts, tone_of_voice, preferred_terminology, banned_words, style_guide, allow_slang_roman_urdu")
         .limit(1)
         .maybeSingle();
       if (data) {
@@ -57,6 +59,7 @@ export default function BrandPage() {
           preferred_terminology: data.preferred_terminology ?? [],
           banned_words: data.banned_words ?? [],
           style_guide: data.style_guide ?? "",
+          allow_slang_roman_urdu: data.allow_slang_roman_urdu ?? false,
         });
       }
       setLoading(false);
@@ -75,6 +78,7 @@ export default function BrandPage() {
       preferred_terminology: form.preferred_terminology,
       banned_words: form.banned_words,
       style_guide: form.style_guide || null,
+      allow_slang_roman_urdu: form.allow_slang_roman_urdu,
     };
     if (form.id) {
       await supabase.from("brand_profiles").update(payload).eq("id", form.id);
@@ -201,6 +205,24 @@ export default function BrandPage() {
           placeholder="e.g. Friendly but professional. Never salesy or pushy."
           className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
         />
+      </Section>
+
+      <Section title="Language tolerance">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={form.allow_slang_roman_urdu}
+            onChange={(e) => setForm({ ...form, allow_slang_roman_urdu: e.target.checked })}
+            className="mt-1 size-4 accent-emerald-500"
+          />
+          <span>
+            <span className="block text-sm font-medium">Allow slang &amp; Roman Urdu</span>
+            <span className="block text-xs text-slate-500">
+              Don&rsquo;t flag casual slang or Roman Urdu (e.g. &ldquo;bohat acha&rdquo;, &ldquo;yaar&rdquo;,
+              &ldquo;bhai&rdquo;) as typos or grammar errors. Good for social-media and street-casual copy.
+            </span>
+          </span>
+        </label>
       </Section>
 
       <Section title="Preferred terminology">

@@ -3,6 +3,7 @@ import { normalizeImage } from "@/lib/image";
 import { renderPdfFirstPage } from "@/lib/pdf";
 import { getProvider } from "@/lib/ai";
 import { spellcheck } from "./spellcheck";
+import { SLANG_ROMAN_URDU } from "./slang";
 import { sanitizeText } from "@/lib/text";
 import type { BrandContext, PreviousProofContext, RawIssue, RawReport } from "@/lib/ai";
 
@@ -120,6 +121,7 @@ async function loadBrand(admin: any, orgId: string): Promise<BrandContext | null
     preferred_terminology: data.preferred_terminology ?? [],
     banned_words: data.banned_words ?? [],
     style_guide: data.style_guide,
+    allow_slang_roman_urdu: data.allow_slang_roman_urdu ?? false,
   };
 }
 
@@ -242,6 +244,7 @@ function mergeSpellcheck(
     brand?.company_name ?? "",
     ...(brand?.preferred_terminology ?? []),
     ...(brand?.fonts ?? []),
+    ...(brand?.allow_slang_roman_urdu ? SLANG_ROMAN_URDU : []),
   ].filter(Boolean);
 
   const alreadyFlagged = new Set<string>();
