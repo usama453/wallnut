@@ -6,7 +6,7 @@ import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMedia, sendInteractive, sendText } from "./client";
 import { logUsage } from "./usage";
 import { summarizeIssues, reportStatus } from "@/lib/reportSummary";
-import { extractMedia, isButtonReply, getButtonReplyId } from "./webhook";
+import { extractMedia, isButtonReply, getButtonReplyId, extractPhoneNumberId } from "./webhook";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -36,6 +36,10 @@ export interface WhatsAppWebhookResult {
  */
 export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWebhookResult> {
   const value = event?.value ?? event?.entry?.[0]?.changes?.[0]?.value;
+  const phoneNumberId = extractPhoneNumberId(value);
+
+  // Store the raw payload for the webhook viewer (best-effort).
+  storeWebhookEvent(value, phoneNumberId).catch(() => {});
 
   // Delivery/read receipts arrive as status events.
   if (value?.statuses?.length) {
@@ -56,7 +60,7 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
       const pending = pendingFallbacks.get(s.id);
       if (pending) {
         pendingFallbacks.delete(s.id);
-        await sendText(pending.from, pending.text, pending.groupId, pending.replyToMessageId).catch(() => {});
+        await sendText(pending.from, pending.text, pending.groupId, pending.replyToMessageId, phoneNumberId).catch(() => {});
         console.log(`[whatsapp] fallback text sent for failed msg ${s.id}`);
       }
     }
@@ -77,7 +81,7 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
     }
     markSeen(message.id);
     const groupId = message?.context?.group_id ?? undefined;
-    console.log(`[whatsapp] dispatch msgId=${message.id} type=${message.type} from=${message.from}${groupId ? ` group=${groupId}` : ""}`);
+    console.log(`[whatsapp] dispatch msgId=${message.id} type=${message.type} from=${message.from}${groupId ? ` group=${groupId}` : ""}${phoneNumberId ? ` phone=${phoneNumberId}` : ""}`);
     logUsage({
       direction: "inbound",
       msg_type: message.type,
@@ -85,7 +89,7 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
       from_phone: message.from,
       group_id: groupId,
     });
-    const result = await dispatchMessage(message, groupId);
+    const result = await dispatchMessage(message, groupId, phoneNumberId);
     handled = handled || result.handled;
     lastAction = result.action;
   }
@@ -95,22 +99,23 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
 async function dispatchMessage(
   message: any,
   groupId: string | undefined,
+  phoneNumberId?: string,
 ): Promise<WhatsAppWebhookResult> {
   const from = message.from;
 
   if (isButtonReply(message)) {
-    return await handleButtonReply(from, message, groupId);
+    return await handleButtonReply(from, message, groupId, phoneNumberId);
   }
 
   const media = extractMedia(message);
   if (media) {
-    return await handleMedia(from, media, message, groupId);
+    return await handleMedia(from, media, message, groupId, phoneNumberId);
   }
 
   if (message.type === "text") {
     console.log(`[whatsapp] text from ${from}: ${(message.text?.body ?? "").slice(0, 120)}`);
     const reply = await chatReply((message.text?.body ?? "").trim());
-    await sendText(from, reply, groupId, message.id);
+    await sendText(from, reply, groupId, message.id, phoneNumberId);
     return { handled: true, action: "text" };
   }
 
@@ -156,12 +161,13 @@ async function handleMedia(
   media: { mediaId: string; mime: string },
   message: any,
   groupId?: string,
+  phoneNumberId?: string,
 ): Promise<WhatsAppWebhookResult> {
   try {
-    const bytes = await downloadMedia(media.mediaId);
+    const bytes = await downloadMedia(media.mediaId, phoneNumberId);
     const kind = media.mime === "application/pdf" ? "pdf" : "image";
 
-    const orgId = await resolveOrgId(from);
+    const orgId = await resolveOrgId(from, phoneNumberId);
 
     const providedName = message?.image?.caption || message?.document?.filename;
     const count = (imageCounters.get(from) ?? 0) + 1;
@@ -216,6 +222,7 @@ async function handleMedia(
       },
       groupId,
       message.id,
+      phoneNumberId,
     );
     if (msgId)
       pendingFallbacks.set(msgId, { from, text: detailBody, groupId, replyToMessageId: message.id });
@@ -224,7 +231,7 @@ async function handleMedia(
   } catch (err) {
     const message = err instanceof Error ? err.message : "something went wrong";
     console.error(`[whatsapp] media proof failed: ${message}`);
-    await sendText(from, `Sorry, I couldn't proof that: ${message}`, groupId).catch(() => {});
+    await sendText(from, `Sorry, I couldn't proof that: ${message}`, groupId, undefined, phoneNumberId).catch(() => {});
     return { handled: true, action: "media" };
   }
 }
@@ -233,6 +240,7 @@ async function handleButtonReply(
   from: string,
   message: any,
   groupId?: string,
+  phoneNumberId?: string,
 ): Promise<WhatsAppWebhookResult> {
   const replyId = getButtonReplyId(message) ?? "";
   const [, assetId, versionStr] = replyId.split(":");
@@ -268,6 +276,8 @@ async function handleButtonReply(
       confirmation,
       { url: [{ url: reportUrl, title: "View Report" }] },
       groupId,
+      undefined,
+      phoneNumberId,
     );
     if (msgId) pendingFallbacks.set(msgId, { from, text: `${confirmation}\nOpen report: ${reportUrl}`, groupId });
     logUsage({
@@ -281,13 +291,27 @@ async function handleButtonReply(
     return { handled: true, action: "button" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
-    await sendText(from, `Sorry, I couldn't apply that: ${msg}`, groupId).catch(() => {});
+    await sendText(from, `Sorry, I couldn't apply that: ${msg}`, groupId, undefined, phoneNumberId).catch(() => {});
     return { handled: true, action: "button" };
   }
 }
 
-/** Map a sender phone to an org: known contact > env default > null. */
-async function resolveOrgId(phone: string): Promise<string | null> {
+/** Map an inbound event to an org: provider connection org > env default > known contact > null. */
+async function resolveOrgId(phone: string, phoneNumberId?: string): Promise<string | null> {
+  if (phoneNumberId) {
+    try {
+      const admin = await createAdminClient();
+      const { data } = await admin
+        .from("provider_phones")
+        .select("org_id")
+        .eq("phone_number_id", phoneNumberId)
+        .maybeSingle();
+      if (data?.org_id) return data.org_id;
+    } catch {
+      // fall through
+    }
+  }
+
   const fromEnv = process.env.WHATSAPP_DEFAULT_ORG_ID;
   if (fromEnv) return fromEnv;
 
@@ -301,5 +325,21 @@ async function resolveOrgId(phone: string): Promise<string | null> {
     return data?.org_id ?? null;
   } catch {
     return null;
+  }
+}
+
+/** Best-effort persistence of raw webhook payloads for the debug viewer. */
+async function storeWebhookEvent(value: any, phoneNumberId?: string) {
+  try {
+    const admin = await createAdminClient();
+    const wabaId = value?.metadata?.waba_id ?? null;
+    await admin.from("webhook_events").insert({
+      direction: "inbound",
+      phone_number_id: phoneNumberId ?? null,
+      waba_id: wabaId ? String(wabaId) : null,
+      payload: value ?? {},
+    });
+  } catch (err) {
+    console.error(`[whatsapp] webhook store failed: ${err instanceof Error ? err.message : err}`);
   }
 }

@@ -1,22 +1,32 @@
-const GRAPH_BASE = "https://graph.facebook.com/v21.0";
+import { GRAPH_BASE } from "./config";
 import { logUsage } from "./usage";
+import type { WhatsAppConnection } from "./connection";
+import { resolveConnection } from "./connection";
 
-function token() {
+function legacyToken() {
   return process.env.WHATSAPP_TOKEN ?? "";
 }
-function phoneId() {
+function legacyPhoneId() {
   return process.env.WHATSAPP_PHONE_ID ?? "";
 }
 
+/** Resolve a connection, defaulting to the legacy env credentials. */
+async function getConnection(phoneNumberId?: string): Promise<{ token: string; phoneId: string }> {
+  const conn = await resolveConnection(phoneNumberId);
+  if (conn) return { token: conn.accessToken, phoneId: conn.phoneId };
+  return { token: legacyToken(), phoneId: legacyPhoneId() };
+}
+
 /** Download media bytes from the Meta Graph API using the media id in a message. */
-export async function downloadMedia(mediaId: string): Promise<Buffer> {
+export async function downloadMedia(mediaId: string, phoneNumberId?: string): Promise<Buffer> {
+  const { token } = await getConnection(phoneNumberId);
   const meta = await fetch(`${GRAPH_BASE}/${mediaId}`, {
-    headers: { Authorization: `Bearer ${token()}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!meta.ok) throw new Error(`failed to fetch media info (${meta.status})`);
   const { url } = await meta.json();
 
-  const file = await fetch(url, { headers: { Authorization: `Bearer ${token()}` } });
+  const file = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!file.ok) throw new Error(`failed to download media (${file.status})`);
   return Buffer.from(await file.arrayBuffer());
 }
@@ -27,8 +37,9 @@ export async function sendText(
   text: string,
   groupId?: string,
   replyToMessageId?: string,
+  phoneNumberId?: string,
 ): Promise<string> {
-  return sendMessage(to, { type: "text", text: { body: text } }, groupId, replyToMessageId);
+  return sendMessage(to, { type: "text", text: { body: text } }, groupId, replyToMessageId, phoneNumberId);
 }
 
 export interface Button {
@@ -47,6 +58,7 @@ export async function sendInteractive(
   buttons: { reply?: Button[]; url?: UrlButton[] },
   groupId?: string,
   replyToMessageId?: string,
+  phoneNumberId?: string,
 ): Promise<string> {
   const payload: any[] = [];
   if (buttons.url) payload.push(...buttons.url.map((b) => ({ type: "cta_url", cta_url: { url: b.url, display_text: b.title } })));
@@ -64,14 +76,22 @@ export async function sendInteractive(
     },
     groupId,
     replyToMessageId,
+    phoneNumberId,
   );
 }
 
-async function sendMessage(to: string, content: any, groupId?: string, replyToMessageId?: string): Promise<string> {
-  const res = await fetch(`${GRAPH_BASE}/${phoneId()}/messages`, {
+async function sendMessage(
+  to: string,
+  content: any,
+  groupId?: string,
+  replyToMessageId?: string,
+  phoneNumberId?: string,
+): Promise<string> {
+  const { token, phoneId } = await getConnection(phoneNumberId);
+  const res = await fetch(`${GRAPH_BASE}/${phoneId}/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token()}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -101,3 +121,5 @@ async function sendMessage(to: string, content: any, groupId?: string, replyToMe
   });
   return msgId;
 }
+
+export type { WhatsAppConnection };

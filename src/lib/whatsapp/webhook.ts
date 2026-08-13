@@ -49,3 +49,9 @@ export function isButtonReply(message: any): boolean {
 export function getButtonReplyId(message: any): string | null {
   return message?.interactive?.button_reply?.id ?? null;
 }
+
+/** The destination phone number id for an inbound event (from metadata) —
+ * used to pick the right business token in multi-tenant setups. */
+export function extractPhoneNumberId(value: any): string | undefined {
+  return value?.metadata?.phone_number_id ?? undefined;
+}
