@@ -204,8 +204,20 @@ export function AssetViewer({ data }: { data: ViewerData }) {
 
             {current?.url ? (
               <div className="relative w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={current.url} alt={asset.name} className="block w-full" />
+                {asset.kind === "pdf" && !current.preview_url ? (
+                  <iframe
+                    src={`${current.url}#toolbar=0`}
+                    title={asset.name}
+                    className="block h-[600px] w-full"
+                  />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={current.preview_url ?? current.url}
+                    alt={asset.name}
+                    className="block w-full"
+                  />
+                )}
 
                 {sortedIssues.map((issue, i) => {
                   const markerIndex = issues.indexOf(issue);

@@ -94,6 +94,12 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
     const admin = await createAdminClient();
     const { data } = await admin.from("provider_wabas").select("waba_id, org_id, last_updated");
     return NextResponse.json({ wabas: data ?? [] });

@@ -29,7 +29,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
 
   const { data: version, error: vErr } = await admin
     .from("asset_versions")
-    .select("id, asset_id, storage_path, version, url")
+    .select("id, asset_id, storage_path, version, url, width, height")
     .eq("id", assetVersionId)
     .single();
   if (vErr || !version) throw new Error("asset version not found");
@@ -56,6 +56,38 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
   }
   const normalized = await normalizeImage(image.buffer);
 
+  // 3b. For PDFs the stored URL points at the raw PDF, which browsers can't render
+  // as an <img>. Upload the rasterized first page as a preview image and remember
+  // it (+ its dimensions) so the asset/report viewers show a correct, annotated
+  // preview instead of a broken image.
+  if (asset.kind === "pdf") {
+    const previewPath = `${asset.org_id ?? "external"}/assets/${asset.id}/v${version.version}/preview.png`;
+    const { error: prevUpErr } = await admin.storage.from(BUCKET).upload(
+      previewPath,
+      normalized.buffer,
+      { contentType: normalized.mimeType, upsert: true },
+    );
+    if (!prevUpErr) {
+      const { data: prevUrl } = admin.storage.from(BUCKET).getPublicUrl(previewPath);
+      await admin
+        .from("asset_versions")
+        .update({
+          preview_url: prevUrl?.publicUrl ?? null,
+          width: normalized.width,
+          height: normalized.height,
+        })
+        .eq("id", version.id);
+    } else {
+      console.error(`[proof] failed to store PDF preview for ${version.id}: ${prevUpErr.message}`);
+    }
+  } else if (!version.width || !version.height) {
+    // Record natural dims for image versions so the dashboard can size its <img>.
+    await admin
+      .from("asset_versions")
+      .update({ width: normalized.width, height: normalized.height })
+      .eq("id", version.id);
+  }
+
   // 4. OCR (skipped on serverless runtimes where Tesseract's wasm can't load;
   // the AI model reads the image directly when OCR text is empty)
   let ocr = { text: "", confidence: 0 };
@@ -79,10 +111,12 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     previous,
   });
 
-  // 6b. Deterministic spellcheck pass over the transcribed text (OCR when
-  // available, otherwise the model's verbatim transcription). Catches typos
-  // the vision model may gloss over.
-  mergeSpellcheck(report, ocr.text, brand, asset.name);
+  // 6b. Deterministic spellcheck — only when OCR is enabled, since OCR text
+  // is noisy and benefits from dictionary correction. When OCR is off, the
+  // vision model's transcription is already high-quality.
+  if (ocrEnabled) {
+    mergeSpellcheck(report, ocr.text, brand, asset.name);
+  }
 
   // 7. persist
   const proofId = await persistProof(admin, {

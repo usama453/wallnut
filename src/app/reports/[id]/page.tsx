@@ -20,7 +20,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   const { data: version } = await admin
     .from("asset_versions")
-    .select("id, version, url, created_at")
+    .select("id, version, url, preview_url, created_at")
     .eq("asset_id", asset.id)
     .order("version", { ascending: false })
     .limit(1)
@@ -72,8 +72,16 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             Annotated preview <span className="text-xs text-slate-500">({sortedIssues.length} issue{sortedIssues.length === 1 ? "" : "s"})</span>
           </div>
           <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={version.url} alt={asset.name} className="block w-full" />
+            {asset.kind === "pdf" && !version.preview_url ? (
+              <iframe src={`${version.url}#toolbar=0`} title={asset.name} className="block h-[600px] w-full" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={version.preview_url ?? version.url}
+                alt={asset.name}
+                className="block w-full"
+              />
+            )}
             {sortedIssues.map((issue, i) => (
               <span
                 key={issue.id}

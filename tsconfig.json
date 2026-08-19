@@ -17,5 +17,5 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "kitwood", "wallnut-site"]
+  "exclude": ["node_modules", "kitwood", "wallnut-site", "call-assistant", "photo-bridge"]
 }

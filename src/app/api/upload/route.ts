@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { runProof, BUCKET } from "@/lib/proof/runProof";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 const ALLOWED_IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp", "image/avif"];
 const ALLOWED_PDF_MIME = "application/pdf";
@@ -69,20 +69,30 @@ export async function POST(request: Request) {
   const name = (form.get("name") as string) || file.name || "Untitled artwork";
   const projectId = (form.get("project_id") as string) || null;
 
-  const { data: asset, error: assetErr } = await admin
-    .from("assets")
-    .insert({
-      org_id: orgId,
-      project_id: projectId,
-      name,
-      kind: isPdf ? "pdf" : "image",
-      mime,
-      current_version: 1,
-      status: "in_review",
-      created_by: user?.id ?? null,
-    })
-    .select("id, org_id")
-    .single();
+  // Create the asset with a short slug for /r/<slug> share links, retrying a
+  // few times on the unique-index collision (23505) — mirrors assets.ts.
+  let asset: { id: string; org_id: string } | null = null;
+  let assetErr: { message: string } | null = null;
+  for (let attempt = 0; attempt < 4 && !asset; attempt++) {
+    const res = await admin
+      .from("assets")
+      .insert({
+        org_id: orgId,
+        project_id: projectId,
+        name,
+        kind: isPdf ? "pdf" : "image",
+        mime,
+        slug: generateSlug(),
+        current_version: 1,
+        status: "in_review",
+        created_by: user?.id ?? null,
+      })
+      .select("id, org_id")
+      .single();
+    if (res.error?.code === "23505") continue;
+    asset = res.data;
+    assetErr = res.error;
+  }
   if (assetErr || !asset) {
     return NextResponse.json({ error: `failed to create asset: ${assetErr?.message}` }, { status: 500 });
   }
@@ -141,4 +151,10 @@ export async function POST(request: Request) {
 
 function sanitize(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+}
+
+/** Short random lowercase alphanumeric slug for public report links. */
+function generateSlug(): string {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from(randomBytes(8), (b) => alphabet[b % alphabet.length]).join("");
 }

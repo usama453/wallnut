@@ -114,17 +114,33 @@ async function dispatchMessage(
 
   if (message.type === "text") {
     console.log(`[whatsapp] text from ${from}: ${(message.text?.body ?? "").slice(0, 120)}`);
-    const reply = await chatReply((message.text?.body ?? "").trim());
-    await sendText(from, reply, groupId, message.id, phoneNumberId);
+    await sendText(from, INTRO_LINES, groupId, message.id, phoneNumberId);
     return { handled: true, action: "text" };
   }
 
   return { handled: false, action: "ignored" };
 }
 
+/** Best-effort intro for new conversations: demo notice, group access, and contact link. */
+const INTRO_LINES = [
+  "Hey! I'm Wallnut — your AI proofing tortoise 🐢",
+  "I check marketing images and PDFs for spelling, grammar, brand issues, CTAs, contrast, safe margins and more — and give you a score in seconds.",
+  "Send me an image or a PDF and I'll run a full proof right here in WhatsApp.",
+  "━━━━━━━━━━━━",
+  "🚧 I'm currently running in demo mode. Some features may be limited.",
+  "👥 Want to use me in group chats? Request access here:",
+  "https://usama.fun/wallnut/",
+  "",
+  "Questions, feedback or partnership inquiries:",
+  "https://usama.fun/wallnut/",
+].join("\n");
+
 /** Casual chat reply in the tortoise persona, with a reliable offline fallback. */
 async function chatReply(message: string): Promise<string> {
-  const fallback = "Ah, hello there... I'm Wallnut the proofing tortoise. Send me an image or PDF and I'll proof it — slow and steady, I'll give you a score.";
+  const fallback =
+    "Hey! I'm Wallnut — your AI proofing tortoise 🐢\n\n" +
+    "Send me an image or a PDF and I'll run a full proof and get you a score.\n\n" +
+    "🚧 Running in demo mode. Want group chat access? Visit: https://usama.fun/wallnut/";
   if (!message) return fallback;
   try {
     return await getProvider().chat(message);

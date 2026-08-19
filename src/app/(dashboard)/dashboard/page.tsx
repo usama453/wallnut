@@ -28,13 +28,13 @@ export default async function DashboardHome() {
 
   const assetIds = rows.map((a) => a.id);
   const { data: versions } = assetIds.length
-    ? await supabase.from("asset_versions").select("id, asset_id, version, url").in("asset_id", assetIds)
+    ? await supabase.from("asset_versions").select("id, asset_id, version, url, preview_url").in("asset_id", assetIds)
     : { data: null };
 
-  const versionByAsset = new Map<string, { url: string }[]>();
+  const versionByAsset = new Map<string, { url: string; preview_url: string | null }[]>();
   for (const v of versions ?? []) {
     const list = versionByAsset.get(v.asset_id) ?? [];
-    list.push({ url: v.url });
+    list.push({ url: v.url, preview_url: v.preview_url ?? null });
     versionByAsset.set(v.asset_id, list);
   }
 
@@ -48,7 +48,14 @@ export default async function DashboardHome() {
 
   for (const row of rows) {
     const vs = versionByAsset.get(row.id) ?? [];
-    row.thumbnail = vs.find((v) => v.url)?.url ?? null;
+    const latest = vs.find((v) => v.url) ?? vs[0];
+    // Only use a thumbnail <img> that actually renders: images use their URL,
+    // PDFs only work if a rasterized preview_url exists.
+    if (row.kind === "pdf") {
+      row.thumbnail = latest?.preview_url ?? null;
+    } else {
+      row.thumbnail = latest?.url ?? null;
+    }
     const latestVersionId = (versions ?? []).find((v) => v.asset_id === row.id)?.id;
     row.proof = latestVersionId ? (proofByVersion.get(latestVersionId) ?? null) : null;
   }

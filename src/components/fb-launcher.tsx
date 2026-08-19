@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const FB_APP_ID = process.env.NEXT_PUBLIC_FB_APP_ID ?? "";
-const GRAPH_API_VERSION = process.env.FB_GRAPH_API_VERSION ?? "v24.0";
+const GRAPH_API_VERSION = process.env.NEXT_PUBLIC_FB_GRAPH_API_VERSION ?? "v22.0";
 const TP_CONFIG_ID = process.env.NEXT_PUBLIC_TP_CONFIG_ID ?? "";
 
 const ES_CONFIG = JSON.stringify({

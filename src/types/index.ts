@@ -58,6 +58,8 @@ export interface AssetVersion {
   version: number;
   storage_path: string;
   url: string;
+  /** Rendered preview image (e.g. PDF first page). Falls back to `url` on the client. */
+  preview_url: string | null;
   width: number | null;
   height: number | null;
   created_at: string;
