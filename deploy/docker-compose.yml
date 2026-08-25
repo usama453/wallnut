@@ -11,8 +11,9 @@ services:
     environment:
       WAHA_BASE_URL: http://bridge:3001
       NEXT_PUBLIC_APP_URL: ${PUBLIC_URL}
-    expose:
-      - "3000"
+    ports:
+      # Host nginx (TLS) proxies here. Loopback-only.
+      - "127.0.0.1:3000:3000"
     depends_on:
       - bridge
 
@@ -33,20 +34,5 @@ services:
       # Pairing-code access from the VPS itself only (ssh in, then curl).
       - "127.0.0.1:3001:3001"
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      - app
-
 volumes:
   bridge-session:
-  caddy-data:
-  caddy-config:
