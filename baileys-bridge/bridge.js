@@ -39,6 +39,16 @@ const MEDIA_BASE_URL = process.env.MEDIA_BASE_URL || `http://localhost:${PORT}`;
 const AUTH_DIR = path.join(__dirname, "session-data");
 const log = pino({ level: process.env.LOG_LEVEL || "warn" });
 
+// Baileys throws transient stream errors (Connection Closed, Precondition
+// Required) as unhandled rejections during sync/reconnect. Keep the process
+// alive — the socket's own reconnect logic recovers from these.
+process.on("unhandledRejection", (reason) => {
+  console.error("[bridge] unhandledRejection:", reason?.message || reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[bridge] uncaughtException:", err?.message || err);
+});
+
 let sock = null;
 let status = "STARTING";
 let me = null;
