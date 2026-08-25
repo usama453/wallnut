@@ -3,10 +3,11 @@ import { runProof } from "@/lib/proof/runProof";
 import { proofSemaphore } from "@/lib/proof/concurrency";
 import { getProvider } from "@/lib/ai";
 import { createAssetVersionFromBytes } from "@/lib/assets";
-import { downloadMedia, sendInteractive, sendText } from "./client";
+import { downloadMedia, sendInteractive, sendText, downloadMediaWaha, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
 import { summarizeIssues, reportStatus } from "@/lib/reportSummary";
 import { extractMedia, isButtonReply, getButtonReplyId, extractPhoneNumberId } from "./webhook";
+import { getServerWamode } from "@/components/whatsapp-mode-toggle";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -34,9 +35,15 @@ export interface WhatsAppWebhookResult {
  * - interactive button reply → apply approval status and confirm
  * - anything else → ignore
  */
-export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWebhookResult> {
-  const value = event?.value ?? event?.entry?.[0]?.changes?.[0]?.value;
-  const phoneNumberId = extractPhoneNumberId(value);
+export async function handleWhatsAppMessageEvent(event: any, headers?: Headers): Promise<WhatsAppWebhookResult> {
+  // Determine WAHA vs Meta mode
+  const mode = headers ? getServerWamode(headers) : "meta";
+  const isWaha = mode === "waha";
+
+  const value = isWaha
+    ? event // WAHA payload is the raw event
+    : event?.value ?? event?.entry?.[0]?.changes?.[0]?.value;
+  const phoneNumberId = isWaha ? event.from : extractPhoneNumberId(value);
 
   // Store the raw payload for the webhook viewer (best-effort).
   storeWebhookEvent(value, phoneNumberId).catch(() => {});
@@ -89,7 +96,7 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
       from_phone: message.from,
       group_id: groupId,
     });
-    const result = await dispatchMessage(message, groupId, phoneNumberId);
+    const result = await dispatchMessage(message, groupId, phoneNumberId, mode);
     handled = handled || result.handled;
     lastAction = result.action;
   }
@@ -100,16 +107,17 @@ async function dispatchMessage(
   message: any,
   groupId: string | undefined,
   phoneNumberId?: string,
+  mode: "meta" | "waha" = "meta",
 ): Promise<WhatsAppWebhookResult> {
   const from = message.from;
 
   if (isButtonReply(message)) {
-    return await handleButtonReply(from, message, groupId, phoneNumberId);
+    return await handleButtonReply(from, message, groupId, phoneNumberId, mode);
   }
 
   const media = extractMedia(message);
   if (media) {
-    return await handleMedia(from, media, message, groupId, phoneNumberId);
+    return await handleMedia(from, media, message, groupId, phoneNumberId, mode);
   }
 
   if (message.type === "text") {
@@ -178,9 +186,14 @@ async function handleMedia(
   message: any,
   groupId?: string,
   phoneNumberId?: string,
+  mode: "meta" | "waha" = "meta",
 ): Promise<WhatsAppWebhookResult> {
+  const isWaha = mode === "waha";
+
   try {
-    const bytes = await downloadMedia(media.mediaId, phoneNumberId);
+    const bytes = isWaha
+      ? await downloadMediaWaha(media.mediaId)
+      : await downloadMedia(media.mediaId, phoneNumberId);
     const kind = media.mime === "application/pdf" ? "pdf" : "image";
 
     const orgId = await resolveOrgId(from, phoneNumberId);
@@ -225,21 +238,29 @@ async function handleMedia(
 
     // Single reply: interactive card with summary + report link + approve/request
     // buttons. If WhatsApp filters the card (code 131026), the failed-status
-    // fallback below re-sends the plain text so the result is never lost.
-    const msgId = await sendInteractive(
-      from,
-      detailBody,
-      {
-        reply: [
-          { id: `approve:${created.assetId}:${created.version}`, title: "Approve" },
-          { id: `changes:${created.assetId}:${created.version}`, title: "Request changes" },
-        ],
-        url: [{ url: reportUrl, title: "View Report" }],
-      },
-      groupId,
-      message.id,
-      phoneNumberId,
-    );
+    // fallback below re-sends the plain text so the user never loses the result.
+    const msgId = isWaha
+      ? await sendInteractiveWaha(from, detailBody, {
+          reply: [
+            { id: `approve:${created.assetId}:${created.version}`, title: "Approve" },
+            { id: `changes:${created.assetId}:${created.version}`, title: "Request changes" },
+          ],
+          url: [{ url: reportUrl, title: "View Report" }],
+        })
+      : await sendInteractive(
+          from,
+          detailBody,
+          {
+            reply: [
+              { id: `approve:${created.assetId}:${created.version}`, title: "Approve" },
+              { id: `changes:${created.assetId}:${created.version}`, title: "Request changes" },
+            ],
+            url: [{ url: reportUrl, title: "View Report" }],
+          },
+          groupId,
+          message.id,
+          phoneNumberId,
+        );
     if (msgId)
       pendingFallbacks.set(msgId, { from, text: detailBody, groupId, replyToMessageId: message.id });
 
@@ -247,7 +268,7 @@ async function handleMedia(
   } catch (err) {
     const message = err instanceof Error ? err.message : "something went wrong";
     console.error(`[whatsapp] media proof failed: ${message}`);
-    await sendText(from, `Sorry, I couldn't proof that: ${message}`, groupId, undefined, phoneNumberId).catch(() => {});
+    await (isWaha ? sendTextWaha(from, `Sorry, I couldn't proof that: ${message}`) : sendText(from, `Sorry, I couldn't proof that: ${message}`, groupId, undefined, phoneNumberId)).catch(() => {});
     return { handled: true, action: "media" };
   }
 }
@@ -257,7 +278,9 @@ async function handleButtonReply(
   message: any,
   groupId?: string,
   phoneNumberId?: string,
+  mode: "meta" | "waha" = "meta",
 ): Promise<WhatsAppWebhookResult> {
+  const isWaha = mode === "waha";
   const replyId = getButtonReplyId(message) ?? "";
   const [, assetId, versionStr] = replyId.split(":");
   if (!assetId) return { handled: false, action: "ignored" };
@@ -287,14 +310,16 @@ async function handleButtonReply(
       status === "approved"
         ? `Got it — "${asset.name}" is approved ✅`
         : `Noted — changes requested for "${asset.name}" ⚠️`;
-    const msgId = await sendInteractive(
-      from,
-      confirmation,
-      { url: [{ url: reportUrl, title: "View Report" }] },
-      groupId,
-      undefined,
-      phoneNumberId,
-    );
+    const msgId = isWaha
+      ? await sendInteractiveWaha(from, confirmation, { url: [{ url: reportUrl, title: "View Report" }] })
+      : await sendInteractive(
+          from,
+          confirmation,
+          { url: [{ url: reportUrl, title: "View Report" }] },
+          groupId,
+          undefined,
+          phoneNumberId,
+        );
     if (msgId) pendingFallbacks.set(msgId, { from, text: `${confirmation}\nOpen report: ${reportUrl}`, groupId });
     logUsage({
       direction: "inbound",
@@ -307,7 +332,7 @@ async function handleButtonReply(
     return { handled: true, action: "button" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
-    await sendText(from, `Sorry, I couldn't apply that: ${msg}`, groupId, undefined, phoneNumberId).catch(() => {});
+    await (isWaha ? sendTextWaha(from, `Sorry, I couldn't apply that: ${msg}`) : sendText(from, `Sorry, I couldn't apply that: ${msg}`, groupId, undefined, phoneNumberId)).catch(() => {});
     return { handled: true, action: "button" };
   }
 }

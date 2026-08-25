@@ -3,6 +3,9 @@ import { logUsage } from "./usage";
 import type { WhatsAppConnection } from "./connection";
 import { resolveConnection } from "./connection";
 
+const WAHA_BASE = process.env.WAHA_BASE_URL ?? "http://localhost:3000";
+const WAHA_API_KEY = process.env.WAHA_API_KEY ?? "";
+
 function legacyToken() {
   return process.env.WHATSAPP_TOKEN ?? "";
 }
@@ -123,3 +126,112 @@ async function sendMessage(
 }
 
 export type { WhatsAppConnection };
+
+/* ============================================================================
+ * WAHA Client Functions (used when mode === "waha")
+ * ============================================================================ */
+
+export interface WahaMessagePayload {
+  session: string;
+  chatId: string;
+  text?: string;
+  body?: string;
+  buttons?: Array<{ id: string; title: string }>;
+  linkPreview?: { url: string; title?: string };
+  replyToMessageId?: string;
+}
+
+export interface WahaMediaPayload {
+  session: string;
+  chatId: string;
+  media: string; // base64 or URL
+  mimeType: string;
+  caption?: string;
+  replyToMessageId?: string;
+}
+
+export interface WahaDownloadResponse {
+  url: string;
+  mimeType: string;
+}
+
+/** Download media from WAHA using the media ID. */
+export async function downloadMediaWaha(mediaId: string): Promise<Buffer> {
+  const res = await fetch(`${WAHA_BASE}/api/media/${mediaId}`, {
+    headers: { "X-Api-Key": WAHA_API_KEY },
+  });
+  if (!res.ok) throw new Error(`failed to fetch media info from WAHA (${res.status})`);
+  const { url, mimeType } = (await res.json()) as WahaDownloadResponse;
+
+  const file = await fetch(url);
+  if (!file.ok) throw new Error(`failed to download media from WAHA (${file.status})`);
+  return Buffer.from(await file.arrayBuffer());
+}
+
+/** Send a plain text message via WAHA. Returns the message ID. */
+export async function sendTextWaha(
+  chatId: string,
+  text: string,
+  replyToMessageId?: string,
+): Promise<string> {
+  const payload: WahaMessagePayload = {
+    session: "default",
+    chatId,
+    text,
+    ...(replyToMessageId ? { replyToMessageId } : {}),
+  };
+
+  const res = await fetch(`${WAHA_BASE}/api/sendText`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Api-Key": WAHA_API_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = new Error(`WAHA sendText failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+    console.error(`[waha-send] ${err.message}`);
+    throw err;
+  }
+  const { id } = await res.json();
+  console.log(`[waha-send] ok to=${chatId} msgId=${id}`);
+  return id;
+}
+
+/** Send an interactive message with buttons via WAHA. Returns the message ID. */
+export async function sendInteractiveWaha(
+  chatId: string,
+  bodyText: string,
+  buttons: { reply?: Array<{ id: string; title: string }>; url?: Array<{ url: string; title: string }> },
+): Promise<string> {
+  // WAHA supports buttons via the sendButtons endpoint
+  const payload = {
+    session: "default",
+    chatId,
+    body: bodyText.slice(0, 1024),
+    buttons: [
+      ...(buttons.reply?.map((b) => ({ id: b.id, title: b.title })) ?? []),
+      ...(buttons.url?.map((b) => ({ id: b.url, title: b.title, type: "url" })) ?? []),
+    ],
+  };
+
+  const res = await fetch(`${WAHA_BASE}/api/sendButtons`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Api-Key": WAHA_API_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = new Error(`WAHA sendButtons failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+    console.error(`[waha-send] ${err.message}`);
+    throw err;
+  }
+  const { id } = await res.json();
+  console.log(`[waha-send] interactive ok to=${arguments[0]} msgId=${id}`);
+  return id;
+}

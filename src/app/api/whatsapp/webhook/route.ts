@@ -3,7 +3,7 @@ import { handleWhatsAppMessageEvent } from "@/lib/whatsapp/handlers";
 import { isWhatsAppEvent, verifySignature } from "@/lib/whatsapp/webhook";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 /**
  * WhatsApp Business Cloud API webhook.
@@ -26,22 +26,28 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-hub-signature-256");
 
-  if (!verifySignature(rawBody, signature)) {
-    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  // For WAHA mode, skip signature verification (WAHA uses API key auth)
+  const isWaha = request.headers.get("x-waha-signature") !== null || request.headers.get("x-api-key") !== null;
+  if (!isWaha) {
+    if (!verifySignature(rawBody, signature)) {
+      return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+    }
   }
 
   const payload = JSON.parse(rawBody);
-  if (!isWhatsAppEvent(payload)) {
+  if (!isWaha && !isWhatsAppEvent(payload)) {
     return NextResponse.json({ ok: true });
   }
 
   // Events arrive in arrays; process each message event. Concurrent handling +
   // the proof semaphore keeps bursts within the 60s function budget.
-  const events = payload.entry.flatMap((entry: any) =>
-    (entry.changes ?? []).filter((c: any) => c.field === "messages"),
-  );
+  const events = isWaha
+    ? [payload] // WAHA sends single event per webhook
+    : payload.entry.flatMap((entry: any) =>
+        (entry.changes ?? []).filter((c: any) => c.field === "messages"),
+      );
 
-  await Promise.allSettled(events.map((change: any) => handleWhatsAppMessageEvent(change)));
+  await Promise.allSettled(events.map((change: any) => handleWhatsAppMessageEvent(change, request.headers)));
 
   // Always acknowledge immediately to avoid retries.
   return NextResponse.json({ ok: true });

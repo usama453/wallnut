@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ProofBadge, StatusBadge, fmtDate } from "@/components/ui";
+import { WhatsAppModeToggle } from "@/components/whatsapp-mode-toggle";
 
 type AssetRow = {
   id: string;
@@ -75,12 +76,15 @@ export default async function DashboardHome() {
           <h1 className="text-2xl font-bold">Home</h1>
           <p className="text-sm text-slate-400">Proof, review and approve your marketing assets.</p>
         </div>
-        <Link
-          href="/upload"
-          className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400"
-        >
-          + Upload asset
-        </Link>
+        <div className="flex items-center gap-3">
+          <WhatsAppModeToggle />
+          <Link
+            href="/upload"
+            className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400"
+          >
+            + Upload asset
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

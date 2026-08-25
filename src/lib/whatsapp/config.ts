@@ -17,3 +17,11 @@ export const REDIRECT_URI =
   process.env.FB_REDIRECT_URI ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+
+/* ============================================================================
+ * WAHA Configuration (used when mode === "waha")
+ * ============================================================================ */
+
+export const WAHA_BASE_URL = process.env.WAHA_BASE_URL ?? "http://localhost:3000";
+export const WAHA_API_KEY = process.env.WAHA_API_KEY ?? "";
+export const WAHA_SESSION = process.env.WAHA_SESSION ?? "default";
