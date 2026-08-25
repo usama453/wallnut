@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/app.Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      WAHA_BASE_URL: http://bridge:3001
+      NEXT_PUBLIC_APP_URL: ${PUBLIC_URL}
+    expose:
+      - "3000"
+    depends_on:
+      - bridge
+
+  bridge:
+    build:
+      context: ..
+      dockerfile: deploy/bridge.Dockerfile
+    restart: unless-stopped
+    environment:
+      BRIDGE_PORT: 3001
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      WAHA_SESSION: default
+      WEBHOOK_URL: http://app:3000/api/whatsapp/webhook
+      MEDIA_BASE_URL: http://bridge:3001
+    volumes:
+      - bridge-session:/bridge/session-data
+    ports:
+      # Pairing-code access from the VPS itself only (ssh in, then curl).
+      - "127.0.0.1:3001:3001"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  bridge-session:
+  caddy-data:
+  caddy-config:

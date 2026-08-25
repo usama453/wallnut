@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-export type Wamode = "meta" | "waha";
+import type { Wamode } from "@/lib/whatsapp/config";
 
 export function WhatsAppModeToggle() {
   const [mode, setMode] = useState<Wamode>("meta");
@@ -40,10 +39,4 @@ export function WhatsAppModeToggle() {
       </span>
     </button>
   );
-}
-
-export function getServerWamode(headers: Headers): Wamode {
-  const cookie = headers.get("cookie") ?? "";
-  const match = cookie.match(/wallnut_wamode=(meta|waha)/);
-  return (match?.[1] as Wamode) ?? "meta";
 }

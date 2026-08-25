@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env*
+!.env.vps.example
+baileys-bridge/session-data
+baileys-bridge/node_modules
+baileys-bridge/bridge.log
+deploy/.env
+waha-qr.png
+call-assistant
+photo-bridge
+*.log

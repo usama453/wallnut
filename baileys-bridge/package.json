@@ -1,0 +1,12 @@
+{
+  "name": "baileys-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WAHA-compatible WhatsApp bridge powered by Baileys (no browser)",
+  "main": "bridge.js",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.24",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4"
+  }
+}

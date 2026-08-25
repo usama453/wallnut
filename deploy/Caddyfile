@@ -1,0 +1,6 @@
+# Replace bot.usama.fun with your chosen subdomain.
+# Caddy auto-provisions Let's Encrypt HTTPS on first request.
+bot.usama.fun {
+	encode gzip
+	reverse_proxy app:3000
+}

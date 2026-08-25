@@ -41,3 +41,14 @@ eng.traineddata
 /kitwood/
 /project-wall/
 .camoufox-venv/
+
+# Local Netlify folder
+.netlify
+.env*
+
+# baileys bridge local state
+baileys-bridge/session-data/
+baileys-bridge/node_modules/
+baileys-bridge/bridge.log
+deploy/.env
+waha-qr.png

@@ -7,7 +7,7 @@ import { downloadMedia, sendInteractive, sendText, downloadMediaWaha, sendIntera
 import { logUsage } from "./usage";
 import { summarizeIssues, reportStatus } from "@/lib/reportSummary";
 import { extractMedia, isButtonReply, getButtonReplyId, extractPhoneNumberId } from "./webhook";
-import { getServerWamode } from "@/components/whatsapp-mode-toggle";
+import { getServerWamode } from "./config";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -67,7 +67,7 @@ export async function handleWhatsAppMessageEvent(event: any, headers?: Headers):
       const pending = pendingFallbacks.get(s.id);
       if (pending) {
         pendingFallbacks.delete(s.id);
-        await sendText(pending.from, pending.text, pending.groupId, pending.replyToMessageId, phoneNumberId).catch(() => {});
+        await (isWaha ? sendTextWaha(pending.from, pending.text) : sendText(pending.from, pending.text, pending.groupId, pending.replyToMessageId, phoneNumberId)).catch(() => {});
         console.log(`[whatsapp] fallback text sent for failed msg ${s.id}`);
       }
     }
@@ -122,7 +122,7 @@ async function dispatchMessage(
 
   if (message.type === "text") {
     console.log(`[whatsapp] text from ${from}: ${(message.text?.body ?? "").slice(0, 120)}`);
-    await sendText(from, INTRO_LINES, groupId, message.id, phoneNumberId);
+    await (mode === "waha" ? sendTextWaha(from, INTRO_LINES) : sendText(from, INTRO_LINES, groupId, message.id, phoneNumberId));
     return { handled: true, action: "text" };
   }
 

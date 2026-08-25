@@ -25,3 +25,16 @@ export const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 export const WAHA_BASE_URL = process.env.WAHA_BASE_URL ?? "http://localhost:3000";
 export const WAHA_API_KEY = process.env.WAHA_API_KEY ?? "";
 export const WAHA_SESSION = process.env.WAHA_SESSION ?? "default";
+
+/* ============================================================================
+ * WA/Meta mode switch (shared by client toggle + server webhook routing)
+ * ============================================================================ */
+
+export type Wamode = "meta" | "waha";
+
+/** Server-safe: read the wallnut_wamode cookie from request headers. */
+export function getServerWamode(headers: Headers): Wamode {
+  const cookie = headers.get("cookie") ?? "";
+  const match = cookie.match(/wallnut_wamode=(meta|waha)/);
+  return (match?.[1] as Wamode) ?? "meta";
+}

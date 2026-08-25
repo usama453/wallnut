@@ -47,7 +47,10 @@ export async function POST(request: Request) {
         (entry.changes ?? []).filter((c: any) => c.field === "messages"),
       );
 
-  await Promise.allSettled(events.map((change: any) => handleWhatsAppMessageEvent(change, request.headers)));
+  const results = await Promise.allSettled(events.map((change: any) => handleWhatsAppMessageEvent(change, request.headers)));
+  for (const r of results) {
+    if (r.status === "rejected") console.error("[webhook-debug] handler rejected:", r.reason);
+  }
 
   // Always acknowledge immediately to avoid retries.
   return NextResponse.json({ ok: true });
