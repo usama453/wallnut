@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>div playground</title>
+<style>
+  :root{
+    --bg:#171717;
+    --panel:#1f1f20;
+    --panel2:#252526;
+    --panel3:#2d2d2e;
+    --border:#3a3a3b;
+    --border2:#454547;
+    --text:#d7d7d7;
+    --muted:#8a8a8a;
+    --faint:#5f5f60;
+    --accent:#0a84ff;
+    --accent-dim:rgba(10,132,255,.16);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:13px;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{display:flex;height:100vh}
+  #left{flex:1 1 65%;min-width:0;display:flex;flex-direction:column}
+  #right{flex:0 0 35%;min-width:300px;border-left:1px solid var(--border2);display:flex;flex-direction:column;background:var(--panel)}
+
+  /* toolbar */
+  #toolbar{
+    height:42px;flex:0 0 auto;display:flex;align-items:center;gap:6px;
+    padding:0 12px;background:var(--panel);border-bottom:1px solid var(--border);
+  }
+  #toolbar .brand{font-weight:600;letter-spacing:.5px;color:var(--muted);margin-right:6px;font-size:12px}
+  .tool-btn{
+    appearance:none;border:1px solid var(--border2);background:var(--panel3);color:var(--text);
+    border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;line-height:1.4;
+  }
+  .tool-btn:hover{background:#333}
+  .tool-btn.active{border-color:var(--accent);color:#fff;background:var(--accent-dim)}
+  .tool-btn:disabled{opacity:.4;cursor:default}
+  .sep{width:1px;height:18px;background:var(--border);margin:0 4px}
+  .spacer{flex:1}
+  #kbd{color:var(--faint);font-size:11px;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+  /* stage */
+  #stage-wrap{flex:1;position:relative;overflow:hidden;background:#141414}
+  #stage{
+    position:absolute;inset:0;
+    background-image:radial-gradient(circle,rgba(255,255,255,.055) 1px,transparent 1px);
+    background-size:18px 18px;
+  }
+  .dn{
+    position:absolute;box-sizing:border-box;
+    outline:1px solid var(--dc);
+    background:color-mix(in srgb,var(--dc) 10%,transparent);
+    color:#d9d9d9;
+    font-size:12px;line-height:1.35;word-break:break-word;
+    overflow:visible;
+  }
+  .dn:hover{outline-width:2px}
+  .dn.selected{outline:2px solid var(--accent);outline-offset:1px;background:color-mix(in srgb,var(--dc) 14%,transparent)}
+  .dn.editing{outline:2px dashed var(--accent);cursor:text}
+  .preview{
+    position:absolute;z-index:50;pointer-events:none;
+    border:1px dashed var(--accent);background:var(--accent-dim);
+  }
+  /* selection overlay */
+  #selOverlay{position:absolute;z-index:40;pointer-events:none;display:none}
+  .handle{
+    position:absolute;width:9px;height:9px;background:#fff;border:1px solid var(--accent);
+    border-radius:2px;pointer-events:auto;
+  }
+  .h-nw{left:-5px;top:-5px;cursor:nwse-resize}
+  .h-n{left:50%;top:-5px;margin-left:-5px;cursor:ns-resize}
+  .h-ne{right:-5px;top:-5px;cursor:nesw-resize}
+  .h-e{right:-5px;top:50%;margin-top:-5px;cursor:ew-resize}
+  .h-se{right:-5px;bottom:-5px;cursor:nwse-resize}
+  .h-s{left:50%;bottom:-5px;margin-left:-5px;cursor:ns-resize}
+  .h-sw{left:-5px;bottom:-5px;cursor:nesw-resize}
+  .h-w{left:-5px;top:50%;margin-top:-5px;cursor:ew-resize}
+  #selLabel{
+    position:absolute;top:-24px;left:-2px;white-space:nowrap;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10px;color:#fff;
+    background:var(--accent);padding:2px 7px;border-radius:4px;pointer-events:none;
+  }
+  #hoverLabel{
+    position:absolute;z-index:45;display:none;pointer-events:none;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10px;color:var(--text);
+    background:var(--panel3);border:1px solid var(--border2);padding:2px 7px;border-radius:4px;
+  }
+
+  /* statusbar */
+  #statusbar{
+    height:26px;flex:0 0 auto;display:flex;align-items:center;gap:10px;
+    padding:0 12px;background:var(--panel);border-top:1px solid var(--border);
+    color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;
+  }
+  #statusSel{color:var(--text);font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+  /* right panel */
+  #rightHeader{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    height:36px;padding:0 12px;border-bottom:1px solid var(--border);
+    font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--muted);
+  }
+  #props{
+    flex:0 0 auto;padding:10px 12px;border-bottom:1px solid var(--border);
+    background:var(--panel2);overflow-y:auto;max-height:40%;
+  }
+  .sec-label{font-size:10px;font-weight:600;letter-spacing:.6px;color:var(--faint);text-transform:uppercase;margin:10px 0 5px}
+  .sec-label:first-child{margin-top:0}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .field{display:flex;flex-direction:column;gap:2px}
+  .field label{font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.4px}
+  .field input,.field select{
+    background:var(--panel3);border:1px solid var(--border2);color:var(--text);
+    border-radius:4px;padding:3px 6px;font-size:11px;width:100%;outline:none;
+  }
+  .field input:focus,.field select:focus{border-color:var(--accent)}
+  .field input:disabled,.field select:disabled{opacity:.35}
+  .field .unit{font-size:8px;color:var(--faint);text-transform:lowercase}
+  .wide{grid-column:1/-1}
+  #emptyHint{color:var(--muted);font-size:11px;padding:6px 0}
+
+  /* tabs */
+  #tabs{
+    flex:0 0 auto;display:flex;border-bottom:1px solid var(--border);background:var(--panel2);
+  }
+  .tab{
+    flex:1;appearance:none;background:transparent;border:none;border-bottom:2px solid transparent;
+    color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.4px;padding:8px 0;cursor:pointer;
+  }
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent)}
+  #panel{flex:1;overflow:auto;position:relative}
+  pre.pane{
+    margin:0;padding:12px 14px;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-size:11.5px;line-height:1.55;white-space:pre;color:var(--text);min-height:100%;
+  }
+  .pane.hidden{display:none}
+  .selmark{color:var(--accent);font-weight:600}
+  .dim{color:var(--faint)}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#3f3f40;border-radius:4px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left">
+    <div id="toolbar">
+      <span class="brand">&lt;div&gt; playground</span>
+      <button id="btnSelect" class="tool-btn active" title="Select / move / resize (V)">Select</button>
+      <button id="btnDraw" class="tool-btn" title="Drag to draw a div; drag inside a div to nest it (D)">Draw</button>
+      <span class="sep"></span>
+      <button id="btnChild" class="tool-btn" title="Add a child div inside the selected div">+ Child</button>
+      <button id="btnDup" class="tool-btn" title="Duplicate selected div (Cmd/Ctrl+D)">Duplicate</button>
+      <button id="btnDel" class="tool-btn" title="Delete selected div (Del/Backspace)">Delete</button>
+      <button id="btnClear" class="tool-btn" title="Clear the canvas">Clear</button>
+      <span class="spacer"></span>
+      <span id="kbd">V select · D draw · ⏎ edit text · ⌫ delete · ⌘D dup · ⇧ arrows nudge</span>
+    </div>
+    <div id="stage-wrap">
+      <div id="stage">
+        <div id="selOverlay">
+          <div id="selLabel"></div>
+          <div class="handle h-nw" data-h="nw"></div>
+          <div class="handle h-n" data-h="n"></div>
+          <div class="handle h-ne" data-h="ne"></div>
+          <div class="handle h-e" data-h="e"></div>
+          <div class="handle h-se" data-h="se"></div>
+          <div class="handle h-s" data-h="s"></div>
+          <div class="handle h-sw" data-h="sw"></div>
+          <div class="handle h-w" data-h="w"></div>
+        </div>
+        <div id="hoverLabel"></div>
+      </div>
+    </div>
+    <div id="statusbar">
+      <span id="statusSel"></span>
+      <span id="statusHint"></span>
+    </div>
+  </div>
+
+  <div id="right">
+    <div id="rightHeader">
+      <span>INSPECTOR</span>
+      <span id="counts"></span>
+    </div>
+
+    <div id="props">
+      <div class="sec-label">Selected element</div>
+      <div class="grid">
+        <div class="field"><label>id</label><input id="pf_id" type="text" autocomplete="off" spellcheck="false"></div>
+        <div class="field wide"><label>text</label><input id="pf_text" type="text" autocomplete="off" spellcheck="false" placeholder="text inside the div…"></div>
+      </div>
+
+      <div class="sec-label">Box</div>
+      <div class="grid">
+        <div class="field"><label>x</label><input id="pf_x" type="number"></div>
+        <div class="field"><label>y</label><input id="pf_y" type="number"></div>
+        <div class="field"><label>width</label><input id="pf_w" type="number"></div>
+        <div class="field"><label>height</label><input id="pf_h" type="number"></div>
+      </div>
+
+      <div class="sec-label">Margin <span class="unit">top right bottom left</span></div>
+      <div class="grid">
+        <div class="field"><input id="pf_mt" type="number"></div>
+        <div class="field"><input id="pf_mr" type="number"></div>
+        <div class="field"><input id="pf_mb" type="number"></div>
+        <div class="field"><input id="pf_ml" type="number"></div>
+      </div>
+
+      <div class="sec-label">Padding <span class="unit">top right bottom left</span></div>
+      <div class="grid">
+        <div class="field"><input id="pf_pt" type="number"></div>
+        <div class="field"><input id="pf_pr" type="number"></div>
+        <div class="field"><input id="pf_pb" type="number"></div>
+        <div class="field"><input id="pf_pl" type="number"></div>
+      </div>
+
+      <div class="sec-label">Layout</div>
+      <div class="grid">
+        <div class="field"><label>display</label>
+          <select id="pf_display">
+            <option value="block">block</option>
+            <option value="flex">flex</option>
+            <option value="inline-block">inline-block</option>
+          </select>
+        </div>
+        <div class="field"><label>position</label>
+          <select id="pf_position">
+            <option value="absolute">absolute</option>
+            <option value="relative">relative</option>
+            <option value="static">static</option>
+          </select>
+        </div>
+        <div class="field"><label>flex-dir</label>
+          <select id="pf_fdir">
+            <option value="row">row</option>
+            <option value="column">column</option>
+            <option value="row-reverse">row-reverse</option>
+            <option value="column-reverse">column-reverse</option>
+          </select>
+        </div>
+        <div class="field"><label>gap</label><input id="pf_gap" type="number"></div>
+        <div class="field"><label>justify</label>
+          <select id="pf_justify">
+            <option value="flex-start">flex-start</option>
+            <option value="flex-end">flex-end</option>
+            <option value="center">center</option>
+            <option value="space-between">space-between</option>
+            <option value="space-around">space-around</option>
+          </select>
+        </div>
+        <div class="field"><label>align-items</label>
+          <select id="pf_align">
+            <option value="stretch">stretch</option>
+            <option value="flex-start">flex-start</option>
+            <option value="flex-end">flex-end</option>
+            <option value="center">center</option>
+          </select>
+        </div>
+      </div>
+      <div id="emptyHint" class="hidden">Nothing selected. Click a div on the canvas, or use the Draw tool.</div>
+    </div>
+
+    <div id="tabs">
+      <button class="tab active" data-tab="tree">Tree</button>
+      <button class="tab" data-tab="html">HTML</button>
+      <button class="tab" data-tab="css">CSS</button>
+      <button class="tab" data-tab="layout">Layout</button>
+    </div>
+    <div id="panel">
+      <pre id="pTree" class="pane"></pre>
+      <pre id="pHTML" class="pane hidden"></pre>
+      <pre id="pCSS" class="pane hidden"></pre>
+      <pre id="pLayout" class="pane hidden"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const stage = $('stage');
+  const state = {
+    nodes: {}, order: [], nextId: 1,
+    selectedId: null, tool: 'select', tab: 'tree'
+  };
+  const els = {};
+  const COLORS = ['#5c9fff','#3fd17f','#ffb340','#ff7a5c','#d178ff','#ff5c8a','#5cd6ff','#a5d6ff'];
+
+  function depthOf(n){
+    let d = 0, p = n.parent;
+    while(p && state.nodes[p]){ d++; p = state.nodes[p].parent; }
+    return d;
+  }
+  function depthColor(n){ return COLORS[depthOf(n) % COLORS.length]; }
+  function childrenOf(parent){ return state.order.filter(id => state.nodes[id] && state.nodes[id].parent === parent); }
+  function selectedNode(){ return state.selectedId ? state.nodes[state.selectedId] : null; }
+
+  function addNode(x,y,w,h,parent,text){
+    const id = 'd' + (state.nextId++);
+    const n = {
+      id, parent, x, y, w, h, text: text || '',
+      margin:{t:0,r:0,b:0,l:0}, padding:{t:0,r:0,b:0,l:0},
+      display:'block', position:'absolute', flexDirection:'row', gap:0,
+      justify:'flex-start', align:'stretch'
+    };
+    state.nodes[id] = n;
+    state.order.push(id);
+    return n;
+  }
+
+  function applyStyleToEl(n, el){
+    const s = el.style;
+    s.boxSizing = 'border-box';
+    s.position = n.position;
+    if(n.position === 'absolute' || n.position === 'relative'){
+      s.left = n.x + 'px';
+      s.top = n.y + 'px';
+    } else {
+      s.left = 'auto'; s.top = 'auto';
+    }
+    s.width = n.w + 'px';
+    s.height = n.h + 'px';
+    s.margin = n.margin.t+'px '+n.margin.r+'px '+n.margin.b+'px '+n.margin.l+'px';
+    s.padding = n.padding.t+'px '+n.padding.r+'px '+n.padding.b+'px '+n.padding.l+'px';
+    s.display = n.display;
+    s.flexDirection = n.flexDirection;
+    s.gap = n.gap + 'px';
+    s.justifyContent = n.justify;
+    s.alignItems = n.align;
+    s.setProperty('--dc', depthColor(n));
+    s.fontSize = '12px';
+  }
+
+  function buildEl(n){
+    const el = document.createElement('div');
+    el.className = 'dn';
+    el.dataset.id = n.id;
+    applyStyleToEl(n, el);
+    if(n.text !== '') el.textContent = n.text;
+    els[n.id] = el;
+    for(const c of childrenOf(n.id)){
+      el.appendChild(buildEl(state.nodes[c]));
+    }
+    return el;
+  }
+
+  function render(){
+    stage.querySelectorAll('.dn').forEach(e => e.remove());
+    for(const id in els) delete els[id];
+    for(const id of state.order){
+      const n = state.nodes[id];
+      if(!n.parent) stage.appendChild(buildEl(n));
+    }
+    for(const id in els){
+      els[id].classList.toggle('selected', id === state.selectedId);
+    }
+    updatePanels();
+  }
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function labelFor(n){ return 'div#' + n.id; }
+  function shortText(s){
+    s = String(s).replace(/\s+/g,' ').trim();
+    return s.length > 24 ? s.slice(0,24) + '…' : s;
+  }
+
+  function genTree(parent, prefix){
+    const lines = [];
+    const kids = childrenOf(parent);
+    kids.forEach((k,i)=>{
+      const n = state.nodes[k];
+      const last = i === kids.length - 1;
+      const head = prefix + (last ? '└── ' : '├── ');
+      lines.push(head + labelFor(n) + (n.text !== '' ? ' "' + shortText(n.text) + '"' : ''));
+      const cont = prefix + (last ? '    ' : '│   ');
+      lines.push(...genSub(n, cont));
+    });
+    return lines;
+  }
+  function genSub(n, prefix){
+    const lines = [];
+    const parts = [];
+    if(n.text !== '') parts.push({text: '"' + shortText(n.text) + '"'});
+    for(const c of childrenOf(n.id)) parts.push({child: c});
+    parts.forEach((p,j)=>{
+      const plast = j === parts.length - 1;
+      if(p.text){
+        lines.push(prefix + (plast ? '└── ' : '├── ') + p.text);
+      } else {
+        lines.push(prefix + (plast ? '└── ' : '├── ') + labelFor(state.nodes[p.child]));
+        lines.push(...genSub(state.nodes[p.child], prefix + (plast ? '    ' : '│   ')));
+      }
+    });
+    return lines;
+  }
+
+  function updateTree(){
+    const lines = ['div#stage'];
+    lines.push(...genTree(null, ''));
+    $('pTree').textContent = lines.join('\n');
+  }
+
+  function genHTML(parent, depth){
+    let out = '';
+    const ind = '  '.repeat(depth);
+    for(const k of childrenOf(parent)){
+      const n = state.nodes[k];
+      const kids = childrenOf(k);
+      let open = '<div id="' + k + '">';
+      if(n.text !== '' && kids.length === 0){
+        out += ind + open + esc(n.text) + '</div>\n';
+      } else {
+        out += ind + open + '\n';
+        if(n.text !== '') out += ind + '  ' + esc(n.text) + '\n';
+        out += genHTML(k, depth + 1);
+        out += ind + '</div>\n';
+      }
+    }
+    return out;
+  }
+  function updateHTML(){
+    const html = '<div id="stage">\n' + genHTML(null, 1) + '</div>';
+    $('pHTML').textContent = html;
+  }
+
+  function ruleFor(n){
+    let s = '#' + n.id + ' {\n';
+    s += '  position: ' + n.position + ';\n';
+    if(n.position === 'absolute' || n.position === 'relative'){
+      s += '  left: ' + n.x + 'px;\n  top: ' + n.y + 'px;\n';
+    }
+    s += '  width: ' + n.w + 'px;\n  height: ' + n.h + 'px;\n';
+    s += '  margin: ' + n.margin.t + 'px ' + n.margin.r + 'px ' + n.margin.b + 'px ' + n.margin.l + 'px;\n';
+    s += '  padding: ' + n.padding.t + 'px ' + n.padding.r + 'px ' + n.padding.b + 'px ' + n.padding.l + 'px;\n';
+    s += '  display: ' + n.display + ';\n';
+    if(n.display === 'flex'){
+      s += '  flex-direction: ' + n.flexDirection + ';\n';
+      s += '  gap: ' + n.gap + 'px;\n';
+      s += '  justify-content: ' + n.justify + ';\n';
+      s += '  align-items: ' + n.align + ';\n';
+    }
+    s += '}';
+    return s;
+  }
+  function updateCSS(){
+    let css = '/* generated stylesheet */\n';
+    for(const k of state.order){
+      const n = state.nodes[k];
+      css += '\n' + (k === state.selectedId ? '/* ▶ ' + labelFor(n) + ' */\n' : '/* ' + labelFor(n) + ' */\n');
+      css += ruleFor(n) + '\n';
+    }
+    $('pCSS').textContent = css;
+  }
+
+  function updateLayout(){
+    const el = state.selectedId ? els[state.selectedId] : null;
+    if(!el){
+      $('pLayout').textContent = 'Nothing selected.\n\nSelect a div on the canvas to inspect its computed layout.';
+      return;
+    }
+    const n = state.nodes[state.selectedId];
+    const cs = getComputedStyle(el);
+    const sr = stage.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const parent = n.parent ? state.nodes[n.parent] : null;
+    const op = el.offsetParent;
+    const opLabel = op === stage ? '#stage' : (op ? 'div#' + op.dataset.id : 'none');
+
+    const kids = childrenOf(n.id).length;
+    let out = '';
+    out += 'Element:   ' + labelFor(n) + '\n';
+    out += 'Depth:     ' + depthOf(n) + '\n';
+    out += 'Parent:    ' + (parent ? labelFor(parent) : '#stage') + '\n';
+    out += 'Children:  ' + kids + '\n\n';
+
+    out += 'Box on stage (px):\n';
+    out += '  x: ' + Math.round(r.left - sr.left) + '   y: ' + Math.round(r.top - sr.top) + '\n';
+    out += '  w: ' + Math.round(r.width) + '   h: ' + Math.round(r.height) + '\n\n';
+
+    out += 'Relative to parent:\n';
+    out += '  offsetLeft: ' + el.offsetLeft + '   offsetTop: ' + el.offsetTop + '\n';
+    out += '  containing block: ' + opLabel + '\n\n';
+
+    out += 'Computed style (browser):\n';
+    out += '  position:        ' + cs.position + '\n';
+    out += '  left/top:        ' + cs.left + ' / ' + cs.top + '\n';
+    out += '  width/height:    ' + cs.width + ' / ' + cs.height + '\n';
+    out += '  display:         ' + cs.display + '\n';
+    out += '  margin:          ' + cs.marginTop + ' ' + cs.marginRight + ' ' + cs.marginBottom + ' ' + cs.marginLeft + '\n';
+    out += '  padding:         ' + cs.paddingTop + ' ' + cs.paddingRight + ' ' + cs.paddingBottom + ' ' + cs.paddingLeft + '\n';
+    out += '  border:          ' + cs.borderTopWidth + '\n';
+    if(parent && parent.display === 'flex'){
+      out += '\nFlex context (parent #' + parent.id + ' is display:flex):\n';
+      out += '  flex-direction:  ' + cs.flexDirection + '\n';
+      out += '  justify-content: ' + cs.justifyContent + '\n';
+      out += '  align-items:     ' + cs.alignItems + '\n';
+      out += '  gap:             ' + cs.rowGap + '\n';
+      if(n.position === 'absolute') out += '  ⚠ position:absolute → removed from flex flow\n';
+    }
+    $('pLayout').textContent = out;
+  }
+
+  function setFlexEnabled(enabled){
+    const ids = ['pf_fdir','pf_gap','pf_justify','pf_align'];
+    for(const id of ids) $(id).disabled = !enabled;
+  }
+
+  function updateProps(){
+    const n = selectedNode();
+    const anyInput = $('props').querySelectorAll('input,select');
+    const fields = ['pf_id','pf_text','pf_x','pf_y','pf_w','pf_h','pf_mt','pf_mr','pf_mb','pf_ml','pf_pt','pf_pr','pf_pb','pf_pl','pf_display','pf_position','pf_fdir','pf_gap','pf_justify','pf_align'];
+    if(!n){
+      for(const f of fields) $(f).disabled = true;
+      setFlexEnabled(false);
+      $('emptyHint').classList.remove('hidden');
+      return;
+    }
+    for(const f of fields) $(f).disabled = false;
+    $('emptyHint').classList.add('hidden');
+    $('pf_id').value = n.id;
+    $('pf_text').value = n.text;
+    $('pf_x').value = n.x;
+    $('pf_y').value = n.y;
+    $('pf_w').value = n.w;
+    $('pf_h').value = n.h;
+    $('pf_mt').value = n.margin.t; $('pf_mr').value = n.margin.r;
+    $('pf_mb').value = n.margin.b; $('pf_ml').value = n.margin.l;
+    $('pf_pt').value = n.padding.t; $('pf_pr').value = n.padding.r;
+    $('pf_pb').value = n.padding.b; $('pf_pl').value = n.padding.l;
+    $('pf_display').value = n.display;
+    $('pf_position').value = n.position;
+    $('pf_fdir').value = n.flexDirection;
+    $('pf_gap').value = n.gap;
+    $('pf_justify').value = n.justify;
+    $('pf_align').value = n.align;
+    setFlexEnabled(n.display === 'flex');
+  }
+
+  function updateStatusbar(){
+    const n = selectedNode();
+    if(n){
+      $('statusSel').textContent = labelFor(n) + ' · ' + n.w + '×' + n.h + ' · depth ' + depthOf(n) +
+        (n.position !== 'absolute' ? ' · ' + n.position : '') +
+        (n.display === 'flex' ? ' · flex:' + n.flexDirection : '');
+      $('statusHint').textContent = 'drag to move · drag handles to resize · double-click to edit text';
+    } else if(state.tool === 'draw'){
+      $('statusSel').textContent = '';
+      $('statusHint').textContent = 'drag on empty space to create a div · drag inside a div to nest it';
+    } else {
+      $('statusSel').textContent = '';
+      $('statusHint').textContent = 'click a div to select it · drag to draw, or press D for the Draw tool';
+    }
+  }
+
+  function updateOverlay(){
+    const ov = $('selOverlay');
+    const el = state.selectedId ? els[state.selectedId] : null;
+    if(!el){ ov.style.display = 'none'; return; }
+    const sr = stage.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    ov.style.display = 'block';
+    ov.style.left = (r.left - sr.left) + 'px';
+    ov.style.top = (r.top - sr.top) + 'px';
+    ov.style.width = r.width + 'px';
+    ov.style.height = r.height + 'px';
+    const n = state.nodes[state.selectedId];
+    $('selLabel').textContent = labelFor(n) + (n.text !== '' ? ' "' + shortText(n.text) + '"' : '');
+  }
+
+  function updateHover(id){
+    const hl = $('hoverLabel');
+    if(!id || !els[id]){ hl.style.display = 'none'; return; }
+    const sr = stage.getBoundingClientRect();
+    const r = els[id].getBoundingClientRect();
+    hl.style.display = 'block';
+    hl.style.left = (r.left - sr.left) + 'px';
+    hl.style.top = Math.max(0, r.top - sr.top - 19) + 'px';
+    hl.textContent = labelFor(state.nodes[id]);
+  }
+
+  function updateCounts(){
+    $('counts').textContent = state.order.length + ' divs';
+  }
+
+  function updatePanels(){
+    updateTree();
+    updateHTML();
+    updateCSS();
+    updateLayout();
+    updateOverlay();
+    updateProps();
+    updateStatusbar();
+    updateCounts();
+  }
+
+  function select(id){
+    state.selectedId = id;
+    for(const k in els){
+      els[k].classList.toggle('selected', k === id);
+    }
+    updatePanels();
+  }
+
+  function getDeepNode(cx, cy){
+    const found = document.elementsFromPoint(cx, cy);
+    let last = null;
+    for(const el of found){
+      if(el.classList && el.classList.contains('dn')){
+        last = el.dataset.id;
+      }
+    }
+    return last;
+  }
+
+  function startMove(id, e){
+    e.preventDefault();
+    const n = state.nodes[id];
+    const sx = e.clientX, sy = e.clientY;
+    const ox = n.x, oy = n.y;
+    let moved = false;
+    const onMove = ev => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if(!moved && Math.abs(dx) + Math.abs(dy) < 3) return;
+      moved = true;
+      n.x = ox + dx;
+      n.y = oy + dy;
+      applyStyleToEl(n, els[id]);
+      updatePanels();
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if(moved) updatePanels();
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function startResize(id, dir, e){
+    e.preventDefault();
+    e.stopPropagation();
+    const n = state.nodes[id];
+    const sx = e.clientX, sy = e.clientY;
+    const ox = n.x, oy = n.y, ow = n.w, oh = n.h;
+    const onMove = ev => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if(dir.indexOf('w') !== -1){ n.x = ox + dx; n.w = Math.max(10, ow - dx); }
+      if(dir.indexOf('e') !== -1){ n.w = Math.max(10, ow + dx); }
+      if(dir.indexOf('n') !== -1){ n.y = oy + dy; n.h = Math.max(10, oh - dy); }
+      if(dir.indexOf('s') !== -1){ n.h = Math.max(10, oh + dy); }
+      applyStyleToEl(n, els[id]);
+      updatePanels();
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      updatePanels();
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function startDraw(e){
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY;
+    const target = getDeepNode(sx, sy);
+    const hostEl = target ? els[target] : stage;
+    const hr = hostEl.getBoundingClientRect();
+    const baseX = hr.left, baseY = hr.top;
+    const prev = document.createElement('div');
+    prev.className = 'preview';
+    stage.appendChild(prev);
+    let lastX = sx, lastY = sy, drawn = false;
+    const onMove = ev => {
+      lastX = ev.clientX; lastY = ev.clientY;
+      drawn = true;
+      const sr = stage.getBoundingClientRect();
+      const x1 = Math.min(sx, lastX), y1 = Math.min(sy, lastY);
+      const x2 = Math.max(sx, lastX), y2 = Math.max(sy, lastY);
+      prev.style.left = (x1 - sr.left) + 'px';
+      prev.style.top = (y1 - sr.top) + 'px';
+      prev.style.width = (x2 - x1) + 'px';
+      prev.style.height = (y2 - y1) + 'px';
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      prev.remove();
+      if(!drawn) return;
+      const w = Math.abs(lastX - sx), h = Math.abs(lastY - sy);
+      if(w < 8 || h < 8) return;
+      const n = addNode(Math.min(sx, lastX) - baseX, Math.min(sy, lastY) - baseY, w, h, target);
+      render();
+      select(n.id);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function startEdit(id){
+    const n = state.nodes[id];
+    if(!n) return;
+    const el = els[id];
+    el.contentEditable = 'true';
+    el.classList.add('editing');
+    updateOverlay();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    el.focus();
+    const done = () => {
+      el.contentEditable = 'false';
+      el.classList.remove('editing');
+      n.text = el.textContent;
+      render();
+      select(id);
+    };
+    el.addEventListener('blur', done, {once: true});
+    el.addEventListener('keydown', ev => {
+      if(ev.key === 'Enter'){ ev.preventDefault(); el.blur(); }
+    });
+  }
+
+  function collect(id){
+    let out = [id];
+    for(const c of childrenOf(id)) out = out.concat(collect(c));
+    return out;
+  }
+  function removeSelected(){
+    if(!state.selectedId) return;
+    const ids = collect(state.selectedId);
+    for(const i of ids){ delete state.nodes[i]; delete els[i]; }
+    state.order = state.order.filter(i => ids.indexOf(i) === -1);
+    state.selectedId = null;
+    render();
+  }
+  function duplicate(){
+    const n = selectedNode();
+    if(!n) return;
+    const c = addNode(n.x + 20, n.y + 20, n.w, n.h, n.parent, n.text);
+    c.margin = Object.assign({}, n.margin);
+    c.padding = Object.assign({}, n.padding);
+    c.display = n.display; c.position = n.position; c.flexDirection = n.flexDirection;
+    c.gap = n.gap; c.justify = n.justify; c.align = n.align;
+    render();
+    select(c.id);
+  }
+  function addChild(){
+    const n = selectedNode();
+    if(!n) return;
+    const c = addNode(24, 24, 140, 90, n.id, 'child');
+    render();
+    select(c.id);
+  }
+  function clearAll(){
+    if(!state.order.length) return;
+    if(!window.confirm('Clear all divs from the canvas?')) return;
+    state.nodes = {}; state.order = [];
+    state.selectedId = null;
+    render();
+  }
+  function nudge(dx, dy){
+    const n = selectedNode();
+    if(!n) return;
+    n.x += dx; n.y += dy;
+    applyStyleToEl(n, els[n.id]);
+    updatePanels();
+  }
+
+  function setTool(t){
+    state.tool = t;
+    $('btnSelect').classList.toggle('active', t === 'select');
+    $('btnDraw').classList.toggle('active', t === 'draw');
+    updateStatusbar();
+  }
+  function setTab(t){
+    state.tab = t;
+    for(const b of document.querySelectorAll('.tab')) b.classList.toggle('active', b.dataset.tab === t);
+    for(const id of ['pTree','pHTML','pCSS','pLayout']) $(id).classList.toggle('hidden', id !== 'p' + t.charAt(0).toUpperCase() + t.slice(1));
+  }
+
+  function commitNum(field, apply){
+    const n = selectedNode();
+    if(!n) return;
+    const v = parseFloat($(field).value);
+    if(isNaN(v)) return;
+    apply(n, v);
+    applyStyleToEl(n, els[n.id]);
+    updatePanels();
+  }
+
+  stage.addEventListener('mousedown', e => {
+    if(e.button !== 0) return;
+    if(state.tool === 'draw'){ startDraw(e); return; }
+    const handle = e.target.closest('.handle');
+    if(handle && state.selectedId){
+      startResize(state.selectedId, handle.dataset.h, e);
+      return;
+    }
+    const t = e.target.closest('.dn');
+    if(t){
+      select(t.dataset.id);
+      startMove(t.dataset.id, e);
+    } else {
+      select(null);
+    }
+  });
+
+  stage.addEventListener('dblclick', e => {
+    const t = e.target.closest('.dn');
+    if(t) startEdit(t.dataset.id);
+  });
+
+  stage.addEventListener('mouseover', e => {
+    const t = e.target.closest('.dn');
+    updateHover(t ? t.dataset.id : null);
+  });
+  stage.addEventListener('mouseleave', () => updateHover(null));
+
+  $('btnSelect').addEventListener('click', () => setTool('select'));
+  $('btnDraw').addEventListener('click', () => setTool('draw'));
+  $('btnChild').addEventListener('click', addChild);
+  $('btnDup').addEventListener('click', duplicate);
+  $('btnDel').addEventListener('click', removeSelected);
+  $('btnClear').addEventListener('click', clearAll);
+
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+  const numFields = {
+    pf_x: n=>v=>{n.x=v}, pf_y: n=>v=>{n.y=v}, pf_w: n=>v=>{n.w=Math.max(4,v)}, pf_h: n=>v=>{n.h=Math.max(4,v)},
+    pf_mt: n=>v=>{n.margin.t=v}, pf_mr: n=>v=>{n.margin.r=v}, pf_mb: n=>v=>{n.margin.b=v}, pf_ml: n=>v=>{n.margin.l=v},
+    pf_pt: n=>v=>{n.padding.t=v}, pf_pr: n=>v=>{n.padding.r=v}, pf_pb: n=>v=>{n.padding.b=v}, pf_pl: n=>v=>{n.padding.l=v},
+    pf_gap: n=>v=>{n.gap=v}
+  };
+  for(const f in numFields){
+    $(f).addEventListener('input', () => commitNum(f, numFields[f]));
+  }
+  $('pf_display').addEventListener('change', () => {
+    const n = selectedNode();
+    if(!n) return;
+    n.display = $('pf_display').value;
+    applyStyleToEl(n, els[n.id]);
+    updatePanels();
+  });
+  $('pf_position').addEventListener('change', () => {
+    const n = selectedNode();
+    if(!n) return;
+    n.position = $('pf_position').value;
+    applyStyleToEl(n, els[n.id]);
+    updatePanels();
+  });
+  $('pf_fdir').addEventListener('change', () => {
+    const n = selectedNode();
+    if(!n) return;
+    n.flexDirection = $('pf_fdir').value;
+    applyStyleToEl(n, els[n.id]);
+    updatePanels();
+  });
+  $('pf_justify').addEventListener('change', () => {
+    const n = selectedNode();
+    if(!n) return;
+    n.justify = $('pf_justify').value;
+    applyStyleToEl(n, els[n.id]);
+    updatePanels();
+  });
+  $('pf_align').addEventListener('change', () => {
+    const n = selectedNode();
+    if(!n) return;
+    n.align = $('pf_align').value;
+    applyStyleToEl(n, els[n.id]);
+    updatePanels();
+  });
+  $('pf_text').addEventListener('input', () => {
+    const n = selectedNode();
+    if(!n) return;
+    n.text = $('pf_text').value;
+    const el = els[n.id];
+    for(const child of Array.from(el.childNodes)){
+      if(child.nodeType === Node.TEXT_NODE) el.removeChild(child);
+    }
+    if(n.text !== '') el.insertBefore(document.createTextNode(n.text), el.firstChild);
+    updatePanels();
+  });
+  $('pf_id').addEventListener('change', () => {
+    const n = selectedNode();
+    if(!n) return;
+    let v = $('pf_id').value.trim().replace(/\s+/g, '_');
+    if(!v) return;
+    if(v !== n.id && state.nodes[v]) return;
+    state.nodes[v] = n;
+    delete state.nodes[n.id];
+    const idx = state.order.indexOf(n.id);
+    state.order[idx] = v;
+    for(const k in state.nodes){
+      if(state.nodes[k].parent === n.id) state.nodes[k].parent = v;
+    }
+    n.id = v;
+    els[v] = els[n.id];
+    delete els[n.id];
+    state.selectedId = v;
+    render();
+  });
+
+  window.addEventListener('keydown', e => {
+    if(e.metaKey || e.ctrlKey){
+      if(e.key.toLowerCase() === 'd'){ e.preventDefault(); duplicate(); return; }
+    }
+    const tgt = e.target;
+    if(tgt.closest('input,select,textarea') || (tgt.isContentEditable)) return;
+    switch(e.key){
+      case 'Delete': case 'Backspace': e.preventDefault(); removeSelected(); break;
+      case 'Escape': select(null); break;
+      case 'v': case 'V': setTool('select'); break;
+      case 'd': case 'D': setTool('draw'); break;
+      case 'Enter': if(state.selectedId) startEdit(state.selectedId); break;
+      case 'ArrowUp': e.preventDefault(); nudge(0, e.shiftKey ? -10 : -1); break;
+      case 'ArrowDown': e.preventDefault(); nudge(0, e.shiftKey ? 10 : 1); break;
+      case 'ArrowLeft': e.preventDefault(); nudge(e.shiftKey ? -10 : -1, 0); break;
+      case 'ArrowRight': e.preventDefault(); nudge(e.shiftKey ? 10 : 1, 0); break;
+    }
+  });
+
+  window.addEventListener('resize', updateOverlay);
+
+  const p = addNode(70, 60, 380, 250, null);
+  p.padding = {t:20, r:20, b:20, l:20};
+  const a = addNode(20, 20, 150, 96, p.id, 'child A');
+  const b = addNode(190, 20, 160, 160, p.id, 'child B');
+  state.nextId = 2;
+  render();
+})();
+</script>
+</body>
+</html>

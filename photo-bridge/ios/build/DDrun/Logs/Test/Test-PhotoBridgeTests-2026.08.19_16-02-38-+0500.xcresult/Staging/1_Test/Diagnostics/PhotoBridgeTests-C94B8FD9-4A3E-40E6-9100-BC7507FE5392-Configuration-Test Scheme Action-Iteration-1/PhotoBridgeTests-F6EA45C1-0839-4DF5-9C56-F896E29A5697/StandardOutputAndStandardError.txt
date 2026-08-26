@@ -1,0 +1,13 @@
+2026-08-19 16:03:46.458244+0500 PhotoBridge[15190:887917] [discovery] browsing _photobridge._tcp
+Test Suite 'All tests' started at 2026-08-19 16:03:48.455.
+Test Suite 'PhotoBridgeTests.xctest' started at 2026-08-19 16:03:48.455.
+Test Suite 'DeviceConnectionTests' started at 2026-08-19 16:03:48.455.
+Test Case '-[PhotoBridgeTests.DeviceConnectionTests testCloseUnblocksWaiters]' started.
+2026-08-19 16:03:48.459076+0500 PhotoBridge[15190:888151] [] nw_listener_socket_inbox_create_socket setsockopt SO_NECP_LISTENUUID failed [2: No such file or directory]
+2026-08-19 16:03:48.465500+0500 PhotoBridge[15190:888153] [connection] connection closed by peer
+2026-08-19 16:03:48.465765+0500 PhotoBridge[15190:888151] [connection] [C1 127.0.0.1:62305 tcp, attribution: developer] is already cancelled, ignoring cancel
+Test Case '-[PhotoBridgeTests.DeviceConnectionTests testCloseUnblocksWaiters]' passed (0.011 seconds).
+Test Case '-[PhotoBridgeTests.DeviceConnectionTests testNextThrowsAfterPeerVanished]' started.
+2026-08-19 16:03:48.467420+0500 PhotoBridge[15190:888150] [] nw_listener_socket_inbox_create_socket setsockopt SO_NECP_LISTENUUID failed [2: No such file or directory]
+2026-08-19 16:04:48.468047+0500 PhotoBridge[15190:888152] [connection] nw_socket_handle_socket_event [C2:1] Socket SO_ERROR [54: Connection reset by peer]
+2026-08-19 16:04:48.474435+0500 PhotoBridge[15190:888152] [connection] nw_protocol_socket_reset_linger [C2:1] setsockopt SO_LINGER failed [22: Invalid argument]

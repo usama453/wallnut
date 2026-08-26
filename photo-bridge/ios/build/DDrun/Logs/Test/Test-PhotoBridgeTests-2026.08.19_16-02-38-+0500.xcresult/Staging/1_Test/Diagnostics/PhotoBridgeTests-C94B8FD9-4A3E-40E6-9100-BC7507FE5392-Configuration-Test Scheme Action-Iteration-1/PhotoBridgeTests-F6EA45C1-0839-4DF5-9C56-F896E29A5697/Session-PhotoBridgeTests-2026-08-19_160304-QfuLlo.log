@@ -1,0 +1,319 @@
+Xcode version: 26.3 (17C529)
+16:03:04.324 xcodebuild[14920:884454] Beginning test session PhotoBridgeTests-11B40E2C-1C81-4A98-BCC2-54E1AEF3C702 at 2026-08-19 16:03:04.323 on target <DVTiPhoneSimulator: 0x127843520> {
+		SimDevice: PhotoBridgeTester (D7BDDB96-BD29-43E7-9DB1-7B788931EE69, iOS 26.3, Booted)
+} (26.3.1 (23D8133))
+16:03:04.324 xcodebuild[14920:884454] 	/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild
+test
+-project
+PhotoBridge.xcodeproj
+-scheme
+PhotoBridgeTests
+-destination
+platform=iOS Simulator,id=D7BDDB96-BD29-43E7-9DB1-7B788931EE69
+-derivedDataPath
+build/DDrun
+CODE_SIGNING_ALLOWED=NO
+16:03:04.325 xcodebuild[14920:884454] Test standard output and standard error is at /Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Logs/Test/Test-PhotoBridgeTests-2026.08.19_16-02-38-+0500.xcresult/Staging/1_Test/Diagnostics/PhotoBridgeTests-C94B8FD9-4A3E-40E6-9100-BC7507FE5392-Configuration-Test Scheme Action-Iteration-1/PhotoBridgeTests-F6EA45C1-0839-4DF5-9C56-F896E29A5697/StandardOutputAndStandardError.txt
+16:03:04.328 xcodebuild[14920:884475] 📱<DVTiPhoneSimulator (0x127843520), PhotoBridgeTester, unknown class, 26.3.1 (23D8133), D7BDDB96-BD29-43E7-9DB1-7B788931EE69> claim LaunchSessionClaim_0x1661b98a0 on simulator was issued, 2 claims exist.
+16:03:04.328 xcodebuild[14920:884454] Setting up test runner session
+16:03:04.328 xcodebuild[14920:884475] Sim PhotoBridgeTester: Unregistering for sim device notification with token 5
+16:03:04.328 xcodebuild[14920:884475] Calling -[SimDevice getenv:error:] for TESTMANAGERD_SIM_SOCK
+16:03:04.329 xcodebuild[14920:884454] Registering/updating daemon-based crash report observer for process names (
+    xctest,
+    debugserver,
+    FrontBoard,
+    assertiond,
+    runningboardd,
+    SpringBoard,
+    testmanagerd,
+    backboardd,
+    DTServiceHub,
+    PhotoBridge,
+    PhotoBridgeTests
+)
+16:03:04.330 xcodebuild[14920:884475] Sim PhotoBridgeTester has testmanagerd socket at /private/tmp/com.apple.launchd.souYLgDKWR/com.apple.testmanagerd.unix-domain.socket
+16:03:04.330 xcodebuild[14920:884475] Validating test connection socket path (/private/tmp/com.apple.launchd.souYLgDKWR/com.apple.testmanagerd.unix-domain.socket)
+16:03:04.330 xcodebuild[14920:884475] Constructing transport for test connection socket
+16:03:04.330 xcodebuild[14920:884475] Connected socket 37 to testmanagerd for Sim PhotoBridgeTester
+16:03:04.331 xcodebuild[14920:884475] Received connection for test runner session
+16:03:04.331 xcodebuild[14920:884475] Listening for proxy connection request from the test bundle
+16:03:04.331 xcodebuild[14920:884454] Test runner session acquired connection.
+16:03:04.332 xcodebuild[14920:884475] Initiating session with identifier: 11B40E2C-1C81-4A98-BCC2-54E1AEF3C702
+16:03:04.332 xcodebuild[14920:884454] Finished requesting crash reports. Continuing with testing.
+16:03:04.333 xcodebuild[14920:884474] Got reply to session initiation request with identifier 11B40E2C-1C81-4A98-BCC2-54E1AEF3C702 (error: (null))
+16:03:04.347 xcodebuild[14920:884454] Launch session started.
+16:03:04.358 xcodebuild[14920:884674] 📱<DVTiPhoneSimulator (0x127843520), PhotoBridgeTester, unknown class, 26.3.1 (23D8133), D7BDDB96-BD29-43E7-9DB1-7B788931EE69> claim LaunchSessionClaim_0x1661b98a0 on simulator was issued, 2 claims exist.
+16:03:04.361 xcodebuild[14920:884474] 📱<DVTiPhoneSimulator (0x127843520), PhotoBridgeTester, unknown class, 26.3.1 (23D8133), D7BDDB96-BD29-43E7-9DB1-7B788931EE69> claim LaunchSessionClaim_0x1661b98a0 on simulator was issued, 2 claims exist.
+16:03:04.361 xcodebuild[14920:884474] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Registered for sim device notification, got token 8
+16:03:04.361 xcodebuild[14920:884654] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Unregistering for sim device notification with token 8
+16:03:04.402 xcodebuild[14920:884474] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Installing app at path: /Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator/PhotoBridge.app and options: {
+    SkipWatchAppInstall = 1;
+}
+16:03:13.247 xcodebuild[14920:884474] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Installed app at path: /Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator/PhotoBridge.app and options: {
+    SkipWatchAppInstall = 1;
+}
+16:03:13.250 xcodebuild[14920:884474] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Launching app with identifier: com.photobridge.ios and options: {
+    "activate_suspended" = 0;
+    arguments =     (
+    );
+    environment =     {
+        "APP_DISTRIBUTOR_ID_OVERRIDE" = "com.apple.AppStore";
+        "CA_ASSERT_MAIN_THREAD_TRANSACTIONS" = 0;
+        "CA_DEBUG_TRANSACTIONS" = 0;
+        "DYLD_FRAMEWORK_PATH" = "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks";
+        "DYLD_INSERT_LIBRARIES" = "/usr/lib/libRPAC.dylib:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator/PhotoBridge.app/Frameworks/libXCTestBundleInject.dylib:/Library/Developer/CoreSimulator/Volumes/iOS_23D8133/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.3.simruntime/Contents/Resources/RuntimeRoot/usr/lib/libMainThreadChecker.dylib:/usr/lib/libRPAC.dylib:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator/PhotoBridge.app/Frameworks/libXCTestBundleInject.dylib:/Library/Developer/CoreSimulator/Volumes/iOS_23D8133/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.3.simruntime/Contents/Resources/RuntimeRoot/usr/lib/libMainThreadChecker.dylib:/usr/lib/libRPAC.dylib";
+        "DYLD_LIBRARY_PATH" = "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib";
+        "LLVM_PROFILE_FILE" = "/dev/null";
+        NSUnbufferedIO = YES;
+        "OS_ACTIVITY_DT_MODE" = YES;
+        "PERFC_ENABLE_EXTENDED_DIAGNOSTIC_FORMAT" = 1;
+        "PERFC_ENABLE_PROFILE_MODE" = 1;
+        "PERFC_RESET_INSERT_LIBRARIES" = 1;
+        "PERFC_SUPPRESS_SYSTEM_REPORTS" = 1;
+        "RUN_DESTINATION_DEVICE_NAME" = PhotoBridgeTester;
+        "RUN_DESTINATION_DEVICE_PLATFORM_IDENTIFIER" = "com.apple.platform.iphonesimulator";
+        "RUN_DESTINATION_DEVICE_UDID" = "D7BDDB96-BD29-43E7-9DB1-7B788931EE69";
+        "SQLITE_ENABLE_THREAD_ASSERTIONS" = 1;
+        TERM = dumb;
+        XCInjectBundleInto = unused;
+        "XCODE_SCHEME_NAME" = PhotoBridgeTests;
+        XCTestBundleInjectPath = "/usr/lib/libRPAC.dylib:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator/PhotoBridge.app/Frameworks/libXCTestBundleInject.dylib:/Library/Developer/CoreSimulator/Volumes/iOS_23D8133/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.3.simruntime/Contents/Resources/RuntimeRoot/usr/lib/libMainThreadChecker.dylib:/usr/lib/libRPAC.dylib:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator/PhotoBridge.app/Frameworks/libXCTestBundleInject.dylib:/Library/Developer/CoreSimulator/Volumes/iOS_23D8133/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.3.simruntime/Contents/Resources/RuntimeRoot/usr/lib/libMainThreadChecker.dylib:/usr/lib/libRPAC.dylib";
+        XCTestBundlePath = "PlugIns/PhotoBridgeTests.xctest";
+        XCTestConfigurationFilePath = "";
+        XCTestSessionIdentifier = "11B40E2C-1C81-4A98-BCC2-54E1AEF3C702";
+        "__XCODE_BUILT_PRODUCTS_DIR_PATHS" = "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator";
+        "__XPC_DYLD_FRAMEWORK_PATH" = "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator";
+        "__XPC_DYLD_LIBRARY_PATH" = "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator:/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator";
+        "__XPC_LLVM_PROFILE_FILE" = "/dev/null";
+    };
+    stderr = "/dev/ttys001";
+    stdout = "/dev/ttys001";
+    "terminate_running_process" = 1;
+    "wait_for_debugger" = 1;
+}
+16:03:43.807 xcodebuild[14920:884474] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Launched app with identifier: com.photobridge.ios (pid = 15190)
+16:03:43.807 xcodebuild[14920:884474] 📱<DVTiPhoneSimulator (0x127843520), PhotoBridgeTester, unknown class, 26.3.1 (23D8133), D7BDDB96-BD29-43E7-9DB1-7B788931EE69> tracking pid 15190
+16:03:43.807 xcodebuild[14920:884474] 📱<DVTiPhoneSimulator (0x127843520), PhotoBridgeTester, unknown class, 26.3.1 (23D8133), D7BDDB96-BD29-43E7-9DB1-7B788931EE69> checking to see if pid 15190 is valid: kill(pid, 0) = 0 (YES, it's still running)
+16:03:43.809 xcodebuild[14920:887787] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Registered for sim device notification, got token 10
+16:03:43.810 xcodebuild[14920:886398] D7BDDB96-BD29-43E7-9DB1-7B788931EE69: Unregistering for sim device notification with token 10
+16:03:45.329 xcodebuild[14920:884454] Test process runnable PID is 15190.
+16:03:45.330 xcodebuild[14920:884474] XCTHTestOperationStateMachine: Transitioning from state Initial to AcquiredPID
+2026-08-19 16:03:46.458244+0500 PhotoBridge[15190:887917] [discovery] browsing _photobridge._tcp
+16:03:46.663 xcodebuild[14920:884474] Handling proxy channel request from test runner
+16:03:46.661 PhotoBridge[15190:887917] Creating future for 'requesting test configuration' with timeout 600.00
+16:03:46.661 PhotoBridge[15190:887917] Notifying test runner ready
+16:03:46.667 xcodebuild[14920:884474] Test runner is ready with capabilities: <XCTCapabilities: 0x12238e3f0>: {
+    "delayed attachment transfer" = 1;
+    "fetch all test identifiers" = 1;
+    "ubiquitous test identifiers" = 1;
+}
+16:03:46.661 PhotoBridge[15190:887917] <XCTWaiter: 0x600000c3d650> entering wait loop for 600.00s with expectations: `requesting test configuration`
+16:03:46.673 xcodebuild[14920:884454] Test runner session successfully initiated.
+16:03:46.673 xcodebuild[14920:884454] Authorizing test process ID 15190
+16:03:46.673 xcodebuild[14920:884474] XCTHTestOperationStateMachine: Transitioning from state AcquiredPID to ReportedReady
+16:03:46.691 PhotoBridge[15190:888153] Received test runner ready reply. Waiting for request to start running tests.
+16:03:46.693 xcodebuild[14920:884454] Got authorization response from test daemon: Success
+16:03:46.694 xcodebuild[14920:884454] Registering/updating daemon-based crash report observer for process names (
+    xctest,
+    debugserver,
+    FrontBoard,
+    assertiond,
+    runningboardd,
+    SpringBoard,
+    testmanagerd,
+    backboardd,
+    DTServiceHub,
+    PhotoBridge,
+    PhotoBridgeTests
+)
+16:03:46.694 xcodebuild[14920:884454] Telling test runner to start executing tests.
+16:03:46.695 PhotoBridge[15190:888151] _IDE_startExecutingTestPlanWithProtocolVersion:36
+16:03:46.704 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000c3d650>
+16:03:46.704 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x600001729080> completed after 0.043s
+16:03:46.704 PhotoBridge[15190:887917] cleaning up requesting test configuration
+16:03:46.705 PhotoBridge[15190:887917] Loading test bundle at: file:///Users/apple/Library/Developer/CoreSimulator/Devices/D7BDDB96-BD29-43E7-9DB1-7B788931EE69/data/Containers/Bundle/Application/A7506689-6ACD-48CD-A1BD-174EF641948B/PhotoBridge.app/PlugIns/PhotoBridgeTests.xctest/
+16:03:46.705 PhotoBridge[15190:887917] Finished loading test bundle
+16:03:48.298 PhotoBridge[15190:887917] Registering in-process symbolication service with image names: PhotoBridgeTests, PhotoBridge
+16:03:48.298 PhotoBridge[15190:887917] Running tests with active test configuration: <XCTestConfiguration: 0x109204aa0>
+	                  testBundleURL:file:///Users/apple/Library/Developer/CoreSimulator/Devices/D7BDDB96-BD29-43E7-9DB1-7B788931EE69/data/Containers/Bundle/Application/A7506689-6ACD-48CD-A1BD-174EF641948B/PhotoBridge.app/PlugIns/PhotoBridgeTests.xctest/
+	         testBundleRelativePath:PlugIns/PhotoBridgeTests.xctest
+	              productModuleName:PhotoBridgeTests
+	                  testSelection:<XCTTestSelection: 0x600000c1c150>
+	            identifiersToRun:(null)
+	            identifiersToSkip:
+	            tagsToRun:(null)
+	            tagsToSkip:<XCTTagSelection: 0x6000002202c0>
+	            mode:and
+	            tags:{(
+)}
+	  includeXCTests:NO
+
+
+	             reportResultsToIDE:YES
+	               testsDrivenByIDE:NO
+	inProcessParallelizationEnabled:NO
+	              sessionIdentifier:11B40E2C-1C81-4A98-BCC2-54E1AEF3C702
+	      disablePerformanceMetrics:NO
+	treatMissingBaselinesAsFailures:NO
+	                baselineFileURL:(null)
+	       baselineFileRelativePath:(null)
+	          targetApplicationPath:(null)
+	      targetApplicationBundleID:(null)
+	 testApplicationDependencies:
+{
+    "com.photobridge.ios" = "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun/Build/Products/Debug-iphonesimulator/PhotoBridge.app";
+}
+	 bundleIDsForCrashReportEmphasis:
+{(
+    "com.photobridge.ios.tests",
+    "com.photobridge.ios"
+)}
+	 testApplicationUserOverrides:(null)
+	     targetApplicationArguments:
+	   targetApplicationEnvironment:(null)
+	                  reportActivities:YES
+	          testsMustRunOnMainThread:NO
+	            initializeForUITesting:NO
+	            traceCollectionEnabled:(null)
+	 enablePerformanceTestsDiagnostics:(null)
+	 aggregateStatisticsBeforeCrash:
+{
+    XCSuiteRecordsKey =     {
+    };
+}
+	        automationFrameworkPath:/Library/Developer/CoreSimulator/Volumes/iOS_23D8133/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.3.simruntime/Contents/Resources/RuntimeRoot/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework
+	                     emitOSLogs:NO
+	       systemAttachmentLifetime:deleteOnSuccess
+	         userAttachmentLifetime:deleteOnSuccess
+	   preferredScreenCaptureFormat:screenRecording
+	   gatherLocalizableStringsData:NO
+	          testExecutionOrdering:alphabetical
+	    randomExecutionOrderingSeed:(null)
+	               repetitionPolicy:<XCTRepetitionPolicy: 0x60000021c740>
+	            mode:None
+	            maximumIterations:1
+	            repeatInNewRunnerProcess:NO
+
+	       runtimeDiagnosticsPolicy:<XCTRuntimeDiagnosticsPolicy: 0x600000c186f0>
+	            otherRuntimeIssuesDetectionPolicy:<XCTRuntimeIssueDetectionPolicy: 0x60000021c780>
+	            detectionEnabled:YES
+	            severity:warning
+
+	            threadPerformanceCheckerRuntimeIssueDetectionPolicy:<XCTRuntimeIssueDetectionPolicy: 0x60000021c780>
+	            detectionEnabled:YES
+	            severity:warning
+
+	            mainThreadCheckerDetectionPolicy:<XCTRuntimeIssueDetectionPolicy: 0x60000021c780>
+	            detectionEnabled:YES
+	            severity:warning
+
+	            checkedAllocations:disabled
+
+	            testTimeoutsEnabled:NO
+	              leaksCheckingMode:off
+	 defaultTestExecutionTimeAllowance:600
+	 maximumTestExecutionTimeAllowance:0
+	                IDECapabilities:<XCTCapabilities: 0x60000001c0a0>: {
+    "XCTIssue capability" = 1;
+    "daemon container sandbox extension" = 1;
+    "delayed attachment transfer" = 1;
+    "expected failure test capability" = 1;
+    "in-process test parallelization capability" = 1;
+    "request diagnostics for specific devices" = 1;
+    "runner plan" = 1;
+    "skipped suite capability" = 1;
+    "skipped test capability" = 1;
+    "test case run configurations" = 1;
+    "test iterations" = 2;
+    "test timeout capability" = 1;
+    traits = 1;
+    "ubiquitous test identifiers" = 1;
+    "unified issue recorded" = 1;
+}
+	         applicationBundleInfos:(null)
+
+16:03:48.299 PhotoBridge[15190:887917] <XCTWaiter: 0x600000ccd9e0> entering wait loop for 600.00s with expectations: `requesting ready for testing`
+16:03:48.299 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000ccd9e0>
+16:03:48.299 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x60000176ce00> completed after 0.000s
+16:03:48.299 PhotoBridge[15190:887917] cleaning up requesting ready for testing
+16:03:48.299 PhotoBridge[15190:887917] <XCTWaiter: 0x600000ccda40> entering wait loop for 600.00s with expectations: `IDE proxy`
+16:03:48.299 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000ccda40>
+16:03:48.299 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x60000176d080> completed after 0.000s
+16:03:48.299 PhotoBridge[15190:887917] cleaning up IDE proxy
+16:03:48.299 PhotoBridge[15190:887917] Bypassing UI testing initialization because the test configuration does not request it.
+16:03:48.299 PhotoBridge[15190:887917] Loading test suite...
+16:03:48.434 PhotoBridge[15190:887917] Finished loading test suite, took 0.135s
+16:03:48.435 PhotoBridge[15190:887917] <XCTWaiter: 0x600000c28d50> entering wait loop for 597.71s with expectations: `preparing execution worker`
+Test Suite 'All tests' started at 2026-08-19 16:03:48.455.
+Test Suite 'PhotoBridgeTests.xctest' started at 2026-08-19 16:03:48.455.
+Test Suite 'DeviceConnectionTests' started at 2026-08-19 16:03:48.455.
+16:03:48.458 xcodebuild[14920:884454] Nothing to delete
+16:03:48.458 xcodebuild[14920:884454] Nothing to delete
+Test Case '-[PhotoBridgeTests.DeviceConnectionTests testCloseUnblocksWaiters]' started.
+16:03:48.454 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000c28d50>
+16:03:48.455 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x600001765780> completed after 0.019s
+16:03:48.455 PhotoBridge[15190:887917] cleaning up preparing execution worker
+16:03:48.471 xcodebuild[14920:884454] Nothing to delete
+2026-08-19 16:03:48.459076+0500 PhotoBridge[15190:888151] [] nw_listener_socket_inbox_create_socket setsockopt SO_NECP_LISTENUUID failed [2: No such file or directory]
+2026-08-19 16:03:48.465500+0500 PhotoBridge[15190:888153] [connection] connection closed by peer
+2026-08-19 16:03:48.465765+0500 PhotoBridge[15190:888151] [connection] [C1 127.0.0.1:62305 tcp, attribution: developer] is already cancelled, ignoring cancel
+Test Case '-[PhotoBridgeTests.DeviceConnectionTests testCloseUnblocksWaiters]' passed (0.011 seconds).
+Test Case '-[PhotoBridgeTests.DeviceConnectionTests testNextThrowsAfterPeerVanished]' started.
+2026-08-19 16:03:48.467420+0500 PhotoBridge[15190:888150] [] nw_listener_socket_inbox_create_socket setsockopt SO_NECP_LISTENUUID failed [2: No such file or directory]
+16:03:48.471 xcodebuild[14920:884454] Test runner started executing tests.
+16:03:48.455 PhotoBridge[15190:887917] Entering test execution event loop
+16:03:48.455 PhotoBridge[15190:887917] -[XCTRunnerIDESession(_XCTestObservationInternal) testBundleWillStart:]
+16:03:48.455 PhotoBridge[15190:887917] Running suite...
+16:03:48.455 PhotoBridge[15190:887917] -[XCTRunnerIDESession(_XCTestObservationInternal) testSuiteWillStart:]
+16:03:48.471 xcodebuild[14920:887787] XCTHTestOperationStateMachine: Transitioning from state ReportedReady to ExecutingTests
+16:03:48.471 xcodebuild[14920:884454] _XCT_testSuiteWithIdentifier:<XCTTestIdentifier container ["All tests"]> didStartAt:2026-08-19 11:03:48 +0000
+16:03:48.475 xcodebuild[14920:884454] Nothing to delete
+16:03:48.455 PhotoBridge[15190:887917] -[XCTRunnerIDESession(_XCTestObservationInternal) testSuiteWillStart:]
+16:03:48.475 xcodebuild[14920:884454] _XCT_testSuiteWithIdentifier:<XCTTestIdentifier container []> didStartAt:2026-08-19 11:03:48 +0000
+16:03:48.475 xcodebuild[14920:884454] Nothing to delete
+16:03:48.455 PhotoBridge[15190:887917] -[XCTRunnerIDESession(_XCTestObservationInternal) testSuiteWillStart:]
+16:03:48.475 xcodebuild[14920:884454] _XCT_testSuiteWithIdentifier:<XCTTestIdentifier container, class ["DeviceConnectionTests"]> didStartAt:2026-08-19 11:03:48 +0000
+16:03:48.475 xcodebuild[14920:884454] Nothing to delete
+16:03:48.456 PhotoBridge[15190:887917] -[XCTRuntimeIssueDetectionManager runtimeIssueDetectionEnabled] runtimeIssueDetectionEnabled based on XCTDisableRuntimeIssues and runtime diagnostics policies: YES
+16:03:48.456 PhotoBridge[15190:887917] -[XCTRunnerIDESession(_XCTestObservationInternal) testCaseWillStart:] PhotoBridgeTests.DeviceConnectionTests testCloseUnblocksWaiters
+16:03:48.475 xcodebuild[14920:884454] _XCT_testCaseDidStartWithIdentifier:<XCTTestIdentifier leaf, method, swift ["DeviceConnectionTests", "testCloseUnblocksWaiters"]>testCaseRunConfiguration:<XCTestCaseRunConfiguration: 0x166180350>
+16:03:48.475 xcodebuild[14920:884454] Test case did start: <XCTTestIdentifier leaf, method, swift ["DeviceConnectionTests", "testCloseUnblocksWaiters"]>
+16:03:48.475 xcodebuild[14920:884454] Nothing to delete
+16:03:48.457 PhotoBridge[15190:887917] <XCTWaiter: 0x600000c773f0> entering indefinite wait loop for expectations: `failable invocation block completion`
+16:03:48.457 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000c773f0>
+16:03:48.457 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x600001753d40> completed after 0.000s
+16:03:48.457 PhotoBridge[15190:887917] cleaning up failable invocation block completion
+16:03:48.457 PhotoBridge[15190:887917] <XCTWaiter: 0x600000c77450> entering indefinite wait loop for expectations: `failable invocation block completion`
+16:03:48.466 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000c77450>
+16:03:48.466 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x60000174aa00> completed after 0.009s
+16:03:48.466 PhotoBridge[15190:887917] cleaning up failable invocation block completion
+16:03:48.466 PhotoBridge[15190:887917] <XCTWaiter: 0x600000cc70c0> entering indefinite wait loop for expectations: `failable invocation block completion`
+16:03:48.466 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000cc70c0>
+16:03:48.466 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x60000176a780> completed after 0.000s
+16:03:48.466 PhotoBridge[15190:887917] cleaning up failable invocation block completion
+16:03:48.467 PhotoBridge[15190:887917] -[XCTRunnerIDESession(_XCTestObservationInternal) testCaseDidFinish:]
+16:03:48.475 xcodebuild[14920:884454] _XCT_testCaseWithIdentifier:<XCTTestIdentifier leaf, method, swift ["DeviceConnectionTests", "testCloseUnblocksWaiters"]> didFinishWithStatus:passed duration:0.01067197322845459
+16:03:48.476 xcodebuild[14920:884454] Test case (<XCTTestIdentifier leaf, method, swift ["DeviceConnectionTests", "testCloseUnblocksWaiters"]>) finished - enqueuing console chunks to delegate.
+16:03:48.476 xcodebuild[14920:884454] Nothing to delete
+16:03:48.467 PhotoBridge[15190:887917] -[XCTRuntimeIssueDetectionManager runtimeIssueDetectionEnabled] runtimeIssueDetectionEnabled based on XCTDisableRuntimeIssues and runtime diagnostics policies: YES
+16:03:48.467 PhotoBridge[15190:887917] -[XCTRunnerIDESession(_XCTestObservationInternal) testCaseWillStart:] PhotoBridgeTests.DeviceConnectionTests testNextThrowsAfterPeerVanished
+16:03:48.476 xcodebuild[14920:884454] _XCT_testCaseDidStartWithIdentifier:<XCTTestIdentifier leaf, method, swift ["DeviceConnectionTests", "testNextThrowsAfterPeerVanished"]>testCaseRunConfiguration:<XCTestCaseRunConfiguration: 0x166036c50>
+16:03:48.476 xcodebuild[14920:884454] Test case did start: <XCTTestIdentifier leaf, method, swift ["DeviceConnectionTests", "testNextThrowsAfterPeerVanished"]>
+16:03:48.476 xcodebuild[14920:884454] Nothing to delete
+16:03:48.467 PhotoBridge[15190:887917] <XCTWaiter: 0x600000cc70c0> entering indefinite wait loop for expectations: `failable invocation block completion`
+16:03:48.467 PhotoBridge[15190:887917] Returning result XCTWaiterResultCompleted for synchronous waiter <XCTWaiter: 0x600000cc70c0>
+16:03:48.467 PhotoBridge[15190:887917] Wait <XCTWaiterWait: 0x60000176a2c0> completed after 0.000s
+16:03:48.467 PhotoBridge[15190:887917] cleaning up failable invocation block completion
+16:03:48.467 PhotoBridge[15190:887917] <XCTWaiter: 0x600000cc6e80> entering indefinite wait loop for expectations: `failable invocation block completion`
+16:03:48.481 xcodebuild[14920:884454] Nothing to delete
+16:03:48.481 xcodebuild[14920:884454] Finishing test with new console chunk 2026-08-19 16:03:48.459076+0500 PhotoBridge[15190:888151] [] nw_listener_socket_inbox_create_socket setsockopt SO_NECP_LISTENUUID failed [2: No such file or directory]
+2026-08-19 16:03:48.465500+0500 PhotoBridge[15190:888153] [connection] connection closed by peer
+2026-08-19 16:03:48.465765+0500 PhotoBridge[15190:888151] [connection] [C1 127.0.0.1:62305 tcp, attribution: developer] is already cancelled, ignoring cancel
+Test Case '-[PhotoBridgeTests.DeviceConnectionTests testCloseUnblocksWaiters]' passed (0.011 seconds).
+
+16:03:48.500 xcodebuild[14920:884454] Nothing to delete
+16:03:48.501 xcodebuild[14920:884454] Nothing to delete
+16:03:48.501 xcodebuild[14920:884454] Nothing to delete
+16:03:48.501 xcodebuild[14920:884454] Nothing to delete
+2026-08-19 16:04:48.468047+0500 PhotoBridge[15190:888152] [connection] nw_socket_handle_socket_event [C2:1] Socket SO_ERROR [54: Connection reset by peer]
+2026-08-19 16:04:48.474435+0500 PhotoBridge[15190:888152] [connection] nw_protocol_socket_reset_linger [C2:1] setsockopt SO_LINGER failed [22: Invalid argument]

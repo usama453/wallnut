@@ -20,7 +20,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   const { data: version } = await admin
     .from("asset_versions")
-    .select("id, version, url, preview_url, created_at")
+    .select("id, version, url, preview_url, preview_meta, created_at")
     .eq("asset_id", asset.id)
     .order("version", { ascending: false })
     .limit(1)
@@ -72,29 +72,39 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             Annotated preview <span className="text-xs text-slate-500">({sortedIssues.length} issue{sortedIssues.length === 1 ? "" : "s"})</span>
           </div>
           <div className="relative">
-            {asset.kind === "pdf" && !version.preview_url ? (
+            {version.preview_meta?.pages?.length ? (
+              <div className="space-y-1">
+                {(version.preview_meta.pages as Array<{ url: string; width: number; height: number }>).map((p, i) => {
+                  const isPage1 = i === 0;
+                  const boxStyle = p.width && p.height ? { aspectRatio: `${p.width}/${p.height}` } : undefined;
+                  return (
+                    <div key={p.url ?? i} className="relative mx-auto max-w-full" style={boxStyle}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.url} alt={`page ${i + 1}`} className="absolute inset-0 block h-full w-full object-contain" />
+                      {isPage1 &&
+                        sortedIssues.map((issue, i2) => (
+                          <span
+                            key={issue.id}
+                            className="absolute grid size-[22px] place-items-center rounded-full text-[11px] font-bold text-white shadow-lg"
+                            style={{
+                              left: `${(issue.x ?? 0.05) * 100}%`,
+                              top: `${(issue.y ?? 0.05) * 100}%`,
+                              background: MARKER_COLORS[i2 % MARKER_COLORS.length],
+                            }}
+                          >
+                            {i2 + 1}
+                          </span>
+                        ))}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : asset.kind === "pdf" ? (
               <iframe src={`${version.url}#toolbar=0`} title={asset.name} className="block h-[600px] w-full" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={version.preview_url ?? version.url}
-                alt={asset.name}
-                className="block w-full"
-              />
+              <img src={version.url} alt={asset.name} className="block w-full" />
             )}
-            {sortedIssues.map((issue, i) => (
-              <span
-                key={issue.id}
-                className="absolute grid size-[22px] place-items-center rounded-full text-[11px] font-bold text-white shadow-lg"
-                style={{
-                  left: `${(issue.x ?? 0.05) * 100}%`,
-                  top: `${(issue.y ?? 0.05) * 100}%`,
-                  background: MARKER_COLORS[i % MARKER_COLORS.length],
-                }}
-              >
-                {i + 1}
-              </span>
-            ))}
           </div>
         </div>
       ) : null}

@@ -65,11 +65,14 @@ export async function handleWhatsAppMessageEvent(event: any, headers?: Headers):
     // text (score + link) which delivers reliably, so the user never loses the result.
     if (s.status === "failed" && s.id) {
       const pending = pendingFallbacks.get(s.id);
-      if (pending) {
-        pendingFallbacks.delete(s.id);
-        await (isWaha ? sendTextWaha(pending.from, pending.text) : sendText(pending.from, pending.text, pending.groupId, pending.replyToMessageId, phoneNumberId)).catch(() => {});
-        console.log(`[whatsapp] fallback text sent for failed msg ${s.id}`);
-      }
+        if (pending) {
+          pendingFallbacks.delete(s.id);
+          await (isWaha
+            ? sendTextWaha(pending.from, pending.text, pending.replyToMessageId)
+            : sendText(pending.from, pending.text, pending.groupId, pending.replyToMessageId, phoneNumberId)
+          ).catch(() => {});
+          console.log(`[whatsapp] fallback text sent for failed msg ${s.id}`);
+        }
     }
     return { handled: false, action: "ignored" };
   }
@@ -122,12 +125,22 @@ async function dispatchMessage(
 
   if (message.type === "text") {
     console.log(`[whatsapp] text from ${from}: ${(message.text?.body ?? "").slice(0, 120)}`);
-    await (mode === "waha" ? sendTextWaha(from, INTRO_LINES) : sendText(from, INTRO_LINES, groupId, message.id, phoneNumberId));
+    if (!introSentChats.has(from)) {
+      introSentChats.add(from);
+      if (introSentChats.size > 500) introSentChats.clear();
+      await (mode === "waha" ? sendTextWaha(from, INTRO_LINES, message.id) : sendText(from, INTRO_LINES, groupId, message.id, phoneNumberId));
+    } else {
+      const reminder = "Send me an image or a PDF and I'll proof it right here 🐢";
+      await (mode === "waha" ? sendTextWaha(from, reminder, message.id) : sendText(from, reminder, groupId, message.id, phoneNumberId));
+    }
     return { handled: true, action: "text" };
   }
 
   return { handled: false, action: "ignored" };
 }
+
+/** Chats that already received the full intro (short reminder afterwards instead). */
+const introSentChats = new Set<string>();
 
 /** Best-effort intro for new conversations: demo notice, group access, and contact link. */
 const INTRO_LINES = [
@@ -246,7 +259,7 @@ async function handleMedia(
             { id: `changes:${created.assetId}:${created.version}`, title: "Request changes" },
           ],
           url: [{ url: reportUrl, title: "View Report" }],
-        })
+        }, message.id)
       : await sendInteractive(
           from,
           detailBody,
@@ -266,9 +279,12 @@ async function handleMedia(
 
     return { handled: true, action: "media" };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "something went wrong";
-    console.error(`[whatsapp] media proof failed: ${message}`);
-    await (isWaha ? sendTextWaha(from, `Sorry, I couldn't proof that: ${message}`) : sendText(from, `Sorry, I couldn't proof that: ${message}`, groupId, undefined, phoneNumberId)).catch(() => {});
+    const errMsg = err instanceof Error ? err.message : "something went wrong";
+    console.error(`[whatsapp] media proof failed: ${errMsg}`);
+    await (isWaha
+      ? sendTextWaha(from, `Sorry, I couldn't proof that: ${errMsg}`, message.id)
+      : sendText(from, `Sorry, I couldn't proof that: ${errMsg}`, groupId, undefined, phoneNumberId)
+    ).catch(() => {});
     return { handled: true, action: "media" };
   }
 }
@@ -311,7 +327,7 @@ async function handleButtonReply(
         ? `Got it — "${asset.name}" is approved ✅`
         : `Noted — changes requested for "${asset.name}" ⚠️`;
     const msgId = isWaha
-      ? await sendInteractiveWaha(from, confirmation, { url: [{ url: reportUrl, title: "View Report" }] })
+      ? await sendInteractiveWaha(from, confirmation, { url: [{ url: reportUrl, title: "View Report" }] }, message.id)
       : await sendInteractive(
           from,
           confirmation,
@@ -332,7 +348,10 @@ async function handleButtonReply(
     return { handled: true, action: "button" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
-    await (isWaha ? sendTextWaha(from, `Sorry, I couldn't apply that: ${msg}`) : sendText(from, `Sorry, I couldn't apply that: ${msg}`, groupId, undefined, phoneNumberId)).catch(() => {});
+    await (isWaha
+      ? sendTextWaha(from, `Sorry, I couldn't apply that: ${msg}`, message.id)
+      : sendText(from, `Sorry, I couldn't apply that: ${msg}`, groupId, undefined, phoneNumberId)
+    ).catch(() => {});
     return { handled: true, action: "button" };
   }
 }

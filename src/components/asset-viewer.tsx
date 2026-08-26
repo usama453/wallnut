@@ -203,8 +203,89 @@ export function AssetViewer({ data }: { data: ViewerData }) {
             </div>
 
             {current?.url ? (
-              <div className="relative w-full">
-                {asset.kind === "pdf" && !current.preview_url ? (
+              <div className="w-full">
+                {current.preview_meta?.pages?.length ? (
+                  <div className="space-y-1">
+                    {current.preview_meta.pages.map((p, i) => {
+                      const isPage1 = i === 0;
+                      const boxStyle =
+                        p.width && p.height ? { aspectRatio: `${p.width}/${p.height}` } as const : undefined;
+                      return (
+                        <div key={p.url ?? i} className="relative mx-auto max-w-full" style={boxStyle}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={p.url}
+                            alt={`${asset.name} — page ${i + 1}`}
+                            className="absolute inset-0 block h-full w-full object-contain"
+                          />
+                          {isPage1 && (
+                            <>
+                              {sortedIssues.map((issue) => {
+                                const markerIndex = issues.indexOf(issue);
+                                const color = MARKER_COLORS[markerIndex % MARKER_COLORS.length];
+                                const x = (issue.x ?? 0.05) * 100;
+                                const y = (issue.y ?? 0.05) * 100;
+                                const w = (issue.w ?? 0.15) * 100;
+                                const h = (issue.h ?? 0.1) * 100;
+                                const active = issue.id === activeIssueId;
+
+                                return (
+                                  <button
+                                    key={issue.id}
+                                    onClick={() => setActiveIssueId(issue.id === activeIssueId ? null : issue.id)}
+                                    className="absolute"
+                                    style={{
+                                      left: `${x}%`,
+                                      top: `${y}%`,
+                                      zIndex: active ? 20 : 10,
+                                    }}
+                                    aria-label={issue.title}
+                                  >
+                                    <span
+                                      className="block rounded-full text-white shadow-lg"
+                                      style={{
+                                        background: color,
+                                        width: 22,
+                                        height: 22,
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        display: "grid",
+                                        placeItems: "center",
+                                        transform: active ? "scale(1.25)" : "scale(1)",
+                                        transition: "transform .15s",
+                                        boxShadow: active ? `0 0 0 3px rgba(255,255,255,.5)` : undefined,
+                                      }}
+                                    >
+                                      {markerIndex + 1}
+                                    </span>
+                                    {active && (
+                                      <span className="pointer-events-none absolute left-0 top-6 z-30 mt-1 w-max max-w-56 rounded-md bg-slate-950/95 px-2 py-1 text-[11px] text-white shadow-xl">
+                                        {issue.title}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+
+                              {activeIssue && activeIssue.x != null && activeIssue.y != null && (
+                                <span
+                                  className="pointer-events-none absolute border-2 border-indigo-400"
+                                  style={{
+                                    left: `${activeIssue.x * 100}%`,
+                                    top: `${activeIssue.y * 100}%`,
+                                    width: `${(activeIssue.w ?? 0.15) * 100}%`,
+                                    height: `${(activeIssue.h ?? 0.1) * 100}%`,
+                                    zIndex: 15,
+                                  }}
+                                />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : asset.kind === "pdf" ? (
                   <iframe
                     src={`${current.url}#toolbar=0`}
                     title={asset.name}
@@ -212,71 +293,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                   />
                 ) : (
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={current.preview_url ?? current.url}
-                    alt={asset.name}
-                    className="block w-full"
-                  />
-                )}
-
-                {sortedIssues.map((issue, i) => {
-                  const markerIndex = issues.indexOf(issue);
-                  const color = MARKER_COLORS[markerIndex % MARKER_COLORS.length];
-                  const x = (issue.x ?? 0.05) * 100;
-                  const y = (issue.y ?? 0.05) * 100;
-                  const w = (issue.w ?? 0.15) * 100;
-                  const h = (issue.h ?? 0.1) * 100;
-                  const active = issue.id === activeIssueId;
-
-                  return (
-                    <button
-                      key={issue.id}
-                      onClick={() => setActiveIssueId(issue.id === activeIssueId ? null : issue.id)}
-                      className="absolute"
-                      style={{
-                        left: `${x}%`,
-                        top: `${y}%`,
-                        zIndex: active ? 20 : 10,
-                      }}
-                      aria-label={issue.title}
-                    >
-                      <span
-                        className="block rounded-full text-white shadow-lg"
-                        style={{
-                          background: color,
-                          width: 22,
-                          height: 22,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          display: "grid",
-                          placeItems: "center",
-                          transform: active ? "scale(1.25)" : "scale(1)",
-                          transition: "transform .15s",
-                          boxShadow: active ? `0 0 0 3px rgba(255,255,255,.5)` : undefined,
-                        }}
-                      >
-                        {markerIndex + 1}
-                      </span>
-                      {active && (
-                        <span className="pointer-events-none absolute left-0 top-6 z-30 mt-1 w-max max-w-56 rounded-md bg-slate-950/95 px-2 py-1 text-[11px] text-white shadow-xl">
-                          {issue.title}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-
-                {activeIssue && activeIssue.x != null && activeIssue.y != null && (
-                  <span
-                    className="pointer-events-none absolute border-2 border-indigo-400"
-                    style={{
-                      left: `${activeIssue.x * 100}%`,
-                      top: `${activeIssue.y * 100}%`,
-                      width: `${(activeIssue.w ?? 0.15) * 100}%`,
-                      height: `${(activeIssue.h ?? 0.1) * 100}%`,
-                      zIndex: 15,
-                    }}
-                  />
+                  <img src={current.preview_url ?? current.url} alt={asset.name} className="block w-full" />
                 )}
               </div>
             ) : (

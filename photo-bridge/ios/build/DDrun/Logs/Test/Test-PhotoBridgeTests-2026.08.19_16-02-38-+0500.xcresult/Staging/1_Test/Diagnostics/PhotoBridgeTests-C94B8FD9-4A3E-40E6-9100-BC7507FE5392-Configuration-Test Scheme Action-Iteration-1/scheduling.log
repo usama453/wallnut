@@ -1,0 +1,3 @@
+2026-08-19 11:03:03 +0000: Received worker from worker provider: <XCTHTestRunner: 0x165e6a880, PID: 0, device: PhotoBridgeTester (D7BDDB96-BD29-43E7-9DB1-7B788931EE69)>
+2026-08-19 11:03:46 +0000: Worker <XCTHTestRunner: 0x165e6a880, PID: 15190, device: PhotoBridgeTester (D7BDDB96-BD29-43E7-9DB1-7B788931EE69)> finished bootstrapping
+2026-08-19 11:03:46 +0000: Parallelization disabled; test execution driven by the test process

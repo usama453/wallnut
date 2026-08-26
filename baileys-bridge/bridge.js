@@ -56,6 +56,24 @@ let latestQr = null;
 let pairingCodePromise = null;
 /** mediaId -> {buffer, mimetype, filename} */
 const mediaStore = new Map();
+/** msgId -> original WAMessage, kept so outbound sends can quote-reply. */
+const msgCache = new Map();
+const MSG_CACHE_MAX = 300;
+
+function cacheMessage(m) {
+  const id = m?.key?.id;
+  if (!id) return;
+  msgCache.set(id, m);
+  if (msgCache.size > MSG_CACHE_MAX) {
+    // Evict oldest entries (insertion order).
+    const excess = msgCache.size - MSG_CACHE_MAX;
+    let i = 0;
+    for (const k of msgCache.keys()) {
+      if (i++ >= excess) break;
+      msgCache.delete(k);
+    }
+  }
+}
 
 function normalizeJid(chatId) {
   const s = String(chatId);
@@ -215,6 +233,8 @@ function mapMessage(m) {
   return {
     from,
     id,
+    // Group sender (JID of the participant) — undefined in 1:1 chats.
+    ...(m.key.participant ? { participant: m.key.participant } : {}),
     ...out,
     ...(groupId ? { context: { group_id: groupId } } : {}),
     messages: [{ from, id, ...out }],
@@ -254,14 +274,17 @@ async function downloadBaileysMedia(entry) {
 /* Outbound helpers                                                    */
 /* ------------------------------------------------------------------ */
 
-async function sendText(chatId, text) {
+async function sendText(chatId, text, quotedId) {
   const jid = normalizeJid(chatId);
-  const result = await sock.sendMessage(jid, { text });
+  const quoted = quotedId ? msgCache.get(String(quotedId)) : undefined;
+  const result = await sock.sendMessage(jid, { text }, quoted ? { quoted } : undefined);
   return result?.key?.id || crypto.randomUUID();
 }
 
-async function sendButtons(chatId, body, buttons) {
+async function sendButtons(chatId, body, buttons, quotedId) {
   const jid = normalizeJid(chatId);
+  const quoted = quotedId ? msgCache.get(String(quotedId)) : undefined;
+  const opts = quoted ? { quoted } : undefined;
   const replyButtons = buttons.filter((b) => b.type !== "url" && b.title);
   const urlButtons = buttons.filter((b) => b.type === "url" && b.url);
 
@@ -271,21 +294,25 @@ async function sendButtons(chatId, body, buttons) {
 
   if (replyButtons.length > 0) {
     try {
-      const result = await sock.sendMessage(jid, {
-        text: fullBody,
-        buttons: replyButtons.slice(0, 3).map((b) => ({
-          buttonId: b.id,
-          buttonText: { displayText: b.title },
-          type: 1,
-        })),
-        headerType: 1,
-      });
+      const result = await sock.sendMessage(
+        jid,
+        {
+          text: fullBody,
+          buttons: replyButtons.slice(0, 3).map((b) => ({
+            buttonId: b.id,
+            buttonText: { displayText: b.title },
+            type: 1,
+          })),
+          headerType: 1,
+        },
+        opts,
+      );
       return result?.key?.id || crypto.randomUUID();
     } catch (err) {
       console.error("[bridge] native buttons failed, falling back to text:", err?.message);
     }
   }
-  return sendText(chatId, fullBody);
+  return sendText(chatId, fullBody, quotedId);
 }
 
 /* ------------------------------------------------------------------ */
@@ -312,6 +339,7 @@ async function forwardMessage(m) {
   if (m.key.fromMe) return;
   const mapped = mapMessage(m);
   if (!mapped) return;
+  cacheMessage(m);
   await forwardToWebhook(mapped);
 }
 
@@ -408,7 +436,7 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     if (status !== "WORKING") return json(res, 500, { message: `not connected (${status})` });
     try {
-      const id = await sendText(body.chatId, body.text ?? body.body ?? "");
+      const id = await sendText(body.chatId, body.text ?? body.body ?? "", body.replyToMessageId);
       return json(res, 200, { id });
     } catch (err) {
       return json(res, 502, { message: err?.message || String(err) });
@@ -419,7 +447,7 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     if (status !== "WORKING") return json(res, 500, { message: `not connected (${status})` });
     try {
-      const id = await sendButtons(body.chatId, body.body || "", body.buttons || []);
+      const id = await sendButtons(body.chatId, body.body || "", body.buttons || [], body.replyToMessageId);
       return json(res, 200, { id });
     } catch (err) {
       return json(res, 502, { message: err?.message || String(err) });

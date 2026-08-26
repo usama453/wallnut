@@ -205,12 +205,14 @@ export async function sendInteractiveWaha(
   chatId: string,
   bodyText: string,
   buttons: { reply?: Array<{ id: string; title: string }>; url?: Array<{ url: string; title: string }> },
+  replyToMessageId?: string,
 ): Promise<string> {
   // WAHA supports buttons via the sendButtons endpoint
   const payload = {
     session: "default",
     chatId,
     body: bodyText.slice(0, 1024),
+    ...(replyToMessageId ? { replyToMessageId } : {}),
     buttons: [
       ...(buttons.reply?.map((b) => ({ id: b.id, title: b.title })) ?? []),
       ...(buttons.url?.map((b) => ({ id: b.url, title: b.title, type: "url" })) ?? []),
@@ -232,6 +234,6 @@ export async function sendInteractiveWaha(
     throw err;
   }
   const { id } = await res.json();
-  console.log(`[waha-send] interactive ok to=${arguments[0]} msgId=${id}`);
+  console.log(`[waha-send] interactive ok to=${chatId} msgId=${id}`);
   return id;
 }

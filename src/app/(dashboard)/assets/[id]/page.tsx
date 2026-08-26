@@ -16,7 +16,7 @@ export default async function AssetPage({ params }: { params: Promise<{ id: stri
 
   const { data: versions } = await supabase
     .from("asset_versions")
-    .select("id, asset_id, storage_path, version, url, preview_url, width, height, created_at")
+    .select("id, asset_id, storage_path, version, url, preview_url, preview_meta, width, height, created_at")
     .eq("asset_id", id)
     .order("version", { ascending: false });
 

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Social Wall</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="authModal" class="modal"><div class="modal-content"><h2>Sign in</h2></div></div>
+  <div id="postModal" class="modal"><div class="modal-content"><h2>Add Post</h2><form></form></div></div>
+  <div class="search-container"><input id="searchInput" type="text" placeholder="Search captions..." /></div>
+  <main id="postsMain"></main>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

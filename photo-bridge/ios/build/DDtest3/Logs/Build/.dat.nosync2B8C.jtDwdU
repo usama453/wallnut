@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>12</integer>
+	<key>logs</key>
+	<dict>
+		<key>FFA6DDAC-FBA2-4101-AED2-68DADC63B235</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>FFA6DDAC-FBA2-4101-AED2-68DADC63B235.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>E</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>1</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>PhotoBridge project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>PhotoBridge</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project PhotoBridge with scheme PhotoBridge</string>
+			<key>timeStartedRecording</key>
+			<real>808829877.66685104</real>
+			<key>timeStoppedRecording</key>
+			<real>808829878.37225401</real>
+			<key>title</key>
+			<string>Building project PhotoBridge with scheme PhotoBridge</string>
+			<key>uniqueIdentifier</key>
+			<string>FFA6DDAC-FBA2-4101-AED2-68DADC63B235</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

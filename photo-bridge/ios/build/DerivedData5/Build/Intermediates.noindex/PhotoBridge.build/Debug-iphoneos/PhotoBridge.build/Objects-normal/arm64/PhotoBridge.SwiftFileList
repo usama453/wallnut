@@ -1,0 +1,11 @@
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/UI/ContentView.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Connection/DeviceConnection.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Discovery/DeviceDiscovery.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Core/Hash.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Core/Logger.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/App/PhotoBridgeApp.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Photos/PhotoLibrary.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Photos/PhotoStreamer.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Core/Protocol.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Engine/SessionStore.swift
+/Users/apple/Documents/Default\ Project/photo-bridge/ios/PhotoBridge/Engine/TransferEngine.swift

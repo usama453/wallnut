@@ -1,0 +1,71 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildAndRun"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "fc23cc650e8e7bac3ed6a3a68b09d51bf0a820714963fd76021ab1a7eee4e85b"
+    },
+    {
+      "guid" : "fc23cc650e8e7bac3ed6a3a68b09d51baf2c41b1220b4a307a58587e5bcbef19"
+    }
+  ],
+  "containerPath" : "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "arm64",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : false,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator26.2",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "arm64"
+      ],
+      "targetArchitecture" : "arm64"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun8/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun8/Build/Products",
+      "derivedDataPath" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun8",
+      "indexDataStoreFolderPath" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun8/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun8/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun8/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+          "CODE_SIGNING_ALLOWED" : "NO"
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ASSETCATALOG_FILTER_FOR_DEVICE_MODEL" : "iPhone18,1",
+          "ASSETCATALOG_FILTER_FOR_DEVICE_OS_VERSION" : "26.3.1",
+          "ASSETCATALOG_FILTER_FOR_THINNING_DEVICE_CONFIGURATION" : "iPhone18,1",
+          "BUILD_ACTIVE_RESOURCES_ONLY" : "YES",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "TARGET_DEVICE_IDENTIFIER" : "D7BDDB96-BD29-43E7-9DB1-7B788931EE69",
+          "TARGET_DEVICE_MODEL" : "iPhone18,1",
+          "TARGET_DEVICE_OS_VERSION" : "26.3.1",
+          "TARGET_DEVICE_PLATFORM_NAME" : "iphonesimulator"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "test",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

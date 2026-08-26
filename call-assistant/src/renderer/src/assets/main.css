@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 220 14% 94%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 243 75% 59%;
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 216 32% 5%;
+    --foreground: 210 20% 92%;
+    --card: 216 26% 8%;
+    --card-foreground: 210 20% 92%;
+    --popover: 216 26% 8%;
+    --popover-foreground: 210 20% 92%;
+    --primary: 243 75% 63%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 18% 15%;
+    --secondary-foreground: 210 20% 92%;
+    --muted: 217 18% 13%;
+    --muted-foreground: 215 14% 60%;
+    --accent: 217 18% 17%;
+    --accent-foreground: 210 20% 92%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 18% 15%;
+    --input: 217 18% 20%;
+    --ring: 243 75% 63%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  input,
+  textarea {
+    user-select: text;
+  }
+}
+
+@layer utilities {
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.25s ease-out;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

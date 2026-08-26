@@ -1,0 +1,119 @@
+{
+  "" : {
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridge-primary.dia",
+    "emit-module-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridge-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridge-primary-emit-module.dia",
+    "pch" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridge-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridge-primary.swiftdeps"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/App/PhotoBridgeApp.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoBridgeApp~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Connection/DeviceConnection.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceConnection~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Core/Hash.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Hash~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Core/Logger.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Logger~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Core/Protocol.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/Protocol~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Discovery/DeviceDiscovery.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/DeviceDiscovery~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Engine/SessionStore.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/SessionStore~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Engine/TransferEngine.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/TransferEngine~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Photos/PhotoLibrary.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoLibrary~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/Photos/PhotoStreamer.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/PhotoStreamer~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridge/UI/ContentView.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDtest4/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphoneos/PhotoBridge.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  }
+}

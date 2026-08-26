@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'PhotoBridgeTests' in project 'PhotoBridge'
+➜ Explicit dependency on target 'PhotoBridge' in project 'PhotoBridge'
+Target 'PhotoBridge' in project 'PhotoBridge' (no dependencies)

@@ -15,3 +15,21 @@ export async function renderPdfFirstPage(buffer: Buffer): Promise<PdfRenderResul
   const page = await document.getPage(1);
   return { buffer: page };
 }
+
+/**
+ * Rasterize every page of a PDF to PNG buffers. Used to build a multi-page
+ * preview so the asset/report viewers can show the full document, with issue
+ * markers drawn on their correct page.
+ */
+export async function renderPdfAllPages(buffer: Buffer): Promise<Buffer[]> {
+  const { pdf } = await import("pdf-to-img");
+  const document = await pdf(buffer as Buffer, { scale: 2 });
+  const count = Math.max(document.length ?? 1, 1);
+  const pages: Buffer[] = [];
+  for (let i = 1; i <= count; i++) {
+    const page = await document.getPage(i);
+    if (page) pages.push(page);
+  }
+  if (!pages.length) pages.push(await document.getPage(1));
+  return pages;
+}

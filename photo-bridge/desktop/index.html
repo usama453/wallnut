@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PhotoBridge</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="brand">📷 PhotoBridge</div>
+      <div class="topbar-right">
+        <span id="receiver-name" class="muted"></span>
+        <button id="refresh-btn" class="btn ghost" title="Refresh">↻ Refresh</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="card">
+          <h2>Storage</h2>
+          <div id="storage-dir" class="storage-dir muted">Not set</div>
+          <button id="pick-dir-btn" class="btn">Choose folder…</button>
+        </section>
+
+        <section class="card">
+          <h2>Sessions</h2>
+          <ul id="session-list" class="session-list"></ul>
+        </section>
+
+        <section class="card pin-card" id="pin-card" hidden>
+          <h2>Pairing PIN</h2>
+          <div id="pin-code" class="pin-code">······</div>
+          <p class="muted small">Enter this code on your iPhone when it asks to pair with this computer.</p>
+        </section>
+      </aside>
+
+      <section class="main-col">
+        <section class="card" id="active-card">
+          <div class="card-head">
+            <h2 id="session-title">No active session</h2>
+            <span id="session-status" class="badge">idle</span>
+          </div>
+          <div class="progress-row">
+            <div class="progress-track"><div id="progress-fill" class="progress-fill" style="width: 0%"></div></div>
+            <div class="progress-meta">
+              <span id="progress-text">0 files / 0 B</span>
+              <span id="speed-text" class="muted"></span>
+            </div>
+          </div>
+          <p class="muted small" id="resume-hint">
+            Transfers resume automatically: on your iPhone, open the app and tap Resume — the
+            desktop continues from the exact byte where it stopped.
+          </p>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Files</h2>
+            <span id="files-remaining" class="muted"></span>
+          </div>
+          <table class="file-table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Kind</th><th>Size</th><th>Progress</th><th>Status</th><th>Checksum</th><th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="file-body">
+              <tr><td colspan="7" class="muted">No files yet — connect your iPhone.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Transfer log</h2>
+            <button id="copy-log-btn" class="btn ghost small">Copy log</button>
+          </div>
+          <pre id="log-view" class="log-view"></pre>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "" : {
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/PhotoBridgeTests-primary.dia",
+    "emit-module-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/PhotoBridgeTests-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/PhotoBridgeTests-primary-emit-module.dia",
+    "pch" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/PhotoBridgeTests-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/PhotoBridgeTests-primary.swiftdeps"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridgeTests/DeviceConnectionTests.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/DeviceConnectionTests~partial.swiftmodule"
+  },
+  "/Users/apple/Documents/Default Project/photo-bridge/ios/PhotoBridgeTests/ProtocolTests.swift" : {
+    "const-values" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests.swiftconstvalues",
+    "dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests.d",
+    "diagnostics" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests.dia",
+    "index-unit-output-path" : "/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests.o",
+    "llvm-bc" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests.bc",
+    "object" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests.o",
+    "swift-dependencies" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests.swiftdeps",
+    "swiftmodule" : "/Users/apple/Documents/Default Project/photo-bridge/ios/build/DDrun_final2/Build/Intermediates.noindex/PhotoBridge.build/Debug-iphonesimulator/PhotoBridgeTests.build/Objects-normal/arm64/ProtocolTests~partial.swiftmodule"
+  }
+}

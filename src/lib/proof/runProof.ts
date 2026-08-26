@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { normalizeImage } from "@/lib/image";
-import { renderPdfFirstPage } from "@/lib/pdf";
+import { renderPdfAllPages } from "@/lib/pdf";
 import { getProvider } from "@/lib/ai";
 import { spellcheck } from "./spellcheck";
 import { sanitizeText } from "@/lib/text";
@@ -51,42 +51,35 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
   // 2-3. rasterize PDF or normalize image
   let image: { buffer: Buffer; mimeType: string } = { buffer: bytes, mimeType: asset.mime };
   if (asset.kind === "pdf") {
-    const page = await renderPdfFirstPage(bytes);
-    image = { buffer: page.buffer, mimeType: "image/png" };
+    const page = await renderPdfAllPages(bytes);
+    image = { buffer: page[0], mimeType: "image/png" };
   }
   const normalized = await normalizeImage(image.buffer);
 
-  // 3b. For PDFs the stored URL points at the raw PDF, which browsers can't render
-  // as an <img>. Upload the rasterized first page as a preview image and remember
-  // it (+ its dimensions) so the asset/report viewers show a correct, annotated
-  // preview instead of a broken image.
-  if (asset.kind === "pdf") {
-    const previewPath = `${asset.org_id ?? "external"}/assets/${asset.id}/v${version.version}/preview.png`;
-    const { error: prevUpErr } = await admin.storage.from(BUCKET).upload(
-      previewPath,
-      normalized.buffer,
-      { contentType: normalized.mimeType, upsert: true },
-    );
-    if (!prevUpErr) {
-      const { data: prevUrl } = admin.storage.from(BUCKET).getPublicUrl(previewPath);
-      await admin
-        .from("asset_versions")
-        .update({
-          preview_url: prevUrl?.publicUrl ?? null,
-          width: normalized.width,
-          height: normalized.height,
-        })
-        .eq("id", version.id);
+  // 3b. Build per-page preview thumbnails so the viewers can render the full
+  // document (PDFs only; images use their stored URL). For PDF pages the
+  // annotation coordinates are relative to the analyzed (normalized) page 1,
+  // which keeps the existing marker positioning valid per page.
+  const previewMeta = await storePreviews(admin, {
+    bucket: BUCKET,
+    assetId: asset.id,
+    version: version.version,
+    orgId: asset.org_id,
+    isPdf: asset.kind === "pdf",
+    bytes,
+    page1: { buffer: normalized.buffer, mimeType: normalized.mimeType, width: normalized.width, height: normalized.height },
+  });
+  if (previewMeta) {
+    const updates: Record<string, unknown> = { preview_meta: previewMeta };
+    if (asset.kind === "pdf") {
+      updates.preview_url = previewMeta.pages[0]?.url ?? null;
     } else {
-      console.error(`[proof] failed to store PDF preview for ${version.id}: ${prevUpErr.message}`);
+      updates.width = normalized.width;
+      updates.height = normalized.height;
     }
-  } else if (!version.width || !version.height) {
-    // Record natural dims for image versions so the dashboard can size its <img>.
-    await admin
-      .from("asset_versions")
-      .update({ width: normalized.width, height: normalized.height })
-      .eq("id", version.id);
+    await admin.from("asset_versions").update(updates).eq("id", version.id);
   }
+
 
   // 4. OCR (skipped on serverless runtimes where Tesseract's wasm can't load;
   // the AI model reads the image directly when OCR text is empty)
@@ -339,5 +332,63 @@ function mergeSpellcheck(
     report.status = "needs_review";
   } else {
     report.status = "errors";
+  }
+}
+
+interface PreviewMeta {
+  pages: Array<{ url: string; width: number; height: number }>;
+}
+
+interface StorePreviewsArgs {
+  bucket: string;
+  assetId: string;
+  version: number;
+  orgId: string | null;
+  isPdf: boolean;
+  bytes: Buffer;
+  /** The already-normalized page-1 image (used for analysis). */
+  page1: { buffer: Buffer; mimeType: string; width: number; height: number };
+}
+
+/**
+ * Persist preview thumbnails for an asset version.
+ * - PDF: render every page, upload each, return a per-page manifest.
+ * - Image: reuse the single normalized buffer already used for analysis.
+ */
+async function storePreviews(admin: any, args: StorePreviewsArgs): Promise<PreviewMeta | null> {
+  const { bucket, assetId, version, orgId, isPdf, bytes, page1 } = args;
+  const prefix = `${orgId ?? "external"}/assets/${assetId}/v${version}/previews`;
+  const pages: PreviewMeta["pages"] = [];
+
+  const renderPage = async (buf: Buffer, idx: number) => {
+    const norm = await normalizeImage(buf);
+    const path = `${prefix}/page_${idx}.${norm.mimeType === "image/png" ? "png" : "jpeg"}`;
+    const { error } = await admin.storage.from(bucket).upload(path, norm.buffer, {
+      contentType: norm.mimeType,
+      upsert: true,
+    });
+    if (error) {
+      console.error(`[proof] preview upload page ${idx} for v${version}: ${error.message}`);
+      return null;
+    }
+    const { data: urlData } = admin.storage.from(bucket).getPublicUrl(path);
+    return { url: urlData?.publicUrl ?? "", width: norm.width, height: norm.height };
+  };
+
+  try {
+    if (isPdf) {
+      const pagesBuf = await renderPdfAllPages(bytes);
+      for (let i = 0; i < pagesBuf.length; i++) {
+        const p = i === 0 ? await renderPage(page1.buffer, i) : await renderPage(pagesBuf[i], i);
+        if (p) pages.push(p);
+      }
+    } else {
+      const p = await renderPage(page1.buffer, 0);
+      if (p) pages.push(p);
+    }
+    return pages.length ? { pages } : null;
+  } catch (err) {
+    console.error(`[proof] preview generation failed: ${err instanceof Error ? err.message : err}`);
+    return null;
   }
 }

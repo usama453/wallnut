@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { runProof } from "@/lib/proof/runProof";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 /**
  * POST /api/proof/[assetVersionId]

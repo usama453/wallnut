@@ -58,8 +58,10 @@ export interface AssetVersion {
   version: number;
   storage_path: string;
   url: string;
-  /** Rendered preview image (e.g. PDF first page). Falls back to `url` on the client. */
+  /** Rendered preview image(s). For images, the original URL suffices; for PDFs this is the first rendered page. */
   preview_url: string | null;
+  /** Per-page preview manifest: { pages: [{ url, width, height }] }. NULL until proofed. */
+  preview_meta: { pages: Array<{ url: string; width: number; height: number }> } | null;
   width: number | null;
   height: number | null;
   created_at: string;
