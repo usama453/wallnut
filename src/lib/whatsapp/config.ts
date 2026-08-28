@@ -26,6 +26,12 @@ export const WAHA_BASE_URL = process.env.WAHA_BASE_URL ?? "http://localhost:3000
 export const WAHA_API_KEY = process.env.WAHA_API_KEY ?? "";
 export const WAHA_SESSION = process.env.WAHA_SESSION ?? "default";
 
+/** The bot's own WhatsApp number (with country code, no +).
+ * Used in Waha mode where the webhook `from` field is the sender, not the bot.
+ * In Meta mode the bot number comes from webhook metadata instead.
+ * e.g. 923345818677 */
+export const BOT_PHONE_NUMBER = process.env.BOT_PHONE_NUMBER ?? "";
+
 /* ============================================================================
  * WA/Meta mode switch (shared by client toggle + server webhook routing)
  * ============================================================================ */

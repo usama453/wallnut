@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WhatsAppAccess } from "@/components/whatsapp-access";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default function SettingsPage() {
           </span>
         </div>
       </div>
+
+      <WhatsAppAccess />
 
       <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
         <h2 className="text-sm font-semibold">Billing</h2>

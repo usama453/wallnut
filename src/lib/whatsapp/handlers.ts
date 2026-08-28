@@ -141,18 +141,18 @@ export async function handleWhatsAppMessageEvent(
     // Auth-code claim: before normal dispatch, check whether this text message
     // in a group matches a pending auth code for the resolved org. If it does,
     // claim the group and skip normal dispatch.
-    let claimedGroupId: string | null = null;
+    let claimedGroupId: string | undefined;
     if (groupId && message.type === "text") {
       const body = message.text?.body?.trim() ?? "";
       const claimed = await tryClaimGroupAuthCode(admin, orgId, groupId, body, phoneNumberId, mode);
       if (claimed.ok) {
         console.log(`[whatsapp] group ${groupId} claimed by auth code for org=${orgId}`);
-        claimedGroupId = claimed.linkedGroupId;
+        claimedGroupId = claimed.linkedGroupId ?? undefined;
         return { handled: true, action: "ignored" };
       }
     }
 
-    const result = await dispatchMessage(message, groupId, phoneNumberId, mode, orgId, claimedGroupId);
+    const result = await dispatchMessage(message, groupId, phoneNumberId, mode, orgId, claimedGroupId ?? undefined);
     handled = handled || result.handled;
     lastAction = result.action;
   }
@@ -169,32 +169,20 @@ const ACCESS_TTL_MS = 30 * 1000;
 
 /**
  * True when a group message explicitly @mentions the bot. WhatsApp encodes
- * mentions as literal `@<full-number>` tokens inside the message body. When the
- * bot's own number is known (Meta payloads) we match against it; otherwise we
- * require the body to carry at least one `@<digits>` mention marker, so a
- * throwaway group text ("lol", "nice") never triggers — it must be
- * mention-directed.
+ * mentions as literal `@<full-number>` tokens inside the message body.
+ * Matches against BOT_PHONE_NUMBER (env) so it works in both Meta and Waha modes.
  */
-function wasMentioned(message: any, phoneNumberId?: string): boolean {
+function wasMentioned(message: any): boolean {
   const body: string = message?.text?.body ?? "";
-  // No @-mention tokens at all → not directed at anyone, skip.
   const tokens = body.match(/@([0-9]{6,})/g) ?? [];
   if (tokens.length === 0) return false;
 
-  // If we know the bot's own number, require the mention to match it.
-  const bot = phoneNumberId ? String(phoneNumberId).replace(/\D/g, "") : "";
-  if (bot && bot.length >= 6) {
-    return tokens.some((t) => {
-      const digits = t.replace(/\D/g, "");
-      // Match against the last 10 digits (handles full international format).
-      return digits.includes(bot.slice(-10)) || bot.includes(digits.slice(-10));
-    });
-  }
-
-  // Bot number unknown (e.g. BOT_PHONE_NUMBER not configured in Waha mode):
-  // require at least one @-mention to exist so throwaway group texts are skipped,
-  // but accept any mention — the bot may still be the intended recipient.
-  return true;
+  const bot = BOT_PHONE_NUMBER?.replace(/\D/g, "") ?? "";
+  if (!bot || bot.length < 6) return false;
+  return tokens.some((t) => {
+    const digits = t.replace(/\D/g, "");
+    return digits.includes(bot.slice(-10)) || bot.includes(digits.slice(-10));
+  });
 }
 
 async function dispatchMessage(
@@ -202,7 +190,7 @@ async function dispatchMessage(
   groupId: string | undefined,
   phoneNumberId?: string,
   mode: "meta" | "waha" = "meta",
-  orgId?: string,
+  orgId?: string | null,
   claimedGroupId?: string | null,
 ): Promise<WhatsAppWebhookResult> {
   const from = message.from;
@@ -220,7 +208,7 @@ async function dispatchMessage(
     // In group chats, only talk back on plain text when the bot is @mentioned
     // (so we don't reply to every casual group message). Images/PDFs above are
     // always proofed regardless of mention.
-    if (groupId && !wasMentioned(message, phoneNumberId)) {
+    if (groupId && !wasMentioned(message)) {
       console.log(`[whatsapp] ignored group text ${message.id}: bot not mentioned`);
       return { handled: false, action: "ignored" };
     }
@@ -313,7 +301,7 @@ async function handleMedia(
   groupId?: string,
   phoneNumberId?: string,
   mode: "meta" | "waha" = "meta",
-  orgId?: string,
+  orgId?: string | null,
   claimedGroupId?: string | null,
 ): Promise<WhatsAppWebhookResult> {
   const isWaha = mode === "waha";
@@ -612,13 +600,12 @@ async function tryClaimGroupAuthCode(
   // claimed twice for the same org — the upsert returns the existing row.
   const { data: groupRes, error: groupErr } = await admin
     .from("groups")
-    .insert({
+    .upsert({
       org_id: orgId,
       name: groupName,
       platform: "whatsapp",
       external_id: groupId,
-    })
-    .onConflict("(org_id, external_id)")
+    }, { onConflict: "org_id,external_id" })
     .select("id")
     .single();
   const linkedGroupId = groupErr ? null : (groupRes?.id ?? null);

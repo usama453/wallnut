@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface AuthCode {
   id: string;
@@ -22,8 +21,7 @@ interface LinkedGroup {
   created_at: string;
 }
 
-export function WhatsAppGroups() {
-  const [codes, setCodes] = useState<AuthCode[]>([]);
+export function WhatsAppGroups({ codes: serverCodes }: { codes: AuthCode[] }) {
   const [linkedGroups, setLinkedGroups] = useState<LinkedGroup[]>([]);
   const [generating, setGenerating] = useState(false);
   const [newCode, setNewCode] = useState<string | null>(null);
@@ -34,18 +32,15 @@ export function WhatsAppGroups() {
 
   const loadData = async () => {
     try {
-      const [dataRes, profileRes] = await Promise.all([
-        fetch("/api/whatsapp/groups"),
-        fetch("/api/me"),
-      ]);
+      const profileRes = await fetch("/api/me");
       if (profileRes.ok) setProfile(await profileRes.json());
-      if (dataRes.ok) {
-        const d = await dataRes.json();
-        setCodes(d.codes ?? []);
+      const groupsRes = await fetch("/api/whatsapp/groups");
+      if (groupsRes.ok) {
+        const d = await groupsRes.json();
         setLinkedGroups(d.groups ?? []);
       }
     } catch {
-      setError("Failed to load data");
+      setError("Failed to load linked groups");
     }
   };
 
@@ -170,15 +165,15 @@ export function WhatsAppGroups() {
       {/* Auth codes */}
       <div>
         <h3 className="mb-2 text-sm font-medium text-slate-300">
-          Auth codes ({codes.length})
+          Auth codes ({serverCodes.length})
         </h3>
-        {codes.length === 0 ? (
+        {serverCodes.length === 0 ? (
           <p className="text-xs text-slate-500">
             No codes generated yet.
           </p>
         ) : (
           <div className="space-y-2">
-            {codes.map((c) => {
+            {serverCodes.map((c) => {
               const statusColor =
                 c.status === "used"
                   ? "text-emerald-400"

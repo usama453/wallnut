@@ -42,6 +42,17 @@ gonna wanna gotta kinda sorta
 const ACCEPTED = new Set<string>(BASE);
 for (const w of SUPPLEMENTAL) ACCEPTED.add(w);
 
+// Common marketing / web / business vocabulary missing from the word-list but
+// ubiquitous in ad copy. Without these, terms like "CTA"/"CTAs", "signup",
+// "demo", "branding", "reel" get false-flagged as typos.
+const MARKETING = `
+cta ctas call-to-action signup landing-page clickthrough lead-gen leads
+leadgen demo demos funnel conversion conversions roi kpi kpis ux seo
+branding billboard reels reel story stories sponsor sponsors
+persona personas painpoints funnels
+`.split(/\s+/).flatMap((w) => w.split("-"));
+for (const w of MARKETING) if (w) ACCEPTED.add(w);
+
 const ACCEPTED_BY_FIRST_LETTER = new Map<string, string[]>();
 for (const w of ACCEPTED) {
   const key = w[0] ?? "";
@@ -126,6 +137,9 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
     if (ACCEPTED.has(lower) || ACCEPTED.has(stem)) continue;
     if (IGNORE_PATTERN.test(t.word)) continue;
     if (t.len >= 8 && new Set(lower).size === 1) continue;
+    // All-caps tokens are acronyms / brand shout-outs ("CTA", "AD", "USA"),
+    // never spelling typos. Optional trailing plural/possessive: "CTAs", "CTAs'".
+    if (/^[A-Z]{2,}(?:s|'s)?$/.test(t.word)) continue;
 
     const line = lines[t.lineIdx] ?? "";
     const start = Math.max(0, t.col - 40);
@@ -147,7 +161,11 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
   });
 
   const typos = findings.filter((f) => f.severity === "medium");
-  const properNouns = findings.filter((f) => f.severity === "low");
+  // Short unknown tokens (2-3 chars) are almost always OCR noise from logos,
+  // watermarks or stylized fonts — not real typos. Keep one only when it has a
+  // plausible correction (handled by severity: those are "medium"), and drop
+  // short unexplained tokens from the proper-noun bucket entirely.
+  const properNouns = findings.filter((f) => f.severity === "low" && f.word.length >= 4);
 
   // Cap individual typos so reports stay concise; deeper typos are dropped.
   const MAX_TYPO_FINDINGS = 10;
@@ -171,28 +189,52 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
 
 /**
  * Words with no strong correction are treated as names / brands / handles /
- * acronyms ("low" → aggregated nouns bucket), NOT as typos. Capitalized words
- * are extra careful: only a transposition (like "Feburary" → "february")
- * counts as a typo, since a single substitution from a name is usually a name
- * ("Oliver"→"olives", "Ava"→"aga").
+ * acronyms ("low" → aggregated nouns bucket), NOT as typos.
+ *
+ * Length-aware noise guard: real typos are rarely shorter than 3 letters, and
+ * 1-2 char OCR fragments ("wr", "bls") sit within one substitution of some
+ * ultra-common word purely by chance. So:
+ * - ≤2 chars: never a typo.
+ * - 3 chars: typo only on an exact transposition of a COMMON word ("teh").
+ * - ≥4 chars: full rules below.
  */
 function severityFor(lower: string, original: string): "low" | "medium" {
   const capitalized = /[A-Z]/.test(original[0] ?? "");
-  if (strongCorrection(lower, capitalized)) return "medium";
+  if (lower.length <= 2) return "low";
+  if (
+    strongCorrection(
+      lower,
+      capitalized,
+      lower.length === 3 ? "anagram-only" : "full",
+    )
+  )
+    return "medium";
   return "low";
 }
 
 /** True if the word is a same-length transposition of a COMMON word, or one
  * substitution away from a VERY_COMMON word (the latter only for lowercase
- * words — capitalized ones are usually names). */
-function strongCorrection(word: string, capitalized: boolean): boolean {
+ * words — capitalized ones are usually names, and only for words ≥4 chars). */
+function strongCorrection(
+  word: string,
+  capitalized: boolean,
+  mode: "anagram-only" | "full",
+): boolean {
   const bucket = ACCEPTED_BY_FIRST_LETTER.get(word[0]) ?? [];
   const sorted = [...word].sort().join("");
   for (const candidate of bucket) {
     if (candidate === word) continue;
     if (candidate.length !== word.length) continue;
-    if (COMMON.has(candidate) && [...candidate].sort().join("") === sorted) return true;
-    if (!capitalized && VERY_COMMON.has(candidate) && damerauLevenshtein(word, candidate) <= 1) {
+    if (!COMMON.has(candidate)) continue;
+    // Transposition of a common word always counts ("Feburary", "teh").
+    if ([...candidate].sort().join("") === sorted) return true;
+    if (
+      mode === "full" &&
+      !capitalized &&
+      word.length >= 4 &&
+      VERY_COMMON.has(candidate) &&
+      damerauLevenshtein(word, candidate) <= 1
+    ) {
       return true;
     }
   }

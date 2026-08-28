@@ -12,6 +12,17 @@ export interface Organization {
   slug: string;
 }
 
+export type GroupPlatform = "whatsapp" | "slack" | "teams";
+
+export interface Group {
+  id: string;
+  org_id: string;
+  name: string;
+  platform: GroupPlatform;
+  external_id: string | null;
+  created_at: string;
+}
+
 export interface BrandProfile {
   id: string;
   org_id: string;

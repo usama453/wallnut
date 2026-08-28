@@ -8,6 +8,8 @@ export interface SummaryIssue {
   category?: string | null;
   title?: string;
   severity?: string | null;
+  description?: string;
+  suggestion?: string;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -104,4 +106,165 @@ export function reportStatus(issues: SummaryIssue[]): ReportStatus {
   if (hasGrammar) return { emoji: "🟡", label: "Grammar" };
   if (issues.length) return { emoji: "🟡", label: "Needs review" };
   return { emoji: "🟢", label: "All good" };
+}
+
+/* ------------------------------------------------------------------------- */
+
+interface CorrectionLine {
+  rank: number;
+  label: string;
+  before: string;
+  after: string;
+}
+
+/**
+ * Build the WhatsApp error list in the compact correction format the user asked
+ * for, e.g.:
+ *
+ *   Typo: recieve → receive
+ *   Grammar: He go → He goes
+ *   +3 more
+ *
+ * Shows the top 3 most important corrections, then "+X more". Classifies each
+ * issue from its category + parsed title/suggestion text, and extracts a
+ * "before → after" pair when a clean one is present.
+ */
+export function formatCorrectionList(issues: SummaryIssue[]): string {
+  const lines = buildCorrectionLines(issues);
+  const top = lines.slice(0, 3); // best-ranked corrections first
+  const body = top.map((l) => `${l.label}: ${l.before} → ${l.after}`).join("\n");
+  const extra = lines.length - top.length;
+  const suffix = extra > 0 ? `\n+${extra} more` : "";
+  return body ? `${body}${suffix}` : "";
+}
+
+/** Sort corrections so the most concrete/actionable ones surface first. */
+function buildCorrectionLines(issues: SummaryIssue[]): CorrectionLine[] {
+  const parsed: (CorrectionLine & { score: number })[] = [];
+  for (const issue of issues) {
+    const t = issue.title ?? "";
+    const s = issue.suggestion ?? "";
+    const d = issue.description ?? "";
+    const cat = (issue.category ?? "").toLowerCase();
+    const hay = `${t} ${s} ${d}`;
+
+    // Skip vague visual/layout/scope nitpicks and "not valid asset" noise that
+    // have no concrete before→after correction.
+    const skip =
+      /proper nouns|brand names|not a marketing asset|photograph of a screen|screenshot ui|not a valid/i.test(
+        hay,
+      ) &&
+      (!/change .* to |should be |did you mean|replace with/i.test(hay));
+    if (skip) continue;
+
+    const pair = extractPair(hay);
+    if (!pair) continue;
+
+    const label = classifyLabel(cat, hay);
+    // Prefer to show exact in-place fixes (with a before→after pair) over
+    // generic advisories.
+    const concrete = /change .* to |should be |did you mean|replace with|typo/i.test(hay) ? 1 : 0;
+    const sev = issue.severity === "high" ? 0 : issue.severity === "medium" ? 1 : 2;
+    const rank = sev * 10 + concrete; // lower = higher priority
+    parsed.push({ rank, label, before: pair.before, after: pair.after, score: rank });
+  }
+  // Stable ordering: highest priority first.
+  parsed.sort((a, b) => a.rank - b.rank);
+  return parsed.map((p, i) => ({ rank: i, label: p.label, before: p.before, after: p.after }));
+}
+
+/** Extract a clean "before → after" pair from issue title/suggestion text. */
+function extractPair(hay: string): { before: string; after: string } | null {
+  const clean = (s: string) =>
+    s.replace(/["'`]/g, "").replace(/[.\s]+$/, "").trim();
+  const norm = hay.replace(/\s+/g, " ");
+
+  // "Did you mean: X, Y?" (spellcheck) → before from "Misspelled "word""
+  {
+    const mA = /did you mean[:\s]+([^,?"]+)/i.exec(norm);
+    if (mA) {
+      const mB = /misspelled\s+["']?([^"'?×(]+)/i.exec(norm);
+      const before = mB ? clean(mB[1]) : "—";
+      const after = clean(mA[1]);
+      if (after && after !== "…") return { before, after };
+    }
+  }
+
+  // Quoted pair: "Change '"X"' to '"Y"'." / "'X' should be 'Y'." / "Replace with 'Y'."
+  // Where the "before" and "after" are each delimited by quotes.
+  {
+    // before … to after, both quoted or the first quoted + bare word after "to"
+    const m = /change\s+["']([^"']+)["']\s+to\s+["']([^"']+)["']/i.exec(norm)
+      || /["']([^"']+)["']\s+should\s+be\s+["']([^"']+)["']/i.exec(norm)
+      || /["']([^"']+)["']\s+to\s+["']([^"']+)["']/i.exec(norm)
+      || /^["']([^"']+)["']\s+(?:→|->|=>)\s+["']([^"']+)["']/i.exec(norm);
+    if (m) {
+      const b = clean(m[1]);
+      const a = clean(m[2]);
+      if (b && a && b !== a) return { before: b, after: a };
+    }
+  }
+
+  // Unquoted "X should be Y" / "Change X to Y" — capture up to a clear boundary.
+  {
+    // Prefer delimited instances: "WORD should be WORD" where before/after
+    // are simple tokens (letters, digits, /, . - _). Runs right-to-left so the
+    // "after" ends at the end of the sentence.
+    const mBe = /\b([A-Za-z0-9][A-Za-z0-9\.\/\-_]*)\s+should\s+be\s+([A-Za-z0-9][A-Za-z0-9\.\/\-_]*)\s*$/i.exec(norm);
+    if (mBe) {
+      const b = clean(mBe[1]);
+      const a = clean(mBe[2]);
+      if (b && a && b !== a) return { before: b, after: a };
+    }
+    const mCh = /change\s+([A-Za-z0-9][A-Za-z0-9\.\/\-_ ]*?)\s+to\s+([A-Za-z0-9][A-Za-z0-9\.\/\-_ ]*?)\s*$/i.exec(norm);
+    if (mCh) {
+      const b = clean(mCh[1]);
+      const a = clean(mCh[2]);
+      if (b && a && b !== a) return { before: b, after: a };
+    }
+  }
+
+  // "Replace with "Y"." → guess the before word if present.
+  {
+    const m = /replace with\s+["']?([^"'.]+?)["']?\.?$/i.exec(norm);
+    if (m) {
+      const a = clean(m[1]);
+      if (a) {
+        const mB = /["'`]([^"'`]+?)["'`]\s+(?:is|appears|looks|reads)\b/i.exec(norm);
+        return { before: mB ? clean(mB[1]) : "—", after: a };
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Map an issue to one of the user's correction-style labels. */
+function classifyLabel(cat: string, hay: string): string {
+  const h = hay.toLowerCase();
+  if (h.includes("misspelled") || /typo|spelling?\b/i.test(h) || cat === "typo") return "Typo";
+  if (h.includes("apostrophe")) return "Missing apostrophe";
+  if (cat === "links" || h.includes("url") || h.includes("link")) return "Broken URL";
+  if (h.includes("hashtag")) return "Hashtag typo";
+  if (h.includes("mention") || h.includes("@")) return "Mention typo";
+  if (h.includes("abbreviat")) return "Abbreviation";
+  if (h.includes("truncat") || h.includes("cut-off") || h.includes("cut off")) return "Truncation";
+  if (h.includes("overflow")) return "Text overflow";
+  if (h.includes("capital")) return "Capitalization";
+  if (h.includes("punctuat") || h.includes("exclamation") || h.includes("!")) return "Punctuation";
+  if (h.includes("double space") || h.includes("extra space")) return "Double space";
+  if (h.includes("repetition") || h.includes("duplicate") || h.includes("repeat")) return "Word repetition";
+  if (h.includes("missing word")) return "Missing word";
+  if (h.includes("extra word") || h.includes("unnecessary word")) return "Extra word";
+  if (h.includes("tense")) return "Wrong tense";
+  if (h.includes("subject") && h.includes("verb")) return "Subject/verb";
+  if (h.includes("singular") || h.includes("plural") || h.includes("agreement")) return "Singular/plural";
+  if (h.includes("fragment")) return "Sentence fragment";
+  if (h.includes("awkward") || h.includes("phrasing") || h.includes("wordy")) return "Awkward phrasing";
+  if (h.includes("emoji")) return "Incorrect emoji";
+  if (h.includes("number") && h.includes("format")) return "Number formatting";
+  if (h.includes("date")) return "Date formatting";
+  if (h.includes("spelling")) return "Inconsistent spelling";
+  if (cat === "text" || cat.includes("grammar")) return "Grammar";
+  return "Needs review";
 }

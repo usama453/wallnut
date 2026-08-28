@@ -28,16 +28,16 @@ export default async function DashboardLayout({
       : "My workspace";
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-black text-zinc-200">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/60 px-6">
-          <div className="text-sm text-slate-400">{orgName}</div>
+        <header className="flex h-14 items-center justify-between border-b border-zinc-800 bg-zinc-950/60 px-6">
+          <div className="text-sm text-zinc-400">{orgName}</div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-zinc-400">
               {profile?.full_name ?? user?.email}
             </span>
-            <span className="grid size-7 place-items-center rounded-full bg-indigo-500/20 text-xs font-semibold text-indigo-300">
+            <span className="grid size-7 place-items-center rounded-full bg-zinc-800 text-xs font-semibold text-zinc-200">
               {(profile?.full_name?.[0] ?? user?.email?.[0] ?? "?").toUpperCase()}
             </span>
           </div>

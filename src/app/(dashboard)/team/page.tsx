@@ -32,8 +32,6 @@ export default async function TeamPage() {
 
       <TeamManager />
 
-      <WhatsAppGroups />
-
       <p className="text-xs text-slate-500">
         Everyone in this workspace sees the same reports. Report links sent via
         WhatsApp remain viewable by anyone with the link.
