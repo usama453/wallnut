@@ -27,11 +27,13 @@ export async function getDashboardData() {
       ? (profile.organizations as { name: string }[])[0].name
       : "My workspace";
 
+  // Communication groups, org-scoped via RLS. Keep the "General" workspace
+  // catch-all plus real WhatsApp groups (@g.us); drop stray 1:1 chat rows
+  // (seeded as @lid entries) that aren't actual teams.
   const { data: groups } = await supabase
     .from("groups")
     .select("id, name, platform, external_id, created_at")
-    .eq("platform", "whatsapp")
-    .like("external_id", "%@g.us")
+    .or("name.eq.General,external_id.like.%@g.us")
     .order("created_at", { ascending: true });
 
   const { data: assets } = await supabase

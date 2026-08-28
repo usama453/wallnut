@@ -11,7 +11,7 @@ export default function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signin" | "magic">("signin");
+  const [mode, setMode] = useState<"signin" | "magic" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +46,20 @@ export default function LoginForm() {
         });
         if (error) throw error;
         setMessage("Check your inbox for the magic link.");
+      } else if (mode === "signup") {
+        const { error, data } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: `${location.origin}/auth/callback` },
+        });
+        if (error) throw error;
+        if (data.session) {
+          setMessage("Account created. Enjoy your private workspace.");
+          router.push(redirectTo);
+          router.refresh();
+        } else {
+          setMessage("Account created. Check your inbox to confirm your email, then sign in.");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -98,7 +112,7 @@ export default function LoginForm() {
             <div className="h-px flex-1 bg-slate-800" />
           </div>
 
-          <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-800/60 p-1 text-xs">
+          <div className="grid grid-cols-3 gap-1 rounded-lg bg-slate-800/60 p-1 text-xs">
             <button
               type="button"
               onClick={() => setMode("signin")}
@@ -107,6 +121,15 @@ export default function LoginForm() {
               }`}
             >
               Sign in
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("signup")}
+              className={`rounded-md px-2 py-1.5 ${
+                mode === "signup" ? "bg-slate-700 font-medium" : "text-slate-400"
+              }`}
+            >
+              Create
             </button>
             <button
               type="button"
@@ -130,9 +153,11 @@ export default function LoginForm() {
             />
           </label>
 
-          {mode === "signin" && (
+          {mode !== "magic" && (
             <label className="block">
-              <span className="text-xs text-slate-400">Password</span>
+              <span className="text-xs text-slate-400">
+                {mode === "signup" ? "Password (min 6 characters)" : "Password"}
+              </span>
               <input
                 type="password"
                 required
@@ -151,15 +176,24 @@ export default function LoginForm() {
             disabled={loading}
             className="w-full rounded-lg bg-indigo-500 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
           >
-            {loading ? "Please wait…" : mode === "magic" ? "Send magic link" : "Sign in"}
+            {loading ? "Please wait…" : mode === "magic" ? "Send magic link" : mode === "signup" ? "Create account" : "Sign in"}
           </button>
 
           {mode === "signin" && (
             <p className="pt-1 text-center text-xs text-slate-500">
               New here?{" "}
-              <span className="text-slate-600">
-                create an account in your Supabase dashboard (Authentication → Users)
-              </span>
+              <button
+                type="button"
+                onClick={() => setMode("signup")}
+                className="text-indigo-400 hover:text-indigo-300"
+              >
+                Create an account
+              </button>
+            </p>
+          )}
+          {mode === "signup" && (
+            <p className="pt-1 text-center text-xs text-slate-500">
+              Your account gets its own private workspace.
             </p>
           )}
         </form>
