@@ -22,8 +22,22 @@ export async function createAssetVersionFromBytes(args: {
   kind: "image" | "pdf";
   bytes: Buffer;
   createdBy?: string | null;
+  groupId?: string | null;
+  lookupGroupId?: string | null;
 }): Promise<CreatedAssetVersion> {
   const admin = await createAdminClient();
+
+  // Resolve a group JID to a groups.id if a lookupGroupId was provided.
+  let resolvedGroupId: string | null = args.groupId ?? null;
+  if (args.lookupGroupId) {
+    const { data: groupRow } = await admin
+      .from("groups")
+      .select("id")
+      .eq("external_id", args.lookupGroupId)
+      .eq("platform", "whatsapp")
+      .maybeSingle();
+    resolvedGroupId = groupRow?.id ?? null;
+  }
 
   // Retry a few times on slug collisions (unique index on assets.slug).
   let asset: { id: string; org_id: string; slug: string } | null = null;
@@ -40,6 +54,7 @@ export async function createAssetVersionFromBytes(args: {
         current_version: 1,
         status: "in_review",
         created_by: args.createdBy ?? null,
+        group_id: resolvedGroupId,
       })
       .select("id, org_id, slug")
       .single();

@@ -5,9 +5,10 @@ import { getProvider } from "@/lib/ai";
 import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMedia, sendInteractive, sendText, downloadMediaWaha, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
-import { summarizeIssues, reportStatus } from "@/lib/reportSummary";
+import { formatCorrectionList, reportStatus } from "@/lib/reportSummary";
 import { extractMedia, isButtonReply, getButtonReplyId, extractPhoneNumberId } from "./webhook";
-import { getServerWamode } from "./config";
+import { getServerWamode, BOT_PHONE_NUMBER } from "./config";
+import { loadAccessState, trackSeenChat } from "./access";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -35,7 +36,10 @@ export interface WhatsAppWebhookResult {
  * - interactive button reply → apply approval status and confirm
  * - anything else → ignore
  */
-export async function handleWhatsAppMessageEvent(event: any, headers?: Headers): Promise<WhatsAppWebhookResult> {
+export async function handleWhatsAppMessageEvent(
+  event: any,
+  headers?: Headers,
+): Promise<WhatsAppWebhookResult> {
   // Determine WAHA vs Meta mode
   const mode = headers ? getServerWamode(headers) : "meta";
   const isWaha = mode === "waha";
@@ -43,7 +47,9 @@ export async function handleWhatsAppMessageEvent(event: any, headers?: Headers):
   const value = isWaha
     ? event // WAHA payload is the raw event
     : event?.value ?? event?.entry?.[0]?.changes?.[0]?.value;
-  const phoneNumberId = isWaha ? event.from : extractPhoneNumberId(value);
+  const phoneNumberId = isWaha
+    ? BOT_PHONE_NUMBER || undefined // Waha: bot's own number, not the sender
+    : extractPhoneNumberId(value); // Meta: from webhook metadata
 
   // Store the raw payload for the webhook viewer (best-effort).
   storeWebhookEvent(value, phoneNumberId).catch(() => {});
@@ -82,6 +88,7 @@ export async function handleWhatsAppMessageEvent(event: any, headers?: Headers):
 
   let handled = false;
   let lastAction: WhatsAppWebhookResult["action"] = "ignored";
+  const admin = await createAdminClient();
   for (const message of messages) {
     if (!message?.from) continue;
     // Skip retries of messages we already processed.
@@ -91,7 +98,38 @@ export async function handleWhatsAppMessageEvent(event: any, headers?: Headers):
     }
     markSeen(message.id);
     const groupId = message?.context?.group_id ?? undefined;
-    console.log(`[whatsapp] dispatch msgId=${message.id} type=${message.type} from=${message.from}${groupId ? ` group=${groupId}` : ""}${phoneNumberId ? ` phone=${phoneNumberId}` : ""}`);
+
+    // For group messages, try to resolve org from the claimed groups table first.
+    // This way a group belongs to the org that claimed it (via auth code), not
+    // to whatever org the sender happens to be in.
+    let groupOrgId: string | null = null;
+    if (groupId) {
+      groupOrgId = await resolveGroupOrg(admin, groupId);
+    }
+
+    // Response gating: only reply to allowed chats when allowlist mode is on.
+    // Seen-chat tracking runs regardless so the dashboard can offer one-click allow.
+    const orgId = groupOrgId ?? (await resolveOrgId(message.from, phoneNumberId));
+    void trackSeenChat(admin, orgId, message.from, message.text?.body).catch(() => {});
+    const cached =
+      accessCache?.org === orgId && Date.now() - accessCache.at < ACCESS_TTL_MS;
+    const state = cached && accessCache ? accessCache.state : await loadAccessState(admin, orgId);
+    if (!cached) accessCache = { org: orgId, state, at: Date.now() };
+    if (state.mode === "allowlist" && !state.allowed.has(message.from)) {
+      console.log(`[whatsapp] ignored msg ${message.id}: chat not in allowlist`);
+      logUsage({
+        direction: "inbound",
+        msg_type: message.type,
+        message_id: message.id,
+        from_phone: message.from,
+        group_id: groupId,
+        status: "not_allowed",
+      });
+      handled = true;
+      lastAction = "ignored";
+      continue;
+    }
+
     logUsage({
       direction: "inbound",
       msg_type: message.type,
@@ -99,11 +137,64 @@ export async function handleWhatsAppMessageEvent(event: any, headers?: Headers):
       from_phone: message.from,
       group_id: groupId,
     });
-    const result = await dispatchMessage(message, groupId, phoneNumberId, mode);
+
+    // Auth-code claim: before normal dispatch, check whether this text message
+    // in a group matches a pending auth code for the resolved org. If it does,
+    // claim the group and skip normal dispatch.
+    let claimedGroupId: string | null = null;
+    if (groupId && message.type === "text") {
+      const body = message.text?.body?.trim() ?? "";
+      const claimed = await tryClaimGroupAuthCode(admin, orgId, groupId, body, phoneNumberId, mode);
+      if (claimed.ok) {
+        console.log(`[whatsapp] group ${groupId} claimed by auth code for org=${orgId}`);
+        claimedGroupId = claimed.linkedGroupId;
+        return { handled: true, action: "ignored" };
+      }
+    }
+
+    const result = await dispatchMessage(message, groupId, phoneNumberId, mode, orgId, claimedGroupId);
     handled = handled || result.handled;
     lastAction = result.action;
   }
   return { handled, action: lastAction };
+}
+
+/** Short-lived cache of the access gate so bursts don't hammer the DB. */
+let accessCache: {
+  org: string | null;
+  state: Awaited<ReturnType<typeof loadAccessState>>;
+  at: number;
+} | null = null;
+const ACCESS_TTL_MS = 30 * 1000;
+
+/**
+ * True when a group message explicitly @mentions the bot. WhatsApp encodes
+ * mentions as literal `@<full-number>` tokens inside the message body. When the
+ * bot's own number is known (Meta payloads) we match against it; otherwise we
+ * require the body to carry at least one `@<digits>` mention marker, so a
+ * throwaway group text ("lol", "nice") never triggers — it must be
+ * mention-directed.
+ */
+function wasMentioned(message: any, phoneNumberId?: string): boolean {
+  const body: string = message?.text?.body ?? "";
+  // No @-mention tokens at all → not directed at anyone, skip.
+  const tokens = body.match(/@([0-9]{6,})/g) ?? [];
+  if (tokens.length === 0) return false;
+
+  // If we know the bot's own number, require the mention to match it.
+  const bot = phoneNumberId ? String(phoneNumberId).replace(/\D/g, "") : "";
+  if (bot && bot.length >= 6) {
+    return tokens.some((t) => {
+      const digits = t.replace(/\D/g, "");
+      // Match against the last 10 digits (handles full international format).
+      return digits.includes(bot.slice(-10)) || bot.includes(digits.slice(-10));
+    });
+  }
+
+  // Bot number unknown (e.g. BOT_PHONE_NUMBER not configured in Waha mode):
+  // require at least one @-mention to exist so throwaway group texts are skipped,
+  // but accept any mention — the bot may still be the intended recipient.
+  return true;
 }
 
 async function dispatchMessage(
@@ -111,20 +202,41 @@ async function dispatchMessage(
   groupId: string | undefined,
   phoneNumberId?: string,
   mode: "meta" | "waha" = "meta",
+  orgId?: string,
+  claimedGroupId?: string | null,
 ): Promise<WhatsAppWebhookResult> {
   const from = message.from;
-
   if (isButtonReply(message)) {
     return await handleButtonReply(from, message, groupId, phoneNumberId, mode);
   }
 
   const media = extractMedia(message);
   if (media) {
-    return await handleMedia(from, media, message, groupId, phoneNumberId, mode);
+    return await handleMedia(from, media, message, groupId, phoneNumberId, mode, orgId, claimedGroupId);
   }
 
   if (message.type === "text") {
     console.log(`[whatsapp] text from ${from}: ${(message.text?.body ?? "").slice(0, 120)}`);
+    // In group chats, only talk back on plain text when the bot is @mentioned
+    // (so we don't reply to every casual group message). Images/PDFs above are
+    // always proofed regardless of mention.
+    if (groupId && !wasMentioned(message, phoneNumberId)) {
+      console.log(`[whatsapp] ignored group text ${message.id}: bot not mentioned`);
+      return { handled: false, action: "ignored" };
+    }
+
+    // If the bot is @mentioned in an unclaimed group, prompt the user to
+    // link the group via the dashboard auth-code flow. Send once per group.
+    if (groupId && !claimedGroupId && !linkPromptSentGroups.has(groupId)) {
+      linkPromptSentGroups.add(groupId);
+      const prompt =
+        "This group isn't linked to a workspace yet. An admin can link it from the dashboard: go to Team → WhatsApp Groups, create an auth code, then paste that code (e.g. WN-A7F3K2) right here in this group.";
+      await (mode === "waha"
+        ? sendTextWaha(from, prompt, message.id)
+        : sendText(from, prompt, groupId, message.id, phoneNumberId)
+      ).catch(() => {});
+    }
+
     if (!introSentChats.has(from)) {
       introSentChats.add(from);
       if (introSentChats.size > 500) introSentChats.clear();
@@ -141,7 +253,8 @@ async function dispatchMessage(
 
 /** Chats that already received the full intro (short reminder afterwards instead). */
 const introSentChats = new Set<string>();
-
+/** Groups that have already received the "link this group" prompt. */
+const linkPromptSentGroups = new Set<string>();
 /** Best-effort intro for new conversations: demo notice, group access, and contact link. */
 const INTRO_LINES = [
   "Hey! I'm Wallnut — your AI proofing tortoise 🐢",
@@ -200,6 +313,8 @@ async function handleMedia(
   groupId?: string,
   phoneNumberId?: string,
   mode: "meta" | "waha" = "meta",
+  orgId?: string,
+  claimedGroupId?: string | null,
 ): Promise<WhatsAppWebhookResult> {
   const isWaha = mode === "waha";
 
@@ -209,7 +324,13 @@ async function handleMedia(
       : await downloadMedia(media.mediaId, phoneNumberId);
     const kind = media.mime === "application/pdf" ? "pdf" : "image";
 
-    const orgId = await resolveOrgId(from, phoneNumberId);
+    // Use the org resolved from the group claim (if any), falling back to
+    // the sender-based resolution so 1:1 messages still work.
+    const resolvedOrg = orgId ?? (await resolveOrgId(from, phoneNumberId));
+
+    // If this message arrived in a group that was just claimed via auth code
+    // in this same webhook batch, link the asset to that group.
+    const linkedGroupId = claimedGroupId ?? groupId;
 
     const providedName = message?.image?.caption || message?.document?.filename;
     const count = (imageCounters.get(from) ?? 0) + 1;
@@ -219,11 +340,12 @@ async function handleMedia(
       `WhatsApp upload${count > 1 ? ` #${count}` : ""}${groupId ? ` (group)` : ""}`;
 
     const created = await createAssetVersionFromBytes({
-      orgId,
+      orgId: resolvedOrg,
       name: name,
       mime: media.mime,
       kind,
       bytes,
+      lookupGroupId: linkedGroupId ?? undefined,
     });
 
     // Cap concurrent AI proofs so a burst of uploads doesn't blow Gemini's rate limit.
@@ -240,14 +362,22 @@ async function handleMedia(
 
     const reportUrl = `${APP_URL}/r/${created.slug}`;
 
-    // Compact category summary, e.g. "1 grammar, 2 nouns, 1 visual".
-    const summaryLine = summarizeIssues(result.report.issues);
+    // Top corrections first (up to 3, then "+X more"), then the URL directly
+    // below with no extra blank line:
+    //   Typo: recieve → receive
+    //   Grammar: He go → He goes
+    //   +2 more
+    //   https://bot.usama.fun/r/xyz
+    const corrections = formatCorrectionList(result.report.issues);
     const status = reportStatus(result.report.issues);
 
-    const detailBody =
-      `${status.emoji} ${status.label}\n` +
-      (summaryLine ? summaryLine : "") +
-      `\n\n${reportUrl}`;
+    let detailBody: string;
+    if (corrections) {
+      detailBody = `${corrections}\n${reportUrl}`;
+    } else {
+      // No clean before→after pair extractable, or the asset is clean.
+      detailBody = `${status.emoji} ${status.label}\n${reportUrl}`;
+    }
 
     // Single reply: interactive card with summary + report link + approve/request
     // buttons. If WhatsApp filters the card (code 131026), the failed-status
@@ -356,7 +486,28 @@ async function handleButtonReply(
   }
 }
 
-/** Map an inbound event to an org: provider connection org > env default > known contact > null. */
+/** Resolve the org for an unauthenticated WhatsApp group: look up the claimed
+ * groups table by external_id (= group JID). Returns null if the group hasn't
+ * been claimed yet (auth code hasn't been used).
+ */
+async function resolveGroupOrg(
+  admin: Awaited<ReturnType<typeof createAdminClient>>,
+  groupJid: string,
+): Promise<string | null> {
+  try {
+    const { data } = await admin
+      .from("groups")
+      .select("org_id")
+      .eq("external_id", groupJid)
+      .eq("platform", "whatsapp")
+      .maybeSingle();
+    return data?.org_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Dispatch a single message to the right handler: button reply, media proof, or casual text. */
 async function resolveOrgId(phone: string, phoneNumberId?: string): Promise<string | null> {
   if (phoneNumberId) {
     try {
@@ -386,6 +537,94 @@ async function resolveOrgId(phone: string, phoneNumberId?: string): Promise<stri
   } catch {
     return null;
   }
+}
+
+/**
+ * Try to claim a WhatsApp group using an auth code sent in a group text.
+ *
+ * The code must match a pending code belonging to the resolved orgId (the
+ * sender's org — a group can only be claimed by members of the org that
+ * generated the code). On success the code is marked used, a groups row is
+ * created linking the group JID to the org, and a reply is sent.
+ */
+async function tryClaimGroupAuthCode(
+  admin: Awaited<ReturnType<typeof createAdminClient>>,
+  orgId: string | null,
+  groupId: string,
+  body: string,
+  phoneNumberId?: string,
+  mode?: "meta" | "waha",
+): Promise<{ ok: boolean; error?: string; linkedGroupId?: string | null }> {
+  if (!orgId) return { ok: false, error: "no org resolved" };
+
+  // Only exact code matches (trimmed). Codes look like "WN-A7F3K2".
+  const trimmed = body.trim();
+  if (!/^WN-[A-Z0-9]{6}$/i.test(trimmed)) return { ok: false, error: "not a code" };
+
+  // Find a pending code for this org that matches the body.
+  const { data: codeRow } = await admin
+    .from("whatsapp_group_auth_codes")
+    .select("id, code, status, expires_at")
+    .eq("org_id", orgId)
+    .eq("code", trimmed)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (!codeRow) return { ok: false, error: "no matching pending code" };
+  if (new Date(codeRow.expires_at) < new Date()) {
+    // Expired — mark it expired and reject.
+    await admin
+      .from("whatsapp_group_auth_codes")
+      .update({ status: "expired" })
+      .eq("id", codeRow.id);
+    return { ok: false, error: "code expired" };
+  }
+
+  // Fetch the real WhatsApp group subject first (Meta Graph API) so we have
+  // the actual group name to store alongside the code record. For WAHA we fall
+  // back to a JID-based name.
+  let groupName = `WhatsApp group ${groupId.slice(0, 12)}…`;
+  if (phoneNumberId) {
+    try {
+      const metaRes = await fetch(
+        `https://graph.facebook.com/v18.0/${phoneNumberId}/groups/${encodeURIComponent(groupId)}`,
+        { headers: { Authorization: `Bearer ${process.env.WHATSAPP_API_TOKEN ?? ""}` } },
+      );
+      if (metaRes.ok) {
+        const g = (await metaRes.json()) as { name?: string };
+        if (g.name) groupName = g.name;
+      }
+    } catch {
+      // fall through to JID-based name
+    }
+  }
+
+  // Mark the code used and record which group JID was claimed + the group name.
+  const now = new Date().toISOString();
+  const { error: codeErr } = await admin
+    .from("whatsapp_group_auth_codes")
+    .update({ status: "used", used_at: now, group_jid: groupId, group_name: groupName })
+    .eq("id", codeRow.id);
+  if (codeErr) return { ok: false, error: "failed to mark code used" };
+
+  // Create / link the groups row keyed by the group JID (external_id).
+  // onConflict on (org_id, external_id) ensures the same group can't be
+  // claimed twice for the same org — the upsert returns the existing row.
+  const { data: groupRes, error: groupErr } = await admin
+    .from("groups")
+    .insert({
+      org_id: orgId,
+      name: groupName,
+      platform: "whatsapp",
+      external_id: groupId,
+    })
+    .onConflict("(org_id, external_id)")
+    .select("id")
+    .single();
+  const linkedGroupId = groupErr ? null : (groupRes?.id ?? null);
+
+  console.log(`[whatsapp] claimed group ${groupId} for org ${orgId} via code ${codeRow.code}`);
+  return { ok: true, linkedGroupId };
 }
 
 /** Best-effort persistence of raw webhook payloads for the debug viewer. */
