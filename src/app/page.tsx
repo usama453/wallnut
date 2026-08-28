@@ -13,11 +13,11 @@ export default async function LandingPage() {
           <span className="text-lg font-semibold">AI Proof</span>
         </div>
         <nav className="flex items-center gap-4 text-sm">
-          <Link href="/dashboard" className="text-slate-400 hover:text-white">
-            Dashboard
+          <Link href="/login" className="text-slate-400 hover:text-white">
+            Sign in
           </Link>
           <Link
-            href="/dashboard"
+            href="/login"
             className="rounded-lg bg-indigo-500 px-4 py-2 font-medium hover:bg-indigo-400"
           >
             Get started
@@ -39,13 +39,13 @@ export default async function LandingPage() {
         </p>
         <div className="mt-8 flex items-center justify-center gap-3">
           <Link
-            href="/dashboard"
+            href="/login"
             className="rounded-lg bg-indigo-500 px-5 py-2.5 font-semibold hover:bg-indigo-400"
           >
             Start proofing free
           </Link>
           <Link
-            href="/dashboard"
+            href="/reports/d38a73564c"
             className="rounded-lg border border-slate-700 px-5 py-2.5 font-medium hover:border-slate-500"
           >
             See an example report
