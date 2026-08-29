@@ -22,23 +22,28 @@ export async function getDashboardData() {
     .maybeSingle();
 
   const orgId = profile?.org_id as string | undefined;
-  const orgName =
-    Array.isArray(profile?.organizations) && profile.organizations.length
-      ? (profile.organizations as { name: string }[])[0].name
-      : "My workspace";
+  const organization = Array.isArray(profile?.organizations)
+    ? (profile.organizations[0] as { name?: string } | undefined)
+    : (profile?.organizations as { name?: string } | null | undefined);
+  const orgName = organization?.name ?? "My workspace";
 
-  // Communication groups, org-scoped via RLS. Keep the "General" workspace
-  // catch-all plus real WhatsApp groups (@g.us); drop stray 1:1 chat rows
-  // (seeded as @lid entries) that aren't actual teams.
+  const { count: memberCount } = orgId
+    ? await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", orgId)
+    : { count: 0 };
+
+  // Communication groups are org-scoped via RLS. Include empty groups so a
+  // newly connected workspace does not disappear from the dashboard.
   const { data: groups } = await supabase
     .from("groups")
-    .select("id, name, platform, external_id, created_at")
-    .or("name.eq.General,external_id.like.%@g.us")
+    .select("id, org_id, name, platform, external_id, created_at")
     .order("created_at", { ascending: true });
 
   const { data: assets } = await supabase
     .from("assets")
-    .select("id, name, kind, status, created_at, slug, group_id")
+    .select("id, name, kind, status, created_at, created_by, slug, group_id")
     .order("created_at", { ascending: false })
     .limit(300);
 
@@ -48,11 +53,12 @@ export async function getDashboardData() {
         .from("asset_versions")
         .select("id, asset_id, version, url, preview_url")
         .in("asset_id", assetIds)
+        .order("version", { ascending: false })
     : { data: null };
 
   const versionByAsset = new Map<string, { id: string; url: string | null; preview_url: string | null }>();
   for (const v of versions ?? []) {
-    versionByAsset.set(v.asset_id, v);
+    if (!versionByAsset.has(v.asset_id)) versionByAsset.set(v.asset_id, v);
   }
 
   const versionIds = (versions ?? []).map((v) => v.id);
@@ -73,10 +79,52 @@ export async function getDashboardData() {
     issueByProof.set(i.proof_id, (issueByProof.get(i.proof_id) ?? 0) + 1);
   }
 
+  const visibleGroups = (groups ?? []).filter(
+    (group) =>
+      group.platform !== "whatsapp" ||
+      !group.external_id ||
+      group.name === "General" ||
+      group.external_id.endsWith("@g.us"),
+  );
   const byGroup = new Map<string, Group>();
-  for (const g of groups ?? []) byGroup.set(g.id, g as Group);
+  for (const g of visibleGroups) byGroup.set(g.id, g as Group);
+
+  const creatorIds = [
+    ...new Set(
+      (assets ?? [])
+        .map((asset) => asset.created_by as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const [{ data: creators }, { data: usageUploaders }] = await Promise.all([
+    creatorIds.length
+      ? supabase.from("profiles").select("id, full_name").in("id", creatorIds)
+      : Promise.resolve({ data: null }),
+    assetIds.length
+      ? supabase
+          .from("whatsapp_usage")
+          .select("asset_id, from_phone")
+          .in("asset_id", assetIds)
+          .eq("direction", "inbound")
+          .eq("msg_type", "proof")
+      : Promise.resolve({ data: null }),
+  ]);
+  const creatorName = new Map<string, string>();
+  for (const creator of creators ?? []) {
+    creatorName.set(creator.id, creator.full_name || "Workspace member");
+  }
+  const phoneByAsset = new Map<string, string>();
+  for (const usage of usageUploaders ?? []) {
+    if (usage.asset_id && usage.from_phone && !phoneByAsset.has(usage.asset_id)) {
+      phoneByAsset.set(usage.asset_id, usage.from_phone);
+    }
+  }
 
   const groupMap = new Map<string, GroupCard>();
+  for (const group of byGroup.values()) {
+    groupMap.set(group.id, { group, reports: [] });
+  }
+
   for (const a of assets ?? []) {
     const gid = a.group_id;
     if (!gid || !byGroup.has(gid)) continue;
@@ -93,10 +141,13 @@ export async function getDashboardData() {
       createdAt: a.created_at,
       slug: a.slug,
       groupId: gid,
+      uploader:
+        (a.created_by ? creatorName.get(a.created_by) : null) ??
+        phoneByAsset.get(a.id) ??
+        null,
     };
-    const card = groupMap.get(gid) ?? { group: byGroup.get(gid)!, reports: [] };
+    const card = groupMap.get(gid)!;
     card.reports.push(row);
-    groupMap.set(gid, card);
   }
 
   for (const card of groupMap.values()) {
@@ -111,6 +162,7 @@ export async function getDashboardData() {
     reports: allReports.length,
     filesChecked: allReports.filter((r) => r.score != null).length,
     issues: allReports.reduce((n, r) => n + r.issueCount, 0),
+    members: memberCount ?? 0,
   };
 
   const cards = [...groupMap.values()].sort((a, b) => {
@@ -124,7 +176,7 @@ export async function getDashboardData() {
   const { data: authCodes } = orgId
     ? await supabase
         .from("whatsapp_group_auth_codes")
-        .select("id, code, status, expires_at, claimed_at, group_jid, group_name, created_at")
+        .select("id, code, status, expires_at, used_at, group_jid, group_name, created_at")
         .eq("org_id", orgId)
     : { data: null };
 
@@ -140,7 +192,7 @@ export async function getDashboardData() {
       groupJid: c.group_jid ?? null,
       groupName: c.group_name ?? null,
       createdAt: c.created_at ?? null,
-      usedAt: c.claimed_at ?? null,
+      usedAt: c.used_at ?? null,
     };
   });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { canonicalChatId } from "@/lib/whatsapp/jid";
 
 /**
  * GET    /api/whatsapp/access → { mode, allowed[], recent[] }
@@ -30,7 +31,7 @@ export async function GET() {
     admin
       .from("whatsapp_seen_chats")
       .select("chat_id, label, message_count, last_message_at, org_id")
-      .or(`org_id.eq.${orgId},org_id.is.null`)
+      .eq("org_id", orgId)
       .order("last_message_at", { ascending: false })
       .limit(25),
   ]);
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
       case "add": {
         const chatId = String(body.chatId ?? "").trim();
         if (!chatId) return NextResponse.json({ error: "chatId required" }, { status: 400 });
-        const normalized = normalizeChatId(chatId);
+        const normalized = canonicalChatId(chatId);
         const { error } = await admin.from("whatsapp_allowlist").upsert(
           {
             org_id: orgId,
@@ -109,11 +110,4 @@ async function getOrgId(supabase: Awaited<ReturnType<typeof createClient>>, user
     .eq("id", userId)
     .maybeSingle();
   return profile?.org_id ?? null;
-}
-
-/** Accept bare numbers ("923345818677") or full JIDs; keep JIDs verbatim. */
-function normalizeChatId(raw: string): string {
-  if (raw.includes("@")) return raw;
-  const digits = raw.replace(/[^0-9]/g, "");
-  return `${digits}@s.whatsapp.net`;
 }

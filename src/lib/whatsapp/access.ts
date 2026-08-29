@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canonicalChatId } from "./jid";
 
 export interface WhatsAppAccessState {
   mode: "all" | "allowlist";
@@ -29,7 +30,15 @@ export async function loadAccessState(
       .from("whatsapp_allowlist")
       .select("chat_id")
       .eq("org_id", orgId);
-    return { mode, allowed: new Set((rows ?? []).map((r) => r.chat_id)) };
+    return {
+      mode,
+      allowed: new Set(
+        (rows ?? []).flatMap((row) => [
+          row.chat_id,
+          canonicalChatId(row.chat_id),
+        ]),
+      ),
+    };
   } catch {
     return OPEN_ACCESS;
   }
@@ -52,7 +61,12 @@ export async function trackSeenChat(
     if (existing) {
       await admin
         .from("whatsapp_seen_chats")
-        .update({ message_count: existing.message_count + 1, last_message_at: new Date().toISOString(), ...(label ? { label } : {}) })
+        .update({
+          message_count: existing.message_count + 1,
+          last_message_at: new Date().toISOString(),
+          ...(orgId ? { org_id: orgId } : {}),
+          ...(label ? { label } : {}),
+        })
         .eq("chat_id", chatId);
     } else {
       await admin.from("whatsapp_seen_chats").insert({

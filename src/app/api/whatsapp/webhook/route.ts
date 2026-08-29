@@ -1,57 +1,78 @@
 import { NextResponse } from "next/server";
 import { handleWhatsAppMessageEvent } from "@/lib/whatsapp/handlers";
-import { isWhatsAppEvent, verifySignature } from "@/lib/whatsapp/webhook";
+import {
+  constantTimeEqual,
+  isWhatsAppEvent,
+  verifyWahaWebhookHmac,
+} from "@/lib/whatsapp/webhook";
+import {
+  WAHA_API_KEY,
+  WAHA_SESSION,
+  WAHA_WEBHOOK_HMAC_KEY,
+} from "@/lib/whatsapp/config";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
-/**
- * WhatsApp Business Cloud API webhook.
- * GET  — webhook verification (hub.challenge)
- * POST — incoming messages / button callbacks
- */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const mode = searchParams.get("hub.mode");
-  const token = searchParams.get("hub.verify_token");
-  const challenge = searchParams.get("hub.challenge");
+/** WAHA webhook endpoint (HMAC or an exact custom X-Api-Key).
+ * GET  — unused (WAHA doesn't require webhook verification)
+ * POST — incoming messages and button callbacks */
 
-  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-    return new NextResponse(challenge, { status: 200 });
-  }
-  return new NextResponse("Verification failed", { status: 403 });
+export async function GET() {
+  // WAHA doesn't require webhook verification; return 200.
+  return new NextResponse("ok", { status: 200 });
 }
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
-  const signature = request.headers.get("x-hub-signature-256");
+  if (process.env.WHATSAPP_MOCK !== "1") {
+    if (!WAHA_WEBHOOK_HMAC_KEY && !WAHA_API_KEY) {
+      return NextResponse.json(
+        { error: "webhook authentication is not configured" },
+        { status: 503 },
+      );
+    }
 
-  // For WAHA mode, skip signature verification (WAHA uses API key auth)
-  const isWaha = request.headers.get("x-waha-signature") !== null || request.headers.get("x-api-key") !== null;
-  if (!isWaha) {
-    if (!verifySignature(rawBody, signature)) {
-      return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+    const validHmac = verifyWahaWebhookHmac(
+      rawBody,
+      request.headers.get("x-webhook-hmac"),
+      WAHA_WEBHOOK_HMAC_KEY,
+      request.headers.get("x-webhook-hmac-algorithm"),
+    );
+    const validApiKey = constantTimeEqual(
+      WAHA_API_KEY,
+      request.headers.get("x-api-key"),
+    );
+    if (!validHmac && !validApiKey) {
+      return NextResponse.json({ error: "invalid webhook signature" }, { status: 401 });
     }
   }
 
-  const payload = JSON.parse(rawBody);
-  if (!isWaha && !isWhatsAppEvent(payload)) {
-    return NextResponse.json({ ok: true });
+  let payload: any;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  // Events arrive in arrays; process each message event. Concurrent handling +
-  // the proof semaphore keeps bursts within the 60s function budget.
-  const events = isWaha
-    ? [payload] // WAHA sends single event per webhook
-    : payload.entry.flatMap((entry: any) =>
-        (entry.changes ?? []).filter((c: any) => c.field === "messages"),
-      );
-
-  const results = await Promise.allSettled(events.map((change: any) => handleWhatsAppMessageEvent(change, request.headers)));
-  for (const r of results) {
-    if (r.status === "rejected") console.error("[webhook-debug] handler rejected:", r.reason);
+  if (payload?.session && payload.session !== WAHA_SESSION) {
+    return NextResponse.json({ ok: true, handled: false, action: "ignored" });
+  }
+  if (!isWhatsAppEvent(payload)) {
+    return NextResponse.json({ ok: true, handled: false, action: "ignored" });
   }
 
-  // Always acknowledge immediately to avoid retries.
-  return NextResponse.json({ ok: true });
+  try {
+    const result = await handleWhatsAppMessageEvent(payload);
+    return NextResponse.json({
+      ok: true,
+      handled: result.handled,
+      action: result.action,
+    });
+  } catch (error) {
+    console.error(
+      `[whatsapp] webhook failed: ${error instanceof Error ? error.message : error}`,
+    );
+    return NextResponse.json({ error: "webhook processing failed" }, { status: 500 });
+  }
 }

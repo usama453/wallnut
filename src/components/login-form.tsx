@@ -1,203 +1,396 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { initialsFor } from "@/components/wallnut/avatar";
+import { BackIcon, GoogleIcon } from "@/components/wallnut/icons";
+import { Reveal } from "@/components/wallnut/reveal";
 
-export default function LoginForm() {
+type AuthMode = "signin" | "signup" | "magic";
+
+export interface LoginOrganization {
+  name: string;
+  slug: string;
+  accentColor: string;
+}
+
+export default function LoginForm({
+  organization = null,
+}: {
+  organization?: LoginOrganization | null;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/dashboard";
+  const requestedMode = searchParams.get("mode");
+  const initialMode: AuthMode =
+    requestedMode === "signup" || requestedMode === "magic"
+      ? requestedMode
+      : "signin";
+  const callbackError = searchParams.get("error");
+  const redirectTo = safePath(searchParams.get("redirect"), "/dashboard");
 
+  const [step, setStep] = useState<"email" | "credentials">("email");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signin" | "magic" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    callbackError ? callbackErrorMessage(callbackError) : null,
+  );
+
+  const workspaceLabel = organization?.name ?? "your private workspace";
+  const callbackUrl =
+    typeof window === "undefined"
+      ? ""
+      : buildCallbackUrl(window.location.origin, redirectTo, organization?.slug);
+
+  function continueWithEmail(event: React.FormEvent) {
+    event.preventDefault();
+    if (!email.trim() || !email.includes("@")) {
+      setError("Enter a valid work email.");
+      return;
+    }
+    setError(null);
+    setMessage(null);
+    setStep("credentials");
+  }
 
   async function handleGoogle() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}` },
+      options: { redirectTo: callbackUrl },
     });
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
     }
-    // On success the browser navigates away.
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleCredentials(event: React.FormEvent) {
+    event.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
-
     const supabase = createClient();
+
     try {
       if (mode === "magic") {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo: `${location.origin}/auth/callback` },
+        const { error: authError } = await supabase.auth.signInWithOtp({
+          email: email.trim(),
+          options: { emailRedirectTo: callbackUrl },
         });
-        if (error) throw error;
-        setMessage("Check your inbox for the magic link.");
-      } else if (mode === "signup") {
-        const { error, data } = await supabase.auth.signUp({
-          email,
+        if (authError) throw authError;
+        setMessage(`A secure sign-in link was sent to ${email.trim()}.`);
+        return;
+      }
+
+      if (mode === "signup") {
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: email.trim(),
           password,
-          options: { emailRedirectTo: `${location.origin}/auth/callback` },
+          options: { emailRedirectTo: callbackUrl },
         });
-        if (error) throw error;
+        if (authError) throw authError;
+
         if (data.session) {
-          setMessage("Account created. Enjoy your private workspace.");
+          await verifyOrganizationOrSignOut(supabase, organization?.slug);
           router.push(redirectTo);
           router.refresh();
         } else {
-          setMessage("Account created. Check your inbox to confirm your email, then sign in.");
+          setMessage(
+            organization
+              ? `Check ${email.trim()} to confirm your invited account for ${organization.name}.`
+              : `Check ${email.trim()} to confirm your account.`,
+          );
         }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        router.push(redirectTo);
-        router.refresh();
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (authError) throw authError;
+      await verifyOrganizationOrSignOut(supabase, organization?.slug);
+      router.push(redirectTo);
+      router.refresh();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to sign in. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <span className="mx-auto grid size-10 place-items-center rounded-lg bg-indigo-500 font-bold text-white">
-            A
-          </span>
-          <h1 className="mt-3 text-xl font-semibold">Welcome to AI Proof</h1>
-          <p className="text-sm text-slate-400">Quality gate for marketing assets</p>
-        </div>
+    <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden px-4 py-14">
+      <Link
+        href="/"
+        className="absolute left-[22px] top-[14px] flex items-center gap-1 text-[12px] text-[#919191] transition hover:text-white"
+      >
+        <BackIcon />
+        {organization ? "All organizations" : "Organizations"}
+      </Link>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/50 p-6"
-        >
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm font-medium hover:border-slate-500 disabled:opacity-50"
+      <div className="w-full max-w-[360px]">
+        <Reveal className="flex flex-col items-center" delayMs={60}>
+          <div
+            className="mb-4 flex size-11 items-center justify-center rounded-[10px] text-[14px] font-bold text-white"
+            style={{ background: organization?.accentColor ?? "#3d5a80" }}
           >
-            <svg className="size-4" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
-              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
-              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
-              <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.7l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
-            </svg>
-            Continue with Google
-          </button>
-
-          <div className="flex items-center gap-3 py-1">
-            <div className="h-px flex-1 bg-slate-800" />
-            <span className="text-xs text-slate-500">or</span>
-            <div className="h-px flex-1 bg-slate-800" />
+            {organization ? initialsFor(organization.name) : "W"}
           </div>
+          <h1 className="text-center text-[27px] font-bold leading-none tracking-[-0.72px] text-white">
+            {mode === "signup" && !organization ? "Create workspace" : "Sign in"}
+          </h1>
+          <p className="mt-2.5 text-center text-[12px] text-[#919191]">
+            {organization
+              ? `Continue to ${organization.name}`
+              : mode === "signup"
+                ? "Start a private Wallnut workspace"
+                : "Continue to Wallnut"}
+          </p>
+        </Reveal>
 
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-slate-800/60 p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setMode("signin")}
-              className={`rounded-md px-2 py-1.5 ${
-                mode === "signin" ? "bg-slate-700 font-medium" : "text-slate-400"
-              }`}
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              className={`rounded-md px-2 py-1.5 ${
-                mode === "signup" ? "bg-slate-700 font-medium" : "text-slate-400"
-              }`}
-            >
-              Create
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("magic")}
-              className={`rounded-md px-2 py-1.5 ${
-                mode === "magic" ? "bg-slate-700 font-medium" : "text-slate-400"
-              }`}
-            >
-              Magic link
-            </button>
-          </div>
-
-          <label className="block">
-            <span className="text-xs text-slate-400">Email</span>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
-            />
-          </label>
-
-          {mode !== "magic" && (
-            <label className="block">
-              <span className="text-xs text-slate-400">
-                {mode === "signup" ? "Password (min 6 characters)" : "Password"}
-              </span>
+        {step === "email" ? (
+          <Reveal delayMs={180}>
+            <form onSubmit={continueWithEmail} className="mt-8 flex flex-col gap-3">
+              <label htmlFor="login-email" className="text-[11px] text-[#919191]">
+                Work email
+              </label>
               <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setError(null);
+                }}
+                placeholder="you@company.com"
+                className="w-full rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-3 text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#3a3a3a] focus:outline-none"
               />
-            </label>
-          )}
+              {error ? <AuthNotice tone="error">{error}</AuthNotice> : null}
+              <button
+                type="submit"
+                className="w-full rounded-[8px] bg-[#fbfbfb] py-3 text-[13px] font-bold text-black transition hover:bg-[#e8e8e8]"
+              >
+                Continue with email
+              </button>
+            </form>
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
-          {message && <p className="text-xs text-emerald-400">{message}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-500 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
-          >
-            {loading ? "Please wait…" : mode === "magic" ? "Send magic link" : mode === "signup" ? "Create account" : "Sign in"}
-          </button>
-
-          {mode === "signin" && (
-            <p className="pt-1 text-center text-xs text-slate-500">
-              New here?{" "}
+            <Divider />
+            <GoogleButton loading={loading} onClick={handleGoogle} />
+          </Reveal>
+        ) : (
+          <Reveal delayMs={40}>
+            <form onSubmit={handleCredentials} className="mt-8">
               <button
                 type="button"
-                onClick={() => setMode("signup")}
-                className="text-indigo-400 hover:text-indigo-300"
+                onClick={() => {
+                  setStep("email");
+                  setPassword("");
+                  setError(null);
+                  setMessage(null);
+                }}
+                className="mb-4 flex w-full items-center justify-between rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-2.5 text-left"
               >
-                Create an account
+                <span className="truncate text-[12px] text-[#d0d0d0]">{email}</span>
+                <span className="ml-3 text-[11px] text-[#6c6c6c]">Change</span>
               </button>
-            </p>
-          )}
-          {mode === "signup" && (
-            <p className="pt-1 text-center text-xs text-slate-500">
-              Your account gets its own private workspace.
-            </p>
-          )}
-        </form>
+
+              <div className="mb-5 grid grid-cols-3 gap-1 rounded-[8px] bg-[#101010] p-1">
+                {(
+                  [
+                    ["signin", "Sign in"],
+                    ["signup", "Create"],
+                    ["magic", "Magic link"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setMode(value);
+                      setError(null);
+                      setMessage(null);
+                    }}
+                    className={`rounded-[6px] px-2 py-2 text-[11px] transition ${
+                      mode === value
+                        ? "bg-[#262626] font-bold text-white"
+                        : "text-[#6c6c6c] hover:text-[#bdbdbd]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {mode !== "magic" ? (
+                <label className="block">
+                  <span className="text-[11px] text-[#919191]">
+                    {mode === "signup" ? "Password (minimum 6 characters)" : "Password"}
+                  </span>
+                  <input
+                    type="password"
+                    required
+                    minLength={mode === "signup" ? 6 : undefined}
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    autoFocus
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      setError(null);
+                    }}
+                    className="mt-2 w-full rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-3 text-[13px] text-[#fbfbfb] focus:border-[#3a3a3a] focus:outline-none"
+                  />
+                </label>
+              ) : (
+                <p className="rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-3 text-[12px] leading-relaxed text-[#919191]">
+                  We’ll email you a one-time sign-in link. No password required.
+                </p>
+              )}
+
+              {mode === "signup" && organization ? (
+                <p className="mt-3 text-[11px] leading-relaxed text-[#6c6c6c]">
+                  Use the email address that was invited to {organization.name}.
+                </p>
+              ) : null}
+
+              {error ? <AuthNotice tone="error">{error}</AuthNotice> : null}
+              {message ? <AuthNotice tone="success">{message}</AuthNotice> : null}
+
+              <button
+                type="submit"
+                disabled={loading || Boolean(message)}
+                className="mt-4 w-full rounded-[8px] bg-[#fbfbfb] py-3 text-[13px] font-bold text-black transition hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading
+                  ? "Please wait…"
+                  : mode === "magic"
+                    ? "Send magic link"
+                    : mode === "signup"
+                      ? organization
+                        ? "Create invited account"
+                        : "Create private workspace"
+                      : "Sign in"}
+              </button>
+            </form>
+
+            <Divider />
+            <GoogleButton loading={loading} onClick={handleGoogle} />
+          </Reveal>
+        )}
+
+        {organization ? (
+          <p className="mt-7 text-center text-[11px] leading-relaxed text-[#555]">
+            Access is limited to members invited to {workspaceLabel}.
+          </p>
+        ) : null}
       </div>
     </main>
   );
+}
+
+function Divider() {
+  return (
+    <div className="my-4 flex items-center gap-2.5">
+      <span className="h-px flex-1 bg-[#1b1b1b]" />
+      <span className="text-[11px] text-[#6c6c6c]">or</span>
+      <span className="h-px flex-1 bg-[#1b1b1b]" />
+    </div>
+  );
+}
+
+function GoogleButton({
+  loading,
+  onClick,
+}: {
+  loading: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#1b1b1b] bg-[#101010] py-3 text-[13px] font-bold text-[#fbfbfb] transition hover:bg-[#161616] disabled:opacity-50"
+    >
+      <GoogleIcon />
+      Continue with Google
+    </button>
+  );
+}
+
+function AuthNotice({
+  tone,
+  children,
+}: {
+  tone: "error" | "success";
+  children: React.ReactNode;
+}) {
+  return (
+    <p
+      role={tone === "error" ? "alert" : "status"}
+      className={`mt-3 rounded-[7px] border px-3 py-2 text-[11px] leading-relaxed ${
+        tone === "error"
+          ? "border-red-950 bg-red-950/20 text-[#e8b4b4]"
+          : "border-emerald-950 bg-emerald-950/20 text-[#a7d7bd]"
+      }`}
+    >
+      {children}
+    </p>
+  );
+}
+
+function safePath(value: string | null, fallback: string) {
+  return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
+}
+
+function buildCallbackUrl(origin: string, next: string, org?: string) {
+  const params = new URLSearchParams({ next });
+  if (org) params.set("org", org);
+  return `${origin}/auth/callback?${params.toString()}`;
+}
+
+function callbackErrorMessage(error: string) {
+  if (error === "wrong_org") {
+    return "This account does not have access to the selected organization.";
+  }
+  if (error === "profile_not_ready") {
+    return "Your workspace membership is still being prepared. Try again in a moment.";
+  }
+  return "The sign-in link could not be completed. Please try again.";
+}
+
+async function verifyOrganizationOrSignOut(
+  supabase: ReturnType<typeof createClient>,
+  expectedSlug?: string,
+) {
+  if (!expectedSlug) return;
+
+  const response = await fetch("/api/me", {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const body = await response.json().catch(() => null);
+  const actualSlug = body?.organization?.slug as string | undefined;
+
+  if (!response.ok || !actualSlug) {
+    await supabase.auth.signOut();
+    throw new Error("Your workspace membership is not ready yet. Please try again.");
+  }
+
+  if (actualSlug !== expectedSlug) {
+    await supabase.auth.signOut();
+    throw new Error("This account does not have access to the selected organization.");
+  }
 }

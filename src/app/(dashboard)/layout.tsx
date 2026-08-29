@@ -1,5 +1,6 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Sidebar } from "@/components/sidebar";
+import { AppHeader } from "@/components/wallnut/app-header";
 
 export default async function DashboardLayout({
   children,
@@ -8,42 +9,33 @@ export default async function DashboardLayout({
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 
-  let user = null;
-  let profile = null;
-  if (supabaseConfigured) {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("full_name, org_id, organizations(name)")
-      .eq("id", user?.id ?? "")
-      .maybeSingle();
-    profile = profileData;
-  }
+  if (!supabaseConfigured) redirect("/");
 
-  const orgName =
-    Array.isArray(profile?.organizations) && profile.organizations.length
-      ? (profile.organizations as { name: string }[])[0].name
-      : "My workspace";
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  if (!user) redirect("/");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, org_id, organizations(name)")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const organization = Array.isArray(profile?.organizations)
+    ? (profile.organizations[0] as { name?: string } | undefined)
+    : (profile?.organizations as { name?: string } | null | undefined);
+  const orgName = organization?.name ?? "My workspace";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-black text-zinc-200">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 items-center justify-between border-b border-zinc-800 bg-zinc-950/60 px-6">
-          <div className="text-sm text-zinc-400">{orgName}</div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-400">
-              {profile?.full_name ?? user?.email}
-            </span>
-            <span className="grid size-7 place-items-center rounded-full bg-zinc-800 text-xs font-semibold text-zinc-200">
-              {(profile?.full_name?.[0] ?? user?.email?.[0] ?? "?").toUpperCase()}
-            </span>
-          </div>
-        </header>
-        <main className="thin-scroll flex-1 overflow-y-auto px-6 py-6">{children}</main>
-      </div>
+    <div className="min-h-screen bg-black text-[#fbfbfb]">
+      <AppHeader
+        authenticated
+        orgName={orgName}
+        userName={profile?.full_name}
+        userEmail={user.email}
+      />
+      <main className="min-h-[calc(100vh-3.5rem)] px-4 py-6 sm:px-6">{children}</main>
     </div>
   );
 }

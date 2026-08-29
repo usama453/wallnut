@@ -13,7 +13,7 @@ export function ScoreRing({ score, size = 96 }: { score: number; size?: number }
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke="#1e2533"
+          stroke="#242424"
           strokeWidth="8"
           fill="none"
         />
@@ -29,25 +29,25 @@ export function ScoreRing({ score, size = 96 }: { score: number; size?: number }
         />
       </svg>
       <div className="absolute text-center">
-        <div className="text-2xl font-bold leading-none">{score}</div>
-        <div className="text-[10px] uppercase tracking-wide text-slate-500">/ 100</div>
+        <div className="text-2xl font-bold leading-none text-[#fbfbfb]">{score}</div>
+        <div className="text-[9px] uppercase tracking-wide text-[#6c6c6c]">/ 100</div>
       </div>
     </div>
   );
 }
 
 const STATUS_STYLES: Record<AssetStatus, string> = {
-  draft: "bg-slate-700 text-slate-200",
-  in_review: "bg-blue-500/15 text-blue-300",
-  changes_requested: "bg-red-500/15 text-red-300",
-  approved: "bg-emerald-500/15 text-emerald-300",
-  published: "bg-indigo-500/15 text-indigo-300",
+  draft: "border-[#343434] bg-[#242424] text-[#bdbdbd]",
+  in_review: "border-blue-900/70 bg-blue-500/10 text-blue-300",
+  changes_requested: "border-red-900/70 bg-red-500/10 text-red-300",
+  approved: "border-emerald-900/70 bg-emerald-500/10 text-emerald-300",
+  published: "border-violet-900/70 bg-violet-500/10 text-violet-300",
 };
 
 export function StatusBadge({ status }: { status: AssetStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize ${STATUS_STYLES[status]}`}
     >
       {status.replace("_", " ")}
     </span>
@@ -55,23 +55,23 @@ export function StatusBadge({ status }: { status: AssetStatus }) {
 }
 
 const PROOF_STYLES: Record<ProofStatus, string> = {
-  passed: "bg-emerald-500/15 text-emerald-300",
-  needs_review: "bg-amber-500/15 text-amber-300",
-  errors: "bg-red-500/15 text-red-300",
+  passed: "border-emerald-900/70 bg-emerald-500/10 text-emerald-300",
+  needs_review: "border-amber-900/70 bg-amber-500/10 text-amber-300",
+  errors: "border-red-900/70 bg-red-500/10 text-red-300",
 };
 
 export function ProofBadge({ status }: { status: ProofStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PROOF_STYLES[status]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-medium ${PROOF_STYLES[status]}`}
     >
-      {status === "passed" ? "✅ Passed" : status === "needs_review" ? "⚠ Needs review" : "❌ Errors"}
+      {status === "passed" ? "Passed" : status === "needs_review" ? "Needs review" : "Errors"}
     </span>
   );
 }
 
 const SEVERITY_STYLES: Record<Severity, string> = {
-  low: "bg-slate-700 text-slate-300",
+  low: "bg-[#292929] text-[#bdbdbd]",
   medium: "bg-amber-500/15 text-amber-300",
   high: "bg-red-500/15 text-red-300",
 };
@@ -88,7 +88,7 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
 
 export function CategoryBadge({ category }: { category: string }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
+    <span className="inline-flex items-center rounded-full bg-[#242424] px-2 py-0.5 text-[10px] text-[#bdbdbd]">
       {category}
     </span>
   );

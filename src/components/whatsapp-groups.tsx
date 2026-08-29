@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { PlatformIcon } from "@/components/wallnut/icons";
 
 interface AuthCode {
   id: string;
   code: string;
   status: string;
   isExpired: boolean;
-  expiresAt: string;
+  expiresAt: string | null;
   groupJid: string | null;
   groupName: string | null;
-  createdAt: string;
+  createdAt: string | null;
   usedAt: string | null;
 }
 
@@ -27,208 +28,181 @@ export function WhatsAppGroups({ codes: serverCodes }: { codes: AuthCode[] }) {
   const [newCode, setNewCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ role: string } | null>(null);
-
   const isAdmin = profile?.role === "owner" || profile?.role === "admin";
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const profileRes = await fetch("/api/me");
-      if (profileRes.ok) setProfile(await profileRes.json());
-      const groupsRes = await fetch("/api/whatsapp/groups");
-      if (groupsRes.ok) {
-        const d = await groupsRes.json();
-        setLinkedGroups(d.groups ?? []);
+      const [profileResponse, groupsResponse] = await Promise.all([
+        fetch("/api/me", { cache: "no-store" }),
+        fetch("/api/whatsapp/groups", { cache: "no-store" }),
+      ]);
+      if (profileResponse.ok) setProfile(await profileResponse.json());
+      if (groupsResponse.ok) {
+        const data = await groupsResponse.json();
+        setLinkedGroups(data.groups ?? []);
       }
     } catch {
-      setError("Failed to load linked groups");
+      setError("Failed to load linked groups.");
     }
-  };
+  }, []);
 
-  useState(() => { loadData(); });
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
-  const handleCreateCode = async () => {
+  async function handleCreateCode() {
     if (!isAdmin) return;
     setGenerating(true);
     setError(null);
     try {
-      const res = await fetch("/api/whatsapp/groups", {
+      const response = await fetch("/api/whatsapp/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "create" }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Failed to create code");
-        return;
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Failed to create code");
       setNewCode(data.code);
-      loadData();
-    } catch {
-      setError("Network error");
+      await loadData();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Network error");
     } finally {
       setGenerating(false);
     }
-  };
-
-  const formatDate = (s: string) =>
-    new Date(s).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-200">
-            WhatsApp Groups
-          </h2>
-          <p className="text-xs text-slate-500">
-            Link WhatsApp groups to this workspace using one-time auth codes.
-          </p>
-        </div>
-        {isAdmin && (
-          <button
-            onClick={handleCreateCode}
-            disabled={generating}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white transition hover:bg-indigo-500 disabled:opacity-50"
-          >
-            {generating ? "Creating…" : "Create auth code"}
-          </button>
-        )}
-      </div>
+    <details className="overflow-hidden rounded-[8px] border border-[#1b1b1b] bg-[#0b0b0b]">
+      <summary className="flex list-none items-center justify-between gap-4 px-4 py-3 transition hover:bg-[#121212] [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2">
+          <PlatformIcon platform="whatsapp" />
+          <span className="truncate text-[12px] font-bold text-[#d0d0d0]">
+            WhatsApp group connections
+          </span>
+        </span>
+        <span className="shrink-0 text-[11px] text-[#6c6c6c]">
+          {linkedGroups.length} linked · Configure
+        </span>
+      </summary>
 
-      {newCode && (
-        <div className="rounded-lg border border-emerald-700 bg-emerald-900/30 p-4">
-          <p className="text-sm text-emerald-300">
-            Your code:{" "}
-            <span className="font-mono text-xl tracking-wider text-emerald-200">
-              {newCode}
-            </span>
+      <div className="border-t border-[#1b1b1b] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <p className="max-w-lg text-[11px] leading-relaxed text-[#6c6c6c]">
+            Link a WhatsApp group by creating a one-time code and pasting it into
+            the group conversation.
           </p>
-          <p className="mt-1 text-xs text-emerald-400/70">
-            Paste this inside the WhatsApp group you want to link. The bot will
-            detect it and connect the group to your workspace.
-          </p>
-          <button
-            onClick={() => setNewCode(null)}
-            className="mt-3 float-right text-xs text-emerald-400 hover:text-emerald-300"
-          >
-            Dismiss
-          </button>
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={handleCreateCode}
+              disabled={generating}
+              className="rounded-[7px] bg-[#fbfbfb] px-3 py-2 text-[11px] font-bold text-black transition hover:bg-[#e8e8e8] disabled:opacity-50"
+            >
+              {generating ? "Creating…" : "Create auth code"}
+            </button>
+          ) : null}
         </div>
-      )}
 
-      {error && (
-        <div className="rounded-lg border border-red-700 bg-red-900/30 p-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
+        {newCode ? (
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-[8px] border border-emerald-950 bg-emerald-950/20 p-3">
+            <div>
+              <p className="text-[10px] text-emerald-400/70">Paste this code in WhatsApp</p>
+              <p className="mt-1 font-mono text-xl tracking-[0.18em] text-emerald-200">
+                {newCode}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNewCode(null)}
+              className="text-[11px] text-emerald-400/70 hover:text-emerald-300"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
 
-      {/* Linked groups */}
-      <div>
-        <h3 className="mb-2 text-sm font-medium text-slate-300">
-          Linked groups (
-          {linkedGroups.length})
-        </h3>
-        {linkedGroups.length === 0 ? (
-          <p className="text-xs text-slate-500">
-            No groups linked yet. Create an auth code above and paste it in your
-            WhatsApp group.
+        {error ? (
+          <p role="alert" className="mt-4 text-[11px] text-[#e8b4b4]">
+            {error}
           </p>
-        ) : (
-          <div className="space-y-2">
-            {linkedGroups.map((g) => (
+        ) : null}
+
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <ConnectionList title="Linked groups" empty="No WhatsApp groups linked yet.">
+            {linkedGroups.map((group) => (
               <div
-                key={g.id}
-                className="rounded-lg border border-slate-700 bg-slate-800/50 p-3"
+                key={group.id}
+                className="rounded-[7px] border border-[#202020] bg-[#101010] px-3 py-2.5"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-200">{g.name}</p>
-                    <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      {g.external_id}
-                    </p>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-600">
-                    {formatDate(g.created_at)}
-                  </span>
-                </div>
+                <p className="truncate text-[12px] font-medium text-[#d0d0d0]">
+                  {group.name}
+                </p>
+                <p className="mt-1 truncate font-mono text-[9px] text-[#555]">
+                  {group.external_id}
+                </p>
               </div>
             ))}
-          </div>
-        )}
-      </div>
+          </ConnectionList>
 
-      {/* Auth codes */}
-      <div>
-        <h3 className="mb-2 text-sm font-medium text-slate-300">
-          Auth codes ({serverCodes.length})
-        </h3>
-        {serverCodes.length === 0 ? (
-          <p className="text-xs text-slate-500">
-            No codes generated yet.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {serverCodes.map((c) => {
-              const statusColor =
-                c.status === "used"
+          <ConnectionList title="Auth codes" empty="No auth codes generated yet.">
+            {serverCodes.map((code) => {
+              const expired = code.status === "expired" || code.isExpired;
+              const tone =
+                code.status === "used"
                   ? "text-emerald-400"
-                  : c.status === "expired" || c.isExpired
-                  ? "text-red-400"
-                  : "text-yellow-400";
-              const statusLabel =
-                c.status === "used"
-                  ? "Used"
-                  : c.status === "expired" || c.isExpired
-                  ? "Expired"
-                  : "Pending";
+                  : expired
+                    ? "text-red-400"
+                    : "text-amber-300";
               return (
                 <div
-                  key={c.id}
-                  className="rounded-lg border border-slate-700 bg-slate-800/50 p-3"
+                  key={code.id}
+                  className="flex items-center justify-between gap-3 rounded-[7px] border border-[#202020] bg-[#101010] px-3 py-2.5"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span
-                        className={`font-mono text-lg tracking-wider ${statusColor}`}
-                      >
-                        {c.code}
-                      </span>
-                      {c.groupName && (
-                        <p className="mt-1 text-xs text-slate-400 truncate max-w-[200px]">
-                          → {c.groupName}
-                          {c.groupJid ? ` (${c.groupJid.slice(0, 12)}…)` : ""}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-xs ${statusColor}`}>
-                        {statusLabel}
-                      </span>
-                      <p className="text-[10px] text-slate-600 mt-0.5">
-                        {formatDate(c.createdAt)}
-                        {c.expiresAt && (
-                          <> → {formatDate(c.expiresAt)}</>
-                        )}
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <p className={`font-mono text-[13px] tracking-wider ${tone}`}>{code.code}</p>
+                    {code.groupName ? (
+                      <p className="mt-1 truncate text-[9px] text-[#555]">{code.groupName}</p>
+                    ) : null}
                   </div>
+                  <span className={`text-[9px] uppercase tracking-wider ${tone}`}>
+                    {code.status === "used" ? "Used" : expired ? "Expired" : "Pending"}
+                  </span>
                 </div>
               );
             })}
-          </div>
-        )}
-      </div>
+          </ConnectionList>
+        </div>
 
-      {!isAdmin && (
-        <p className="text-xs text-slate-500">
-          Only owners and admins can create auth codes.
-        </p>
+        {!isAdmin ? (
+          <p className="mt-4 text-[10px] text-[#555]">
+            Only workspace owners and admins can create codes.
+          </p>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
+function ConnectionList({
+  title,
+  empty,
+  children,
+}: {
+  title: string;
+  empty: string;
+  children: React.ReactNode;
+}) {
+  const items = Array.isArray(children) ? children : [children];
+  return (
+    <section>
+      <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
+        {title}
+      </h3>
+      {items.length > 0 ? (
+        <div className="space-y-2">{children}</div>
+      ) : (
+        <p className="py-3 text-[11px] text-[#555]">{empty}</p>
       )}
-    </div>
+    </section>
   );
 }

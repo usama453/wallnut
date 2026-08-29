@@ -1,0 +1,142 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { InitialAvatar } from "./avatar";
+
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Overview" },
+  { href: "/upload", label: "Upload" },
+  { href: "/connect", label: "Connect" },
+  { href: "/stats", label: "Rankings" },
+  { href: "/usage", label: "Usage" },
+  { href: "/brand", label: "Brand profile" },
+  { href: "/team", label: "Team" },
+  { href: "/settings", label: "Settings" },
+] as const;
+
+export function AppHeader({
+  authenticated = false,
+  orgName,
+  userName,
+  userEmail,
+}: {
+  authenticated?: boolean;
+  orgName?: string | null;
+  userName?: string | null;
+  userEmail?: string | null;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  async function logOut() {
+    setLoggingOut(true);
+    await createClient().auth.signOut();
+    router.replace("/");
+    router.refresh();
+  }
+
+  return (
+    <header className="relative z-40 flex h-14 shrink-0 items-center justify-between bg-black/90 px-[22px] backdrop-blur-md">
+      <Link
+        href={authenticated ? "/dashboard" : "/"}
+        className="text-[12px] font-bold leading-none text-white transition-opacity hover:opacity-75"
+      >
+        Wallnut
+      </Link>
+
+      {!authenticated ? (
+        <span className="text-[12px] text-[#6c6c6c]">Public</span>
+      ) : (
+        <div ref={menuRef} className="relative">
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-label="Open account and navigation menu"
+            onClick={() => setOpen((value) => !value)}
+            className="flex items-center gap-2 rounded-full text-left text-[12px] text-[#919191] transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+          >
+            <span className="hidden max-w-44 truncate sm:block">{orgName}</span>
+            <InitialAvatar label={userName || userEmail} size={28} />
+          </button>
+
+          {open ? (
+            <div
+              role="menu"
+              className="absolute right-0 top-[38px] w-[248px] overflow-hidden rounded-[10px] border border-[#242424] bg-[#101010] shadow-[0_24px_60px_rgba(0,0,0,0.7)] wallnut-reveal"
+            >
+              <div className="border-b border-[#222] px-4 py-3">
+                <p className="truncate text-[12px] font-bold text-[#fbfbfb]">
+                  {userName || userEmail || "Account"}
+                </p>
+                {userName && userEmail ? (
+                  <p className="mt-1 truncate text-[11px] text-[#6c6c6c]">{userEmail}</p>
+                ) : null}
+                <p className="mt-1 truncate text-[11px] text-[#919191]">{orgName}</p>
+              </div>
+
+              <nav className="grid grid-cols-2 gap-1 p-2" aria-label="Workspace">
+                {NAV_ITEMS.map((item) => {
+                  const active =
+                    item.href === "/dashboard"
+                      ? pathname === item.href
+                      : pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      role="menuitem"
+                      href={item.href}
+                      className={`rounded-[7px] px-3 py-2 text-[12px] transition ${
+                        active
+                          ? "bg-[#202020] font-bold text-white"
+                          : "text-[#919191] hover:bg-[#181818] hover:text-white"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="border-t border-[#222] p-2">
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={loggingOut}
+                  onClick={logOut}
+                  className="w-full rounded-[7px] px-3 py-2 text-left text-[12px] text-[#919191] transition hover:bg-[#181818] hover:text-white disabled:opacity-50"
+                >
+                  {loggingOut ? "Logging out…" : "Log out"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </header>
+  );
+}

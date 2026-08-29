@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "AI Proof — Marketing Asset Quality Gate",
+  title: {
+    default: "Wallnut",
+    template: "%s · Wallnut",
+  },
   description:
-    "AI-powered proofreading and QA for marketing assets. Catch mistakes before you publish or print.",
+    "Proofreading and quality assurance for every asset your team shares.",
 };
 
 export default function RootLayout({
@@ -12,7 +22,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.variable}>{children}</body>
     </html>
   );
 }

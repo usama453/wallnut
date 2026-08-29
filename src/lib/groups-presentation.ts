@@ -11,6 +11,7 @@ export interface ReportRow {
   createdAt: string;
   slug: string | null;
   groupId: string;
+  uploader: string | null;
 }
 
 export interface GroupCard {

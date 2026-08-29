@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { BUCKET } from "@/lib/proof/runProof";
 import { randomBytes, randomUUID } from "crypto";
+import { whatsappGroupIdVariants } from "@/lib/whatsapp/jid";
 
 export interface CreatedAssetVersion {
   assetId: string;
@@ -33,8 +34,9 @@ export async function createAssetVersionFromBytes(args: {
     const { data: groupRow } = await admin
       .from("groups")
       .select("id")
-      .eq("external_id", args.lookupGroupId)
+      .in("external_id", whatsappGroupIdVariants(args.lookupGroupId))
       .eq("platform", "whatsapp")
+      .limit(1)
       .maybeSingle();
     resolvedGroupId = groupRow?.id ?? null;
   }

@@ -1,46 +1,18 @@
-/**
- * Meta / WhatsApp tech-provider configuration.
- * App id + secret come from the Meta Developer app. The legacy env names
- * (WHATSAPP_APP_SECRET) are kept so existing setups keep working.
- */
+/** WhatsApp (WAHA) configuration.
+ * The bot runs exclusively in WAHA (Baileys) mode. No Meta / Cloud API. */
 
-export const FB_APP_ID = process.env.FB_APP_ID ?? "";
-export const FB_APP_SECRET =
-  process.env.FB_APP_SECRET ?? process.env.WHATSAPP_APP_SECRET ?? "";
-export const GRAPH_API_VERSION = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
-/** 6-digit PIN used to register WhatsApp phone numbers. */
-export const FB_REG_PIN = process.env.FB_REG_PIN ?? "";
-/** Tech Provider Configuration id (created in the Meta Developer Dashboard). */
-export const TP_CONFIG_ID = process.env.TP_CONFIG_ID ?? "";
-export const TP_CONTACT_EMAIL = process.env.TP_CONTACT_EMAIL ?? "";
-export const REDIRECT_URI =
-  process.env.FB_REDIRECT_URI ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
-export const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
-
-/* ============================================================================
- * WAHA Configuration (used when mode === "waha")
- * ============================================================================ */
-
+/** WAHA API base URL. */
 export const WAHA_BASE_URL = process.env.WAHA_BASE_URL ?? "http://localhost:3000";
+/** WAHA API key (X-Api-Key header). */
 export const WAHA_API_KEY = process.env.WAHA_API_KEY ?? "";
+/** WAHA session name. */
 export const WAHA_SESSION = process.env.WAHA_SESSION ?? "default";
+/** HMAC key configured for WAHA webhook delivery. */
+export const WAHA_WEBHOOK_HMAC_KEY =
+  process.env.WAHA_WEBHOOK_HMAC_KEY ??
+  process.env.WHATSAPP_HOOK_HMAC_KEY ??
+  "";
 
 /** The bot's own WhatsApp number (with country code, no +).
- * Used in Waha mode where the webhook `from` field is the sender, not the bot.
- * In Meta mode the bot number comes from webhook metadata instead.
  * e.g. 923345818677 */
 export const BOT_PHONE_NUMBER = process.env.BOT_PHONE_NUMBER ?? "";
-
-/* ============================================================================
- * WA/Meta mode switch (shared by client toggle + server webhook routing)
- * ============================================================================ */
-
-export type Wamode = "meta" | "waha";
-
-/** Server-safe: read the wallnut_wamode cookie from request headers. */
-export function getServerWamode(headers: Headers): Wamode {
-  const cookie = headers.get("cookie") ?? "";
-  const match = cookie.match(/wallnut_wamode=(meta|waha)/);
-  return (match?.[1] as Wamode) ?? "meta";
-}

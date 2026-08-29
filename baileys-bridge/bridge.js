@@ -1,19 +1,16 @@
 /**
  * Baileys Bridge — WAHA-compatible WhatsApp HTTP API without a browser.
  *
- * Implements the subset of WAHA endpoints used by Wallnut's WhatsApp client
- * (src/lib/whatsapp/client.ts) so the Next.js app needs zero changes:
+ * Implements the subset of WAHA endpoints used by Wallnut:
  *
  *   POST /api/default/auth/request-code  {phoneNumber}        -> {code}
- *   GET  /api/sessions/default                            -> status JSON
- *   POST /api/sendText      {session, chatId, text}       -> {id}
+ *   GET  /api/sessions/default                               -> status JSON
+ *   GET  /api/default/auth/qr                                -> QR image
+ *   POST /api/sendText      {session, chatId, text}          -> {id}
  *   POST /api/sendButtons   {session, chatId, body, buttons[]} -> {id}
- *   GET  /api/media/:mediaId                             -> {url, mimeType}
- *   GET  /api/files/:mediaId                             -> raw bytes
+ *   GET  /api/files/:mediaId                                -> raw bytes
  *
- * Inbound messages are forwarded to WEBHOOK_URL as single-event payloads
- * shaped for src/app/api/whatsapp/webhook/route.ts (waha mode), including
- * the wallnut_wamode=waha cookie the mode detector expects.
+ * Inbound messages use WAHA's `{event, session, payload}` webhook envelope.
  */
 const http = require("http");
 const crypto = require("crypto");
@@ -30,7 +27,7 @@ const {
 } = require("@whiskeysockets/baileys");
 
 const PORT = Number(process.env.BRIDGE_PORT || 3001);
-const API_KEY = process.env.WAHA_API_KEY || "wallnut-waha-key-2026";
+const API_KEY = process.env.WAHA_API_KEY || "";
 const SESSION = process.env.WAHA_SESSION || "default";
 const WEBHOOK_URL =
   process.env.WEBHOOK_URL || "http://localhost:3000/api/whatsapp/webhook";
@@ -54,6 +51,9 @@ let status = "STARTING";
 let me = null;
 let latestQr = null;
 let pairingCodePromise = null;
+let reconnectTimer = null;
+let startingPromise = null;
+let socketGeneration = 0;
 /** mediaId -> {buffer, mimetype, filename} */
 const mediaStore = new Map();
 /** msgId -> original WAMessage, kept so outbound sends can quote-reply. */
@@ -89,9 +89,24 @@ function digitsOf(jid) {
 }
 
 async function startSocket() {
+  if (startingPromise) return startingPromise;
+  startingPromise = createSocket();
+  try {
+    return await startingPromise;
+  } finally {
+    startingPromise = null;
+  }
+}
+
+async function createSocket() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  const generation = ++socketGeneration;
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
-  sock = makeWASocket({
+  const nextSocket = makeWASocket({
     version,
     auth: state,
     printQRInTerminal: false,
@@ -99,23 +114,34 @@ async function startSocket() {
     markOnlineOnConnect: false,
     syncFullHistory: false,
   });
+  sock = nextSocket;
 
-  sock.ev.on("creds.update", saveCreds);
+  nextSocket.ev.on("creds.update", (update) => {
+    if (generation === socketGeneration) return saveCreds(update);
+  });
 
-  sock.ev.on("connection.update", async (update) => {
+  nextSocket.ev.on("connection.update", async (update) => {
+    if (generation !== socketGeneration) return;
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
       latestQr = qr;
-      console.log("[bridge] QR received — scan /api/default/auth/qr or use the pairing-code endpoint.");
+      status = "SCAN_QR_CODE";
+      console.log(
+        `[bridge] QR received — scan /api/${SESSION}/auth/qr or use the pairing-code endpoint.`,
+      );
     }
     if (connection === "connecting") {
-      status = sock.authState.creds.registered ? "STARTING" : "SCAN_QR_CODE";
+      status = nextSocket.authState.creds.registered ? "STARTING" : "SCAN_QR_CODE";
       console.log(`[bridge] connecting... status=${status}`);
     }
     if (connection === "open") {
       status = "WORKING";
-      me = digitsOf(sock.user?.id || "");
-      console.log(`[bridge] connected as +${me}`);
+      latestQr = null;
+      me = {
+        id: nextSocket.user?.id || "",
+        pushName: nextSocket.user?.name || undefined,
+      };
+      console.log(`[bridge] connected as +${digitsOf(me.id)}`);
     }
     if (connection === "close") {
       me = null;
@@ -125,12 +151,13 @@ async function startSocket() {
       console.log(`[bridge] closed (${code}) loggedOut=${loggedOut}`);
       if (!loggedOut) {
         console.log("[bridge] reconnecting in 5s...");
-        setTimeout(startSocket, 5000);
+        scheduleReconnect();
       }
     }
   });
 
-  sock.ev.on("messages.upsert", async ({ type, messages }) => {
+  nextSocket.ev.on("messages.upsert", async ({ type, messages }) => {
+    if (generation !== socketGeneration) return;
     if (type !== "notify") return;
     for (const m of messages) {
       try {
@@ -142,6 +169,81 @@ async function startSocket() {
   });
 }
 
+function scheduleReconnect() {
+  if (reconnectTimer || status === "STOPPED") return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    startSocket().catch((err) => {
+      console.error("[bridge] reconnect failed:", err?.message || err);
+      status = "FAILED";
+      scheduleReconnect();
+    });
+  }, 5000);
+}
+
+async function restartSocket() {
+  if (startingPromise) {
+    try {
+      await startingPromise;
+    } catch {
+      // Continue with a clean socket after a failed start.
+    }
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  const previous = sock;
+  ++socketGeneration;
+  sock = null;
+  me = null;
+  latestQr = null;
+  status = "STARTING";
+  try {
+    previous?.end?.(new Error("Manual restart"));
+  } catch {
+    // The old socket may already be closed.
+  }
+  await startSocket();
+}
+
+async function resetPairing() {
+  if (startingPromise) {
+    try {
+      await startingPromise;
+    } catch {
+      // The credentials are removed below even if startup failed.
+    }
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  const previous = sock;
+  ++socketGeneration;
+  sock = null;
+  me = null;
+  latestQr = null;
+  status = "STOPPED";
+
+  try {
+    if (previous?.logout) {
+      await Promise.race([
+        previous.logout(),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+    }
+  } catch (err) {
+    console.warn("[bridge] remote logout failed; clearing local session:", err?.message || err);
+  }
+
+  fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+  fs.mkdirSync(AUTH_DIR, { recursive: true });
+  status = "STARTING";
+  await startSocket();
+}
+
 /* ------------------------------------------------------------------ */
 /* Inbound mapping: Baileys message -> Wallnut waha-mode event         */
 /* ------------------------------------------------------------------ */
@@ -149,95 +251,86 @@ async function startSocket() {
 function mapMessage(m) {
   const jid = m.key.remoteJid;
   if (!jid || jid === "status@broadcast") return null;
-  // Keep the full JID (phone @s.whatsapp.net OR new-style @lid) as `from`
-  // so replies route back to the exact chat the message came from.
-  const from = jid;
   const id = m.key.id || crypto.randomUUID();
   const content = m.message || {};
-  // unwrap ephemeral/document wrappers
   const inner =
     content.ephemeralMessage?.message ||
     content.viewOnceMessage?.message ||
     content.documentWithCaptionMessage?.message ||
     content;
 
-  let out = null;
+  let type = "text";
+  let body = "";
+  let hasMedia = false;
+  let media = null;
+  let selectedButtonId = null;
+  const mentions =
+    inner.extendedTextMessage?.contextInfo?.mentionedJid ||
+    inner.imageMessage?.contextInfo?.mentionedJid ||
+    inner.documentMessage?.contextInfo?.mentionedJid ||
+    [];
 
   if (inner.conversation || inner.extendedTextMessage?.text) {
-    out = {
-      type: "text",
-      text: { body: inner.conversation || inner.extendedTextMessage.text },
-    };
+    body = inner.conversation || inner.extendedTextMessage.text;
   } else if (inner.imageMessage) {
     const mediaId = storeMedia(inner.imageMessage, "imageMessage", m);
-    out = {
-      type: "image",
-      image: {
-        id: mediaId,
-        mime_type: inner.imageMessage.mimetype || "image/jpeg",
-        caption: inner.imageMessage.caption || undefined,
-      },
+    type = "image";
+    body = inner.imageMessage.caption || "";
+    hasMedia = true;
+    media = {
+      url: `${MEDIA_BASE_URL}/api/files/${mediaId}`,
+      mimetype: inner.imageMessage.mimetype || "image/jpeg",
+      filename: null,
+      error: null,
     };
   } else if (inner.documentMessage) {
     const mime = inner.documentMessage.mimetype || "";
     const mediaId = storeMedia(inner.documentMessage, "documentMessage", m);
-    out = {
-      type: "document",
-      document: {
-        id: mediaId,
-        mime_type: mime,
-        filename: inner.documentMessage.fileName || undefined,
-      },
+    type = "document";
+    body = inner.documentMessage.caption || "";
+    hasMedia = true;
+    media = {
+      url: `${MEDIA_BASE_URL}/api/files/${mediaId}`,
+      mimetype: mime,
+      filename: inner.documentMessage.fileName || null,
+      error: null,
     };
   } else if (inner.buttonsResponseMessage) {
-    out = {
-      type: "interactive",
-      interactive: {
-        type: "button_reply",
-        button_reply: {
-          id: inner.buttonsResponseMessage.selectedButtonId || "",
-          title: inner.buttonsResponseMessage.selectedDisplayText || "",
-        },
-      },
-    };
+    type = "buttons_response";
+    selectedButtonId = inner.buttonsResponseMessage.selectedButtonId || "";
+    body = inner.buttonsResponseMessage.selectedDisplayText || "";
   } else if (inner.templateButtonReplyMessage) {
-    out = {
-      type: "interactive",
-      interactive: {
-        type: "button_reply",
-        button_reply: {
-          id: inner.templateButtonReplyMessage.selectedId || "",
-          title: inner.templateButtonReplyMessage.selectedDisplayText || "",
-        },
-      },
-    };
+    type = "buttons_response";
+    selectedButtonId = inner.templateButtonReplyMessage.selectedId || "";
+    body = inner.templateButtonReplyMessage.selectedDisplayText || "";
   } else if (inner.listResponseMessage) {
-    out = {
-      type: "interactive",
-      interactive: {
-        type: "button_reply",
-        button_reply: {
-          id: inner.listResponseMessage.singleSelectReply?.selectedRowId || "",
-          title: inner.listResponseMessage.title || "",
-        },
-      },
-    };
+    type = "list_response";
+    selectedButtonId =
+      inner.listResponseMessage.singleSelectReply?.selectedRowId || "";
+    body = inner.listResponseMessage.title || "";
   }
 
-  if (!out) return null;
-
-  const groupId = m.key.remoteJid?.endsWith("@g.us")
-    ? m.key.remoteJid.split("@")[0]
-    : undefined;
+  if (!body && !hasMedia && !selectedButtonId) return null;
 
   return {
-    from,
-    id,
-    // Group sender (JID of the participant) — undefined in 1:1 chats.
-    ...(m.key.participant ? { participant: m.key.participant } : {}),
-    ...out,
-    ...(groupId ? { context: { group_id: groupId } } : {}),
-    messages: [{ from, id, ...out }],
+    event: "message",
+    session: SESSION,
+    engine: "BAILEYS",
+    me,
+    payload: {
+      id,
+      timestamp: Number(m.messageTimestamp || Math.floor(Date.now() / 1000)),
+      from: jid,
+      fromMe: false,
+      source: "app",
+      body,
+      type,
+      hasMedia,
+      media,
+      mentions,
+      ...(m.key.participant ? { participant: m.key.participant } : {}),
+      ...(selectedButtonId ? { selectedButtonId } : {}),
+    },
   };
 }
 
@@ -285,12 +378,16 @@ async function sendButtons(chatId, body, buttons, quotedId) {
   const jid = normalizeJid(chatId);
   const quoted = quotedId ? msgCache.get(String(quotedId)) : undefined;
   const opts = quoted ? { quoted } : undefined;
-  const replyButtons = buttons.filter((b) => b.type !== "url" && b.title);
+  const replyButtons = buttons.filter(
+    (b) => b.type !== "url" && (b.text || b.title),
+  );
   const urlButtons = buttons.filter((b) => b.type === "url" && b.url);
 
   // URL buttons aren't reliably supported by the buttons proto — append links.
   let fullBody = body;
-  for (const u of urlButtons) fullBody += `\n${u.title}: ${u.url}`;
+  for (const u of urlButtons) {
+    fullBody += `\n${u.text || u.title || "Open"}: ${u.url}`;
+  }
 
   if (replyButtons.length > 0) {
     try {
@@ -300,7 +397,7 @@ async function sendButtons(chatId, body, buttons, quotedId) {
           text: fullBody,
           buttons: replyButtons.slice(0, 3).map((b) => ({
             buttonId: b.id,
-            buttonText: { displayText: b.title },
+            buttonText: { displayText: b.text || b.title },
             type: 1,
           })),
           headerType: 1,
@@ -322,17 +419,30 @@ async function sendButtons(chatId, body, buttons, quotedId) {
 async function forwardToWebhook(event) {
   const body = JSON.stringify(event);
   const url = new URL(WEBHOOK_URL);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": API_KEY,
-      "x-waha-signature": "baileys",
-      cookie: "wallnut_wamode=waha",
-    },
-    body,
-  });
-  console.log(`[bridge] webhook ${res.status} for msg from=${event.messages?.[0]?.from} type=${event.messages?.[0]?.type}`);
+  let lastError;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": API_KEY,
+        },
+        body,
+      });
+      console.log(
+        `[bridge] webhook ${res.status} for msg from=${event.payload?.from} type=${event.payload?.type}`,
+      );
+      if (res.ok) return;
+      lastError = new Error(`webhook returned ${res.status}`);
+    } catch (err) {
+      lastError = err;
+    }
+    if (attempt < 4) {
+      await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** (attempt - 1)));
+    }
+  }
+  throw lastError || new Error("webhook delivery failed");
 }
 
 async function forwardMessage(m) {
@@ -390,20 +500,27 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, {
       name: SESSION,
       status,
-      config: {},
-      me: me ? `${me}@s.whatsapp.net` : null,
+      config: {
+        webhooks: [{ url: WEBHOOK_URL, events: ["message"] }],
+      },
+      me,
       engine: { engine: "BAILEYS", state: status === "WORKING" ? "CONNECTED" : "UNPAIRED" },
     });
   }
 
-  if (req.method === "GET" && url.pathname === "/api/default/auth/qr") {
+  if (
+    req.method === "GET" &&
+    url.pathname === `/api/${encodeURIComponent(SESSION)}/auth/qr`
+  ) {
     if (!latestQr) return json(res, 404, { message: `no qr available (status=${status})` });
     const format = url.searchParams.get("format");
-    if (format === "image") {
+    const acceptsPng = String(req.headers.accept || "").includes("image/png");
+    if (format === "image" || acceptsPng) {
       const png = await QRCode.toBuffer(latestQr, { width: 400 });
       res.writeHead(200, { "content-type": "image/png" });
       return res.end(png);
     }
+    if (format === "raw") return json(res, 200, { value: latestQr });
     return json(res, 200, { qr: latestQr });
   }
 
@@ -412,7 +529,20 @@ const server = http.createServer(async (req, res) => {
     return json(res, 201, { name: SESSION, status });
   }
 
-  if (req.method === "POST" && url.pathname === "/api/default/auth/request-code") {
+  if (req.method === "POST" && url.pathname === `/api/sessions/${SESSION}/restart`) {
+    await restartSocket();
+    return json(res, 201, { name: SESSION, status });
+  }
+
+  if (req.method === "POST" && url.pathname === `/api/sessions/${SESSION}/logout`) {
+    await resetPairing();
+    return json(res, 201, { name: SESSION, status });
+  }
+
+  if (
+    req.method === "POST" &&
+    url.pathname === `/api/${encodeURIComponent(SESSION)}/auth/request-code`
+  ) {
     const body = await readBody(req);
     const phone = String(body.phoneNumber || "").replace(/[^0-9]/g, "");
     if (!phone) return json(res, 422, { message: "phoneNumber required" });
@@ -436,7 +566,11 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     if (status !== "WORKING") return json(res, 500, { message: `not connected (${status})` });
     try {
-      const id = await sendText(body.chatId, body.text ?? body.body ?? "", body.replyToMessageId);
+      const id = await sendText(
+        body.chatId,
+        body.text ?? body.body ?? "",
+        body.reply_to ?? body.replyToMessageId,
+      );
       return json(res, 200, { id });
     } catch (err) {
       return json(res, 502, { message: err?.message || String(err) });
@@ -447,10 +581,35 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     if (status !== "WORKING") return json(res, 500, { message: `not connected (${status})` });
     try {
-      const id = await sendButtons(body.chatId, body.body || "", body.buttons || [], body.replyToMessageId);
+      const id = await sendButtons(
+        body.chatId,
+        body.body || "",
+        body.buttons || [],
+        body.reply_to ?? body.replyToMessageId,
+      );
       return json(res, 200, { id });
     } catch (err) {
       return json(res, 502, { message: err?.message || String(err) });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    url.pathname.startsWith(`/api/${encodeURIComponent(SESSION)}/groups/`)
+  ) {
+    if (status !== "WORKING") {
+      return json(res, 500, { message: `not connected (${status})` });
+    }
+    const groupId = decodeURIComponent(url.pathname.split("/").pop());
+    try {
+      const group = await sock.groupMetadata(groupId);
+      return json(res, 200, {
+        id: group.id,
+        subject: group.subject,
+        description: group.desc,
+      });
+    } catch (err) {
+      return json(res, 404, { message: err?.message || "group not found" });
     }
   }
 
@@ -468,10 +627,23 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { message: `no route: ${req.method} ${url.pathname}` });
 });
 
-server.listen(PORT, () => {
-  console.log(`[bridge] listening on http://localhost:${PORT}`);
-  startSocket().catch((err) => {
-    console.error("[bridge] startup failed:", err);
+if (require.main === module) {
+  if (!API_KEY) {
+    console.error("[bridge] WAHA_API_KEY is required");
     process.exit(1);
+  }
+  server.listen(PORT, () => {
+    console.log(`[bridge] listening on http://localhost:${PORT}`);
+    startSocket().catch((err) => {
+      console.error("[bridge] startup failed:", err);
+      status = "FAILED";
+      scheduleReconnect();
+    });
   });
-});
+}
+
+module.exports = {
+  mapMessage,
+  normalizeJid,
+  server,
+};

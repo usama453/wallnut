@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { randomInt } from "crypto";
 
 export async function GET() {
   const ctx = await requireOrg();
@@ -58,26 +59,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
-  const chars =
-    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I, 1/L ambiguity
-  let code = "WN-";
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-
   // Ensure uniqueness (best-effort loop, very low collision probability).
   const admin = await createAdminClient();
+  let code = createAuthCode();
   for (let attempt = 0; attempt < 5; attempt++) {
-    const existing = await admin
+    const { data: existing, error: lookupError } = await admin
       .from("whatsapp_group_auth_codes")
       .select("id")
       .eq("code", code)
       .maybeSingle();
-    if (!existing) break;
-    code = "WN-";
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    if (lookupError) {
+      return NextResponse.json({ error: lookupError.message }, { status: 500 });
     }
+    if (!existing) break;
+    code = createAuthCode();
   }
 
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -98,6 +93,15 @@ export async function POST(req: NextRequest) {
     hint:
       "Paste this code inside the WhatsApp group. The bot will link the group to your workspace.",
   });
+}
+
+function createAuthCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I/L
+  let code = "WN-";
+  for (let i = 0; i < 6; i++) {
+    code += chars[randomInt(chars.length)];
+  }
+  return code;
 }
 
 async function requireOrg() {

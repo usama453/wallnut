@@ -32,6 +32,6 @@ export async function updateSession(request: NextRequest) {
 
   await supabase.auth.getUser();
 
-  // No sign-in required: anonymous visitors get the default workspace via RLS.
+  // Route layouts enforce access; middleware only refreshes the Supabase session.
   return supabaseResponse;
 }

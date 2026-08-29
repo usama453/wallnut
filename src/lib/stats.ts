@@ -26,6 +26,15 @@ export async function getStats() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organizations(name)")
+    .eq("id", user.id)
+    .maybeSingle();
+  const organization = Array.isArray(profile?.organizations)
+    ? profile.organizations[0] ?? null
+    : profile?.organizations ?? null;
+
   // Proofing activity, org-scoped via RLS.
   const { data: usage } = await supabase
     .from("whatsapp_usage")
@@ -101,12 +110,21 @@ export async function getStats() {
   const byTypos = [...people].sort((a, b) => b.typos - a.typos || a.uploads - b.uploads);
 
   return {
+    orgName: organization?.name ?? "My workspace",
     byUploads,
     byTypos,
     totals: {
       uploads: people.reduce((n, p) => n + p.uploads, 0),
       typos: people.reduce((n, p) => n + p.typos, 0),
       people: people.filter((p) => p.phone).length,
+      checked: proofs?.length ?? 0,
+      avgScore:
+        proofs?.length
+          ? Math.round(
+              proofs.reduce((sum, proof) => sum + proof.score, 0) /
+                proofs.length,
+            )
+          : null,
     },
   };
 }

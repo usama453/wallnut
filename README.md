@@ -8,41 +8,36 @@ AI-powered proofreading + QA for marketing assets. Upload an image or PDF and
 get a score, an annotated issue overlay and an approval workflow — before you
 publish or send to print.
 
-## WhatsApp tech-provider (Embedded Signup)
+## WhatsApp (WAHA)
 
-The app lets other businesses connect their own WhatsApp Business Account via
-**Facebook Login for Business (Embedded Signup)** and get AI proofs in WhatsApp.
-
-### One-time Meta Developer setup
-
-1. Create an app at https://developers.facebook.com (type **Business**) and
-   click **WhatsApp > Embedded Signup**.
-2. **WhatsApp > Tech Provider**, choose an app mode, set a contact email, then
-   **Create Config** — copy the generated **Config ID**.
-3. In the app's **Settings > Basic**, copy the **App ID** and **App Secret**.
-4. **Business Verification**, then **App Review > Permissions and Features**,
-   request: `whatsapp_business_management`, `whatsapp_business_messaging`,
-   `whatsapp_business_manage_events` (only the first two need review). Submit for
-   review, then **App Mode: Live**.
+Wallnut uses a single WAHA-compatible session. Production runs the included
+Baileys bridge in `baileys-bridge/`; a standard
+[WAHA](https://waha.devlike.pro/) server can be used with the same API
+contract. An owner or admin opens **Connect WhatsApp**, starts the session, and
+scans its QR code. Incoming images and PDFs are proofed and answered in the
+same chat.
 
 ### Environment variables
 
 ```bash
-NEXT_PUBLIC_FB_APP_ID=          # Meta app id (public)
-NEXT_PUBLIC_TP_CONFIG_ID=       # Tech Provider Config ID (public)
-FB_APP_ID=                      # server-side copy
-FB_APP_SECRET=                  # app secret (server-only)
-TP_CONFIG_ID=                   # same as NEXT_PUBLIC_TP_CONFIG_ID
-FB_REG_PIN=                     # 6-digit PIN to register phone numbers
-TP_CONTACT_EMAIL=               # contact email used in the TP config
-FB_GRAPH_API_VERSION=v22.0
-FB_REDIRECT_URI=                # OAuth redirect; must match app OAuth settings
+WAHA_BASE_URL=http://localhost:3001
+WAHA_API_KEY=                   # must match the WAHA server
+WAHA_SESSION=default
+BOT_PHONE_NUMBER=              # digits only; used for group @mention checks
+WHATSAPP_DEFAULT_ORG_ID=        # fallback workspace for direct messages
+
+NEXT_PUBLIC_APP_URL=            # public Wallnut URL
+WAHA_WEBHOOK_URL=               # optional explicit .../api/whatsapp/webhook URL
+WAHA_WEBHOOK_HMAC_KEY=          # must match WAHA's webhook HMAC key
 ```
 
-Embedded Signup flow: the app's **Connect WhatsApp** page opens the Meta popup
-(`FB.login` with the Tech Provider Config), the returned code is exchanged in
-`/api/token` for a long-lived token, stored per-WABA in `provider_wabas`, the
-phone is registered (`/register`) and the app subscribed to the WABA webhook
-(`/{wabaId}/subscribed_apps`). Inbound messages resolve the phone number's own
-token from `provider_phones`, so each business is isolated.
+Run WAHA on a different port from Next.js. For local development, expose WAHA's
+container port `3000` as host port `3001`, then run Wallnut on `3000` (or
+another free port). The Connect screen checks service health, creates or
+restarts the configured session, proxies the short-lived QR securely, and can
+configure its inbound webhook when a public app URL is available.
+
+To link a WhatsApp group to a workspace, generate an auth code in Wallnut and
+paste it in that group. Auth codes are globally unique and expire after 24
+hours.
 

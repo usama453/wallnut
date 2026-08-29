@@ -63,7 +63,7 @@ export function WhatsAppAccess() {
 
   function prettyChat(chatId: string) {
     if (chatId.endsWith("@g.us")) return `Group ${chatId.split("@")[0].slice(0, 12)}…`;
-    return chatId.replace(/@(s\.whatsapp\.net|lid)$/, "");
+    return chatId.replace(/@(c\.us|s\.whatsapp\.net|lid)$/, "");
   }
 
   return (

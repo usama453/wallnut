@@ -1,239 +1,160 @@
-import { GRAPH_BASE } from "./config";
-import { logUsage } from "./usage";
-import type { WhatsAppConnection } from "./connection";
-import { resolveConnection } from "./connection";
+import { WAHA_API_KEY, WAHA_BASE_URL, WAHA_SESSION } from "./config";
 
-const WAHA_BASE = process.env.WAHA_BASE_URL ?? "http://localhost:3000";
-const WAHA_API_KEY = process.env.WAHA_API_KEY ?? "";
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+  "X-Api-Key": WAHA_API_KEY,
+};
 
-function legacyToken() {
-  return process.env.WHATSAPP_TOKEN ?? "";
-}
-function legacyPhoneId() {
-  return process.env.WHATSAPP_PHONE_ID ?? "";
-}
+/**
+ * Download media referenced by a WAHA webhook. WAHA sends a media URL, not a
+ * Meta-style media id. Rebuild the URL against the configured WAHA origin so a
+ * forged webhook cannot make the server fetch an arbitrary host.
+ */
+export async function downloadMediaWaha(reference: string): Promise<Buffer> {
+  assertConfigured();
+  const base = new URL(WAHA_BASE_URL);
+  let target: URL;
 
-/** Resolve a connection, defaulting to the legacy env credentials. */
-async function getConnection(phoneNumberId?: string): Promise<{ token: string; phoneId: string }> {
-  const conn = await resolveConnection(phoneNumberId);
-  if (conn) return { token: conn.accessToken, phoneId: conn.phoneId };
-  return { token: legacyToken(), phoneId: legacyPhoneId() };
-}
-
-/** Download media bytes from the Meta Graph API using the media id in a message. */
-export async function downloadMedia(mediaId: string, phoneNumberId?: string): Promise<Buffer> {
-  const { token } = await getConnection(phoneNumberId);
-  const meta = await fetch(`${GRAPH_BASE}/${mediaId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!meta.ok) throw new Error(`failed to fetch media info (${meta.status})`);
-  const { url } = await meta.json();
-
-  const file = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!file.ok) throw new Error(`failed to download media (${file.status})`);
-  return Buffer.from(await file.arrayBuffer());
-}
-
-/** Send a plain text message. Returns the outbound message id. */
-export async function sendText(
-  to: string,
-  text: string,
-  groupId?: string,
-  replyToMessageId?: string,
-  phoneNumberId?: string,
-): Promise<string> {
-  return sendMessage(to, { type: "text", text: { body: text } }, groupId, replyToMessageId, phoneNumberId);
-}
-
-export interface Button {
-  id: string;
-  title: string;
-}
-export interface UrlButton {
-  url: string;
-  title: string;
-}
-
-/** Send an interactive message with up to 3 buttons (reply and/or url types). Returns the outbound message id. */
-export async function sendInteractive(
-  to: string,
-  bodyText: string,
-  buttons: { reply?: Button[]; url?: UrlButton[] },
-  groupId?: string,
-  replyToMessageId?: string,
-  phoneNumberId?: string,
-): Promise<string> {
-  const payload: any[] = [];
-  if (buttons.url) payload.push(...buttons.url.map((b) => ({ type: "cta_url", cta_url: { url: b.url, display_text: b.title } })));
-  if (buttons.reply) payload.push(...buttons.reply.map((b) => ({ type: "reply", reply: b })));
-
-  return sendMessage(
-    to,
-    {
-      type: "interactive",
-      interactive: {
-        type: "button",
-        body: { text: bodyText.slice(0, 1024) },
-        action: { buttons: payload.slice(0, 3) },
-      },
-    },
-    groupId,
-    replyToMessageId,
-    phoneNumberId,
-  );
-}
-
-async function sendMessage(
-  to: string,
-  content: any,
-  groupId?: string,
-  replyToMessageId?: string,
-  phoneNumberId?: string,
-): Promise<string> {
-  const { token, phoneId } = await getConnection(phoneNumberId);
-  const res = await fetch(`${GRAPH_BASE}/${phoneId}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: groupId ? "group" : "individual",
-      to: groupId ?? to,
-      ...(replyToMessageId ? { context: { message_id: replyToMessageId } } : {}),
-      ...content,
-    }),
-  });
-
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(`WhatsApp send failed (${res.status}): ${JSON.stringify(body).slice(0, 300)}`);
-    console.error(`[whatsapp-send] ${err.message}`);
-    throw err;
+  if (/^https?:\/\//i.test(reference)) {
+    const supplied = new URL(reference);
+    target = new URL(`${supplied.pathname}${supplied.search}`, base);
+  } else if (reference.startsWith("/")) {
+    target = new URL(reference, base);
+  } else {
+    // Compatibility with early WAHA adapters that stored only an id.
+    target = new URL(`/api/media/${encodeURIComponent(reference)}`, base);
   }
-  const msgId = body?.messages?.[0]?.id ?? "";
-  console.log(`[whatsapp-send] ok to=${to} type=${content.type} msgId=${msgId || "?"}`);
-  logUsage({
-    direction: "outbound",
-    msg_type: content.type === "interactive" ? "interactive" : "text",
-    message_id: msgId || undefined,
-    to_phone: groupId ? undefined : to,
-    group_id: groupId,
-    status: "accepted",
-  });
-  return msgId;
-}
 
-export type { WhatsAppConnection };
-
-/* ============================================================================
- * WAHA Client Functions (used when mode === "waha")
- * ============================================================================ */
-
-export interface WahaMessagePayload {
-  session: string;
-  chatId: string;
-  text?: string;
-  body?: string;
-  buttons?: Array<{ id: string; title: string }>;
-  linkPreview?: { url: string; title?: string };
-  replyToMessageId?: string;
-}
-
-export interface WahaMediaPayload {
-  session: string;
-  chatId: string;
-  media: string; // base64 or URL
-  mimeType: string;
-  caption?: string;
-  replyToMessageId?: string;
-}
-
-export interface WahaDownloadResponse {
-  url: string;
-  mimeType: string;
-}
-
-/** Download media from WAHA using the media ID. */
-export async function downloadMediaWaha(mediaId: string): Promise<Buffer> {
-  const res = await fetch(`${WAHA_BASE}/api/media/${mediaId}`, {
+  const response = await fetch(target, {
     headers: { "X-Api-Key": WAHA_API_KEY },
+    cache: "no-store",
   });
-  if (!res.ok) throw new Error(`failed to fetch media info from WAHA (${res.status})`);
-  const { url, mimeType } = (await res.json()) as WahaDownloadResponse;
+  if (!response.ok) {
+    throw new Error(`WAHA media download failed (${response.status})`);
+  }
 
-  const file = await fetch(url);
-  if (!file.ok) throw new Error(`failed to download media from WAHA (${file.status})`);
-  return Buffer.from(await file.arrayBuffer());
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const data = (await response.json()) as { url?: string };
+    if (!data.url || data.url === reference) {
+      throw new Error("WAHA media response did not include a downloadable URL");
+    }
+    return downloadMediaWaha(data.url);
+  }
+
+  return Buffer.from(await response.arrayBuffer());
 }
 
-/** Send a plain text message via WAHA. Returns the message ID. */
+/** Send a plain text message via WAHA. */
 export async function sendTextWaha(
   chatId: string,
   text: string,
   replyToMessageId?: string,
 ): Promise<string> {
-  const payload: WahaMessagePayload = {
-    session: "default",
-    chatId,
-    text,
-    ...(replyToMessageId ? { replyToMessageId } : {}),
-  };
-
-  const res = await fetch(`${WAHA_BASE}/api/sendText`, {
+  const response = await wahaFetch("/api/sendText", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Api-Key": WAHA_API_KEY,
-    },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      session: WAHA_SESSION,
+      chatId,
+      text,
+      ...(replyToMessageId ? { reply_to: replyToMessageId } : {}),
+    }),
   });
 
-  if (!res.ok) {
-    const err = new Error(`WAHA sendText failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
-    console.error(`[waha-send] ${err.message}`);
-    throw err;
+  if (!response.ok) {
+    throw new Error(
+      `WAHA sendText failed (${response.status}): ${(await response.text()).slice(0, 300)}`,
+    );
   }
-  const { id } = await res.json();
-  console.log(`[waha-send] ok to=${chatId} msgId=${id}`);
+
+  const id = messageId(await response.json().catch(() => ({})));
+  console.log(`[waha-send] text ok to=${chatId} msgId=${id || "unknown"}`);
   return id;
 }
 
-/** Send an interactive message with buttons via WAHA. Returns the message ID. */
+/**
+ * Send WAHA interactive buttons. Button support varies by engine, so an API
+ * rejection automatically falls back to plain text plus the report URL.
+ */
 export async function sendInteractiveWaha(
   chatId: string,
   bodyText: string,
-  buttons: { reply?: Array<{ id: string; title: string }>; url?: Array<{ url: string; title: string }> },
+  buttons: {
+    reply?: Array<{ id: string; title: string }>;
+    url?: Array<{ url: string; title: string }>;
+  },
   replyToMessageId?: string,
 ): Promise<string> {
-  // WAHA supports buttons via the sendButtons endpoint
   const payload = {
-    session: "default",
+    session: WAHA_SESSION,
     chatId,
     body: bodyText.slice(0, 1024),
-    ...(replyToMessageId ? { replyToMessageId } : {}),
+    ...(replyToMessageId ? { reply_to: replyToMessageId } : {}),
     buttons: [
-      ...(buttons.reply?.map((b) => ({ id: b.id, title: b.title })) ?? []),
-      ...(buttons.url?.map((b) => ({ id: b.url, title: b.title, type: "url" })) ?? []),
+      ...(buttons.reply?.map((button) => ({
+        type: "reply",
+        id: button.id,
+        text: button.title,
+      })) ?? []),
+      ...(buttons.url?.map((button) => ({
+        type: "url",
+        text: button.title,
+        url: button.url,
+      })) ?? []),
     ],
   };
 
-  const res = await fetch(`${WAHA_BASE}/api/sendButtons`, {
+  const response = await wahaFetch("/api/sendButtons", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Api-Key": WAHA_API_KEY,
-    },
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const err = new Error(`WAHA sendButtons failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
-    console.error(`[waha-send] ${err.message}`);
-    throw err;
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0, 300);
+    console.warn(
+      `[waha-send] sendButtons unavailable (${response.status}); using text fallback: ${detail}`,
+    );
+    const links = (buttons.url ?? [])
+      .filter((button) => !bodyText.includes(button.url))
+      .map((button) => `${button.title}: ${button.url}`)
+      .join("\n");
+    return sendTextWaha(
+      chatId,
+      links ? `${bodyText}\n${links}` : bodyText,
+      replyToMessageId,
+    );
   }
-  const { id } = await res.json();
-  console.log(`[waha-send] interactive ok to=${chatId} msgId=${id}`);
+
+  const id = messageId(await response.json().catch(() => ({})));
+  console.log(`[waha-send] buttons ok to=${chatId} msgId=${id || "unknown"}`);
   return id;
+}
+
+async function wahaFetch(path: string, init: RequestInit) {
+  assertConfigured();
+  return fetch(new URL(path, normalizedBaseUrl()), {
+    ...init,
+    headers: {
+      ...JSON_HEADERS,
+      ...init.headers,
+    },
+    cache: "no-store",
+  });
+}
+
+function normalizedBaseUrl() {
+  return WAHA_BASE_URL.endsWith("/") ? WAHA_BASE_URL : `${WAHA_BASE_URL}/`;
+}
+
+function assertConfigured() {
+  if (!WAHA_API_KEY) {
+    throw new Error("WAHA_API_KEY is not configured");
+  }
+}
+
+function messageId(data: {
+  id?: string | { _serialized?: string; id?: string };
+}) {
+  if (typeof data.id === "string") return data.id;
+  return data.id?._serialized ?? data.id?.id ?? "";
 }

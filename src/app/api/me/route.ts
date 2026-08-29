@@ -8,9 +8,21 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, role")
+    .select("org_id, role, organizations(name, slug)")
     .eq("id", user.id)
     .maybeSingle();
 
-  return NextResponse.json(profile ?? { role: null });
+  if (!profile) {
+    return NextResponse.json({ org_id: null, role: null, organization: null });
+  }
+
+  const organization = Array.isArray(profile.organizations)
+    ? profile.organizations[0] ?? null
+    : profile.organizations ?? null;
+
+  return NextResponse.json({
+    org_id: profile.org_id,
+    role: profile.role,
+    organization,
+  });
 }

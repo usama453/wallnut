@@ -128,44 +128,49 @@ export function AssetViewer({ data }: { data: ViewerData }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto max-w-7xl space-y-4 pb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#6c6c6c]">
+            Workspace report
+          </p>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">{asset.name}</h1>
+            <h1 className="text-[clamp(22px,3vw,30px)] font-bold leading-tight tracking-[-0.6px]">
+              {asset.name}
+            </h1>
             <StatusBadge status={asset.status} />
           </div>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-1.5 text-[11px] text-[#6c6c6c]">
             {asset.kind === "pdf" ? "PDF" : "Image"} · Created {fmtDate(asset.created_at)} · v{asset.current_version}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
           {brand && (
             <Link
               href="/brand"
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+              className="rounded-[7px] border border-[#2a2a2a] px-3 py-2 text-[11px] text-[#bdbdbd] transition hover:border-[#444] hover:text-white"
             >
-              ◧ Brand: {brand.company_name ?? "profile"}
+              Brand: {brand.company_name ?? "profile"}
             </Link>
           )}
           <button
             onClick={reproof}
             disabled={busy !== null}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium hover:border-slate-500 disabled:opacity-50"
+            className="rounded-[7px] border border-[#2a2a2a] px-3 py-2 text-[11px] font-medium text-[#bdbdbd] transition hover:border-[#444] hover:text-white disabled:opacity-50"
           >
-            {busy === "reproof" ? "Proofing…" : "↻ Re-proof"}
+            {busy === "reproof" ? "Proofing…" : "Re-proof"}
           </button>
           <button
             onClick={() => navigator.clipboard.writeText(shareUrl)}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium hover:border-slate-500"
+            className="rounded-[7px] bg-[#fbfbfb] px-3 py-2 text-[11px] font-bold text-black transition hover:bg-[#e8e8e8]"
           >
-            🔗 Copy share link
+            Copy share link
           </button>
         </div>
       </div>
 
       {note && (
-        <div className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300">
+        <div className="rounded-[8px] border border-[#2a2a2a] bg-[#101010] px-4 py-2.5 text-[12px] text-[#bdbdbd]">
           {note}
         </div>
       )}
@@ -173,15 +178,15 @@ export function AssetViewer({ data }: { data: ViewerData }) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* LEFT: artwork + annotations */}
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50">
-            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2">
-              <span className="text-sm font-medium">
+          <div className="overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#101010] shadow-[0_16px_30px_rgba(0,0,0,0.3)]">
+            <div className="flex items-center justify-between border-b border-[#222] px-4 py-3">
+              <span className="text-[12px] font-bold">
                 Annotated preview{" "}
-                <span className="text-xs text-slate-500">
+                <span className="font-normal text-[#6c6c6c]">
                   ({issues.length} issue{issues.length === 1 ? "" : "s"})
                 </span>
               </span>
-              <div className="flex gap-1 text-xs">
+              <div className="flex gap-1 text-[10px]">
                 {ordered.map((v) => (
                   <button
                     key={v.id}
@@ -191,8 +196,8 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                     }}
                     className={`rounded px-2 py-1 ${
                       v.id === current?.id
-                        ? "bg-slate-700 font-medium"
-                        : "text-slate-400 hover:bg-slate-800"
+                        ? "bg-[#292929] font-medium text-white"
+                        : "text-[#6c6c6c] hover:bg-[#202020] hover:text-[#bdbdbd]"
                     }`}
                   >
                     v{v.version}
@@ -203,7 +208,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
             </div>
 
             {current?.url ? (
-              <div className="w-full">
+              <div className="w-full bg-[#080808]">
                 {current.preview_meta?.pages?.length ? (
                   <div className="space-y-1">
                     {current.preview_meta.pages.map((p, i) => {
@@ -259,7 +264,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                                       {markerIndex + 1}
                                     </span>
                                     {active && (
-                                      <span className="pointer-events-none absolute left-0 top-6 z-30 mt-1 w-max max-w-56 rounded-md bg-slate-950/95 px-2 py-1 text-[11px] text-white shadow-xl">
+                                      <span className="pointer-events-none absolute left-0 top-6 z-30 mt-1 w-max max-w-56 rounded-md border border-[#2a2a2a] bg-[#101010]/95 px-2 py-1 text-[11px] text-white shadow-xl">
                                         {issue.title}
                                       </span>
                                     )}
@@ -269,7 +274,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
 
                               {activeIssue && activeIssue.x != null && activeIssue.y != null && (
                                 <span
-                                  className="pointer-events-none absolute border-2 border-indigo-400"
+                                  className="pointer-events-none absolute border-2 border-white/70"
                                   style={{
                                     left: `${activeIssue.x * 100}%`,
                                     top: `${activeIssue.y * 100}%`,
@@ -297,23 +302,23 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 )}
               </div>
             ) : (
-              <div className="px-4 py-20 text-center text-sm text-slate-500">No file for this version.</div>
+              <div className="px-4 py-20 text-center text-[12px] text-[#6c6c6c]">No file for this version.</div>
             )}
           </div>
 
           {/* Comments */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <h3 className="mb-3 text-sm font-semibold">
-              Comments <span className="text-slate-500">({comments.length})</span>
+          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
+            <h3 className="mb-3 text-[12px] font-bold">
+              Comments <span className="font-normal text-[#6c6c6c]">({comments.length})</span>
             </h3>
             <div className="space-y-2">
               {comments.length === 0 && (
-                <p className="text-sm text-slate-500">No comments yet.</p>
+                <p className="text-[12px] text-[#6c6c6c]">No comments yet.</p>
               )}
               {comments.map((c) => (
-                <div key={c.id} className="rounded-lg bg-slate-800/50 px-3 py-2 text-sm">
-                  <p className="text-slate-200">{c.body}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">{fmtDate(c.created_at)}</p>
+                <div key={c.id} className="rounded-[7px] border border-[#202020] bg-[#151515] px-3 py-2.5 text-[12px]">
+                  <p className="text-[#d0d0d0]">{c.body}</p>
+                  <p className="mt-1 text-[10px] text-[#555]">{fmtDate(c.created_at)}</p>
                 </div>
               ))}
             </div>
@@ -323,11 +328,11 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addComment()}
                 placeholder="Add a comment…"
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
+                className="min-w-0 flex-1 rounded-[7px] border border-[#2a2a2a] bg-[#0b0b0b] px-3 py-2 text-[12px] text-[#d0d0d0] outline-none focus:border-[#444]"
               />
               <button
                 onClick={addComment}
-                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm font-medium hover:bg-slate-600"
+                className="rounded-[7px] bg-[#292929] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#363636]"
               >
                 Add
               </button>
@@ -337,20 +342,20 @@ export function AssetViewer({ data }: { data: ViewerData }) {
 
         {/* RIGHT: score + issues + approval */}
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
             {proof ? (
               <div className="flex items-center gap-4">
                 <ScoreRing score={proof.score} />
                 <div className="min-w-0">
                   <ProofBadge status={proof.status} />
-                  <p className="mt-2 text-sm text-slate-300">{proof.summary ?? "No summary."}</p>
-                  <p className="mt-2 text-[11px] text-slate-500">
+                  <p className="mt-2 text-[12px] leading-relaxed text-[#bdbdbd]">{proof.summary ?? "No summary."}</p>
+                  <p className="mt-2 text-[10px] text-[#555]">
                     {proof.model ?? "AI"} · {fmtDate(proof.created_at)}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">
+              <p className="text-[12px] text-[#6c6c6c]">
                 No proof yet for v{current?.version}. Click “Re-proof” to run the AI review.
               </p>
             )}
@@ -370,16 +375,16 @@ export function AssetViewer({ data }: { data: ViewerData }) {
           </div>
 
           {/* Issue list */}
-          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50">
-            <div className="border-b border-slate-800 px-4 py-2.5 text-sm font-semibold">
-              Issues <span className="text-slate-500">({issues.length})</span>
+          <div className="overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#101010]">
+            <div className="border-b border-[#222] px-4 py-3 text-[12px] font-bold">
+              Issues <span className="font-normal text-[#6c6c6c]">({issues.length})</span>
             </div>
             {sortedIssues.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-slate-500">
-                ✅ No issues found in this version.
+              <p className="px-4 py-8 text-center text-[12px] text-emerald-300">
+                No issues found in this version.
               </p>
             ) : (
-              <ul className="thin-scroll max-h-80 divide-y divide-slate-800/70 overflow-y-auto">
+              <ul className="thin-scroll max-h-80 divide-y divide-[#222] overflow-y-auto">
                 {sortedIssues.map((issue) => {
                   const markerIndex = issues.indexOf(issue);
                   return (
@@ -388,8 +393,8 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                         onClick={() =>
                           setActiveIssueId(issue.id === activeIssueId ? null : issue.id)
                         }
-                        className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-800/30 ${
-                          issue.id === activeIssueId ? "bg-slate-800/50" : ""
+                        className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-[#171717] ${
+                          issue.id === activeIssueId ? "bg-[#1b1b1b]" : ""
                         }`}
                       >
                         <span
@@ -405,13 +410,13 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                             <CategoryBadge category={issue.category} />
                           </span>
                           {issue.description && (
-                            <span className="mt-0.5 block text-xs text-slate-400">
+                            <span className="mt-1 block text-[11px] leading-relaxed text-[#919191]">
                               {issue.description}
                             </span>
                           )}
                           {issue.suggestion && (
-                            <span className="mt-1 block text-xs text-emerald-400/90">
-                              → {issue.suggestion}
+                            <span className="mt-1 block text-[11px] text-emerald-400/90">
+                              Suggested: {issue.suggestion}
                             </span>
                           )}
                         </span>
@@ -424,18 +429,18 @@ export function AssetViewer({ data }: { data: ViewerData }) {
           </div>
 
           {/* Approval history */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <h3 className="mb-2 text-sm font-semibold">Approval history</h3>
+          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
+            <h3 className="mb-2 text-[12px] font-bold">Approval history</h3>
             {approvals.length === 0 ? (
-              <p className="text-sm text-slate-500">No approvals yet.</p>
+              <p className="text-[12px] text-[#6c6c6c]">No approvals yet.</p>
             ) : (
               <ul className="space-y-2">
                 {approvals.slice(0, 6).map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-2 text-sm">
+                  <li key={a.id} className="flex items-center justify-between gap-2 text-[11px]">
                     <span>
-                      <StatusBadge status={a.status} /> <span className="ml-1 text-xs text-slate-500">v{a.version}</span>
+                      <StatusBadge status={a.status} /> <span className="ml-1 text-[#6c6c6c]">v{a.version}</span>
                     </span>
-                    <span className="text-[11px] text-slate-500">{fmtDate(a.created_at)}</span>
+                    <span className="text-[10px] text-[#555]">{fmtDate(a.created_at)}</span>
                   </li>
                 ))}
               </ul>
