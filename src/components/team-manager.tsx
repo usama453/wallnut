@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Spinner } from "@/components/wallnut/icons";
 
 interface Member {
   id: string;
@@ -42,7 +43,7 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("member");
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -75,7 +76,11 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
   const canRemove = canInvite;
 
   async function post(body: Record<string, unknown>) {
-    setBusy(true);
+    const key =
+      body.action === "invite"
+        ? "invite"
+        : `${String(body.action)}:${String(body.id ?? "")}`;
+    setBusy(key);
     setNotice(null);
     try {
       const res = await fetch("/api/org/members", {
@@ -88,7 +93,7 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -144,10 +149,12 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
             </select>
             <button
               type="submit"
-              disabled={busy || !email.trim()}
-              className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
+              disabled={Boolean(busy) || !email.trim()}
+              aria-busy={busy === "invite"}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:cursor-progress disabled:opacity-50"
             >
-              Send invite
+              {busy === "invite" ? <Spinner /> : null}
+              {busy === "invite" ? "Sending…" : "Send invite"}
             </button>
           </form>
         )}
@@ -177,10 +184,12 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
                   {canRemove && m.role !== "owner" ? (
                     <button
                       onClick={() => void post({ action: "remove", id: m.id })}
-                      disabled={busy}
-                      className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+                      disabled={Boolean(busy)}
+                      aria-busy={busy === `remove:${m.id}`}
+                      className="inline-flex items-center gap-1 text-xs text-red-400 hover:text-red-300 disabled:cursor-progress disabled:opacity-50"
                     >
-                      Remove
+                      {busy === `remove:${m.id}` ? <Spinner /> : null}
+                      {busy === `remove:${m.id}` ? "Removing…" : "Remove"}
                     </button>
                   ) : null}
                 </div>
@@ -208,10 +217,12 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
                 {canInvite ? (
                   <button
                     onClick={() => void post({ action: "remove", id: inv.id })}
-                    disabled={busy}
-                    className="shrink-0 text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+                    disabled={Boolean(busy)}
+                    aria-busy={busy === `remove:${inv.id}`}
+                    className="inline-flex shrink-0 items-center gap-1 text-xs text-red-400 hover:text-red-300 disabled:cursor-progress disabled:opacity-50"
                   >
-                    Cancel
+                    {busy === `remove:${inv.id}` ? <Spinner /> : null}
+                    {busy === `remove:${inv.id}` ? "Canceling…" : "Cancel"}
                   </button>
                 ) : null}
               </li>

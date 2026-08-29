@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { orgHomePath, orgRankingsPath } from "@/lib/org-paths";
 import { InitialAvatar } from "./avatar";
+import { Spinner } from "./icons";
+import { NavigationProgress } from "./pending";
 
 export function AppHeader({
   authenticated = false,
@@ -66,6 +68,7 @@ export function AppHeader({
 
   return (
     <header className="relative z-40 flex h-14 shrink-0 items-center justify-between bg-black/90 px-[22px] backdrop-blur-md">
+      <NavigationProgress />
       <Link
         href={authenticated ? homeHref : "/"}
         className="text-[12px] font-bold leading-none text-white transition-opacity hover:opacity-75"
@@ -154,9 +157,11 @@ export function AppHeader({
                   type="button"
                   role="menuitem"
                   disabled={loggingOut}
+                  aria-busy={loggingOut}
                   onClick={logOut}
-                  className="w-full rounded-[7px] px-3 py-2 text-left text-[12px] text-[#919191] transition hover:bg-[#181818] hover:text-white disabled:opacity-50"
+                  className="flex w-full items-center gap-2 rounded-[7px] px-3 py-2 text-left text-[12px] text-[#919191] transition hover:bg-[#181818] hover:text-white disabled:cursor-progress disabled:opacity-50"
                 >
+                  {loggingOut ? <Spinner /> : null}
                   {loggingOut ? "Logging out…" : "Log out"}
                 </button>
               </div>

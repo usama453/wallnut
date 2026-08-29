@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/wallnut/icons";
 import type { WahaSessionState } from "@/lib/whatsapp/session";
 
 export function WahaConnect({
@@ -12,10 +13,12 @@ export function WahaConnect({
 }) {
   const [state, setState] = useState(initialState);
   const [busy, setBusy] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoStarted = useRef(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (manual = false) => {
+    if (manual) setRefreshing(true);
     try {
       const response = await fetch("/api/whatsapp/session?qr=1", {
         cache: "no-store",
@@ -26,6 +29,8 @@ export function WahaConnect({
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not check WAHA");
+    } finally {
+      if (manual) setRefreshing(false);
     }
   }, []);
 
@@ -90,10 +95,13 @@ export function WahaConnect({
           </div>
           <button
             type="button"
-            onClick={() => void refresh()}
-            className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-white/30 hover:text-white"
+            onClick={() => void refresh(true)}
+            disabled={refreshing}
+            aria-busy={refreshing}
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-white/30 hover:text-white disabled:cursor-progress disabled:opacity-70"
           >
-            Refresh
+            {refreshing ? <Spinner /> : null}
+            {refreshing ? "Refreshing…" : "Refresh"}
           </button>
         </div>
 
@@ -259,9 +267,11 @@ function ActionButton({
     <button
       type="button"
       disabled={disabled}
+      aria-busy={busy}
       onClick={onClick}
-      className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-progress disabled:opacity-50"
     >
+      {busy ? <Spinner /> : null}
       {busy ? "Working…" : children}
     </button>
   );

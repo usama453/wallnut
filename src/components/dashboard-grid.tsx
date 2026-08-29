@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { PersonAvatar } from "@/components/wallnut/person-avatar";
-import { PlatformIcon } from "@/components/wallnut/icons";
+import { PlatformIcon, Spinner } from "@/components/wallnut/icons";
+import { PendingLink } from "@/components/wallnut/pending";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { GroupCard, PendingWhatsAppInvite, ReportRow } from "@/lib/groups-presentation";
 import { timeAgo } from "@/lib/groups-presentation";
@@ -38,6 +39,8 @@ export function DashboardGrid({
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [refreshing, startRefresh] = useTransition();
+  const addingGroup = creating || refreshing;
 
   const invites = [
     ...createdInvites,
@@ -47,7 +50,7 @@ export function DashboardGrid({
   ];
 
   async function addWhatsAppGroup() {
-    if (!canAddGroup || creating) return;
+    if (!canAddGroup || addingGroup) return;
     setCreating(true);
     setCreateError(null);
     try {
@@ -67,7 +70,9 @@ export function DashboardGrid({
         },
         ...current,
       ]);
-      router.refresh();
+      startRefresh(() => {
+        router.refresh();
+      });
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : "Failed to create code");
     } finally {
@@ -126,11 +131,12 @@ export function DashboardGrid({
             <button
               type="button"
               onClick={() => void addWhatsAppGroup()}
-              disabled={creating}
-              className="flex items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#2a2a2a] px-4 py-3 text-[12px] font-bold text-[#d0d0d0] transition hover:border-[#3a3a3a] hover:bg-[#121212] hover:text-white disabled:opacity-50"
+              disabled={addingGroup}
+              aria-busy={addingGroup}
+              className="flex items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#2a2a2a] px-4 py-3 text-[12px] font-bold text-[#d0d0d0] transition hover:border-[#3a3a3a] hover:bg-[#121212] hover:text-white disabled:cursor-progress disabled:opacity-70"
             >
-              <PlatformIcon platform="whatsapp" size={16} />
-              {creating ? "Creating code…" : "Add WhatsApp group"}
+              {addingGroup ? <Spinner /> : <PlatformIcon platform="whatsapp" size={16} />}
+              {addingGroup ? "Creating code…" : "Add WhatsApp group"}
             </button>
             {createError ? (
               <p role="alert" className="text-center text-[11px] text-[#e8b4b4]">
@@ -295,12 +301,13 @@ function DashboardGroupCard({
             {card.reports.length}
           </span>
         </button>
-        <Link
+        <PendingLink
           href={orgGroupPath(orgSlug, card.group.id)}
+          pendingLabel="Loading…"
           className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
         >
           View more
-        </Link>
+        </PendingLink>
       </div>
 
       <div
@@ -329,10 +336,22 @@ function DashboardGroupCard({
 }
 
 function DashboardReportRow({ report }: { report: ReportRow }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const href = report.slug ? `/reports/${report.slug}` : `/reports/${report.assetId}`;
   return (
     <Link
       href={href}
+      aria-busy={pending}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+          return;
+        }
+        event.preventDefault();
+        startTransition(() => {
+          router.push(href);
+        });
+      }}
       className="flex items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#171717]"
     >
       <ReportMarker report={report} />
@@ -343,9 +362,13 @@ function DashboardReportRow({ report }: { report: ReportRow }) {
           {report.issueCount} issue{report.issueCount === 1 ? "" : "s"}
         </span>
       </span>
-      <span className="ml-3 shrink-0 text-[11px] text-[#6c6c6c]">
-        {timeAgo(report.createdAt)}
-      </span>
+      {pending ? (
+        <Spinner />
+      ) : (
+        <span className="ml-3 shrink-0 text-[11px] text-[#6c6c6c]">
+          {timeAgo(report.createdAt)}
+        </span>
+      )}
     </Link>
   );
 }
