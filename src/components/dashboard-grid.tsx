@@ -128,16 +128,16 @@ export function DashboardGrid({
 
       <div className="mt-8 flex w-full max-w-[680px] flex-col gap-3">
         {canAddGroup ? (
-          <div className="flex flex-col items-stretch gap-2">
+          <div className="flex flex-col items-center gap-2">
             <button
               type="button"
               onClick={() => void addWhatsAppGroup()}
               disabled={addingGroup}
               aria-busy={addingGroup}
-              className="flex items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#2a2a2a] px-4 py-3 text-[12px] font-bold text-[#d0d0d0] transition hover:border-[#3a3a3a] hover:bg-[#121212] hover:text-white disabled:cursor-progress disabled:opacity-70"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70"
             >
-              {addingGroup ? <Spinner /> : <PlatformIcon platform="whatsapp" size={16} />}
-              {addingGroup ? "Creating code…" : "Add WhatsApp group"}
+              {addingGroup ? <Spinner /> : <span aria-hidden className="text-[14px] leading-none">+</span>}
+              {addingGroup ? "Creating code…" : "Add whatsapp group"}
             </button>
             {createError ? (
               <p role="alert" className="text-center text-[11px] text-[#e8b4b4]">
