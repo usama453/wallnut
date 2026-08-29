@@ -51,6 +51,9 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; label: string } | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     try {
@@ -95,8 +98,10 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Request failed");
       await load();
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -106,7 +111,13 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
     if (!email.trim()) return;
     void post({ action: "invite", email, role: inviteRole })
       .then(() => setEmail(""))
-      .then(() => setNotice("Invite sent. They'll join your org when they sign up."));
+      .then(() => setNotice(`Invite email sent to ${email.trim()}. They can sign up and set a password from that link.`));
+  }
+
+  async function confirmRemoveMember() {
+    if (!removeTarget || busy) return;
+    const ok = await post({ action: "remove", id: removeTarget.id });
+    if (ok) setRemoveTarget(null);
   }
 
   return (
@@ -122,11 +133,13 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
 
       <article className={PANEL}>
         <div className="border-b border-[#222] px-4 py-3">
-          <h2 className="text-[12px] font-bold text-[#fbfbfb]">Invite by email</h2>
+          <h2 className="text-[12px] font-bold text-[#fbfbfb]">
+            Invite someone to this dashboard
+          </h2>
           <p className="mt-1 text-[11px] text-[#6c6c6c]">
             {invites.length > 0
               ? `${invites.length} pending invite${invites.length === 1 ? "" : "s"} — they join automatically when the email signs up.`
-              : "Invite a teammate by email. They join your workspace when they create an account."}
+              : "If you want others to have access to this dashboard, invite them via email."}
           </p>
         </div>
 
@@ -200,7 +213,12 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
                   {canRemove && m.role !== "owner" ? (
                     <button
                       type="button"
-                      onClick={() => void post({ action: "remove", id: m.id })}
+                      onClick={() =>
+                        setRemoveTarget({
+                          id: m.id,
+                          label: m.user_id === "you" ? "You" : (m.email ?? "this member"),
+                        })
+                      }
                       disabled={Boolean(busy)}
                       aria-busy={busy === `remove:${m.id}`}
                       className="inline-flex items-center gap-1 text-[12px] text-[#919191] transition hover:text-[#e8b4b4] disabled:cursor-progress disabled:opacity-70"
@@ -248,6 +266,45 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
             ))}
           </ul>
         </article>
+      ) : null}
+
+      {removeTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-member-title"
+            className="w-full max-w-[360px] rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+          >
+            <h2 id="remove-member-title" className="text-[14px] font-bold text-[#fbfbfb]">
+              Remove member?
+            </h2>
+            <p className="mt-2 text-[12px] leading-relaxed text-[#919191]">
+              <span className="text-[#bdbdbd]">{removeTarget.label}</span> will lose access to
+              this workspace. You can invite them again later.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRemoveTarget(null)}
+                disabled={Boolean(busy)}
+                className="rounded-full border border-[#2e2e2e] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmRemoveMember()}
+                disabled={Boolean(busy)}
+                aria-busy={busy === `remove:${removeTarget.id}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#4a2828] bg-[#1a1010] px-3.5 py-1.5 text-[12px] text-[#e8b4b4] transition hover:border-[#6a3838] disabled:cursor-progress disabled:opacity-70"
+              >
+                {busy === `remove:${removeTarget.id}` ? <Spinner /> : null}
+                {busy === `remove:${removeTarget.id}` ? "Removing…" : "Remove member"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

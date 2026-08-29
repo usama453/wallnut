@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { sendOrgInviteEmail } from "@/lib/org-invites";
 import { requireOrgContext } from "@/lib/org-membership";
 import { isHiddenOrgMember, memberDisplayRole } from "@/lib/roles";
 
@@ -88,12 +89,12 @@ export async function POST(req: NextRequest) {
 
       let result;
       if (existing?.id) {
-      const { data: already } = await admin
-        .from("organizations_users")
-        .select("id")
-        .eq("user_id", existing.id)
-        .eq("org_id", ctx.orgId)
-        .maybeSingle();
+        const { data: already } = await admin
+          .from("organizations_users")
+          .select("id")
+          .eq("user_id", existing.id)
+          .eq("org_id", ctx.orgId)
+          .maybeSingle();
         if (already) {
           return NextResponse.json({ error: "This person is already in your org" }, { status: 400 });
         }
@@ -103,20 +104,41 @@ export async function POST(req: NextRequest) {
           role,
           status: "active",
         });
-      } else {
-        result = await admin.from("organizations_users").insert({
-          org_id: ctx.orgId,
-          invited_email: email,
-          invited_by: ctx.userId,
-          role,
-          status: "pending",
-        });
+        if (result.error) {
+          if (result.error.code === "23505") {
+            return NextResponse.json({ error: "That email is already invited or a member" }, { status: 400 });
+          }
+          throw result.error;
+        }
+        break;
       }
+
+      result = await admin.from("organizations_users").insert({
+        org_id: ctx.orgId,
+        invited_email: email,
+        invited_by: ctx.userId,
+        role,
+        status: "pending",
+      });
       if (result.error) {
         if (result.error.code === "23505") {
           return NextResponse.json({ error: "That email is already invited or a member" }, { status: 400 });
         }
         throw result.error;
+      }
+
+      const emailed = await sendOrgInviteEmail(email, ctx.org);
+      if (!emailed.ok) {
+        await admin
+          .from("organizations_users")
+          .delete()
+          .eq("org_id", ctx.orgId)
+          .eq("invited_email", email)
+          .eq("status", "pending");
+        return NextResponse.json(
+          { error: emailed.error ?? "Failed to send invite email" },
+          { status: 500 },
+        );
       }
       break;
     }

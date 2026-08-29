@@ -1,14 +1,17 @@
 import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { copyCookies, publicOrigin, safeAuthPath } from "@/lib/auth-origin";
 
 /**
- * Auth callback used by Supabase magic links and OAuth providers.
- * Exchanges the `code` for a session, then redirects.
+ * Auth callback used by Supabase magic links, email confirmations, and OAuth.
+ * Exchanges the `code` or `token_hash` for a session, then redirects.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  const tokenHash = searchParams.get("token_hash");
+  const otpType = searchParams.get("type") as EmailOtpType | null;
   const expectedOrg = searchParams.get("org");
   const next = safeAuthPath(
     searchParams.get("next"),
@@ -16,11 +19,11 @@ export async function GET(request: NextRequest) {
   );
   const origin = publicOrigin(request);
 
-  try {
-    if (!code) {
-      return NextResponse.redirect(failureUrl(origin, expectedOrg, next));
-    }
+  if (!code && !(tokenHash && otpType)) {
+    return NextResponse.redirect(failureUrl(origin, expectedOrg, next));
+  }
 
+  try {
     const pending = NextResponse.redirect(new URL(next, origin));
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,9 +47,20 @@ export async function GET(request: NextRequest) {
       },
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      console.error("auth callback exchange failed:", error.message, {
+    const authError = code
+      ? (await supabase.auth.exchangeCodeForSession(code)).error
+      : (
+          await supabase.auth.verifyOtp({
+            type: otpType!,
+            token_hash: tokenHash!,
+          })
+        ).error;
+
+    if (authError) {
+      console.error("auth callback session failed:", authError.message, {
+        hasCode: Boolean(code),
+        hasTokenHash: Boolean(tokenHash),
+        otpType,
         cookieNames: request.cookies.getAll().map((cookie) => cookie.name),
       });
       return NextResponse.redirect(failureUrl(origin, expectedOrg, next));

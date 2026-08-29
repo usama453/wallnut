@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { initialsFor } from "@/components/wallnut/avatar";
-import { BackIcon, GoogleIcon } from "@/components/wallnut/icons";
+import { BackIcon, GoogleIcon, Spinner } from "@/components/wallnut/icons";
 import { Reveal } from "@/components/wallnut/reveal";
 
 type AuthMode = "signin" | "signup" | "magic";
@@ -178,7 +178,8 @@ export default function LoginForm({
               {error ? <AuthNotice tone="error">{error}</AuthNotice> : null}
               <button
                 type="submit"
-                className="w-full rounded-[8px] bg-[#fbfbfb] py-3 text-[13px] font-bold text-black transition hover:bg-[#e8e8e8]"
+                disabled={loading}
+                className="w-full rounded-[8px] bg-[#fbfbfb] py-3 text-[13px] font-bold text-black transition hover:bg-[#e8e8e8] disabled:opacity-70"
               >
                 Continue with email
               </button>
@@ -268,8 +269,10 @@ export default function LoginForm({
               <button
                 type="submit"
                 disabled={loading || Boolean(message)}
-                className="mt-4 w-full rounded-[8px] bg-[#fbfbfb] py-3 text-[13px] font-bold text-black transition hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-50"
+                aria-busy={loading}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-[#fbfbfb] py-3 text-[13px] font-bold text-black transition hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-50"
               >
+                {loading ? <Spinner /> : null}
                 {loading
                   ? "Please wait…"
                   : mode === "magic"
@@ -319,10 +322,11 @@ function GoogleButton({
       type="button"
       onClick={onClick}
       disabled={loading}
-      className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#1b1b1b] bg-[#101010] py-3 text-[13px] font-bold text-[#fbfbfb] transition hover:bg-[#161616] disabled:opacity-50"
+      aria-busy={loading}
+      className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#1b1b1b] bg-[#101010] py-3 text-[13px] font-bold text-[#fbfbfb] transition hover:bg-[#161616] disabled:cursor-progress disabled:opacity-50"
     >
-      <GoogleIcon />
-      Continue with Google
+      {loading ? <Spinner /> : <GoogleIcon />}
+      {loading ? "Redirecting…" : "Continue with Google"}
     </button>
   );
 }
