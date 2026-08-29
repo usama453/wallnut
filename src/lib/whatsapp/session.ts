@@ -91,7 +91,7 @@ export async function getWahaSessionState(
       ),
     };
 
-    if (includeQr && status === "SCAN_QR_CODE") {
+    if (includeQr) {
       const qr = await request(
         connection,
         `/api/${encodeURIComponent(connection.session)}/auth/qr`,
@@ -101,7 +101,10 @@ export async function getWahaSessionState(
         const contentType = qr.headers.get("content-type") || "image/png";
         const bytes = Buffer.from(await qr.arrayBuffer());
         state.qrDataUrl = `data:${contentType};base64,${bytes.toString("base64")}`;
-      } else {
+        if (status === "STARTING" || status === "STOPPED") {
+          state.status = "SCAN_QR_CODE";
+        }
+      } else if (status === "SCAN_QR_CODE") {
         state.error = `Could not load QR code: ${await responseError(qr)}`;
       }
     }

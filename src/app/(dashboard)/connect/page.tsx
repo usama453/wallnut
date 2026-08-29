@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { WahaConnect } from "@/components/waha-connect";
 import { createClient } from "@/lib/supabase/server";
+import { listUserMemberships } from "@/lib/org-membership";
 import { canCreateWhatsAppGroup, userIsSuperAdmin } from "@/lib/roles";
 import { getWahaSessionState } from "@/lib/whatsapp/session";
 
@@ -16,10 +17,13 @@ export default async function ConnectPage() {
     .select("role")
     .eq("id", user?.id ?? "")
     .maybeSingle();
+  const memberships = user ? await listUserMemberships(user.id) : [];
   const isSuperAdmin = user
     ? await userIsSuperAdmin(user.id, user.email)
     : false;
-  const canManage = canCreateWhatsAppGroup(profile?.role, isSuperAdmin);
+  const canManage =
+    canCreateWhatsAppGroup(profile?.role, isSuperAdmin) ||
+    memberships.some((membership) => canCreateWhatsAppGroup(membership.role));
   const initialState = await getWahaSessionState(canManage);
 
   return (

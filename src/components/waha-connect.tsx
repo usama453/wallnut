@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { WahaSessionState } from "@/lib/whatsapp/session";
 
 export function WahaConnect({
@@ -13,6 +13,7 @@ export function WahaConnect({
   const [state, setState] = useState(initialState);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const autoStarted = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -30,14 +31,17 @@ export function WahaConnect({
 
   useEffect(() => {
     const delay =
-      state.status === "STARTING" || state.status === "SCAN_QR_CODE"
+      state.status === "STARTING" ||
+      state.status === "SCAN_QR_CODE" ||
+      state.status === "STOPPED" ||
+      state.status === "FAILED"
         ? 5_000
         : 30_000;
     const timer = window.setInterval(() => void refresh(), delay);
     return () => window.clearInterval(timer);
   }, [refresh, state.status]);
 
-  const runAction = async (
+  const runAction = useCallback(async (
     action: "create" | "start" | "restart" | "logout" | "configure-webhook",
   ) => {
     setBusy(action);
@@ -56,7 +60,14 @@ export function WahaConnect({
     } finally {
       setBusy(null);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!canManage || autoStarted.current) return;
+    if (state.status !== "STOPPED" && state.status !== "FAILED") return;
+    autoStarted.current = true;
+    void runAction(state.status === "STOPPED" ? "start" : "restart");
+  }, [canManage, runAction, state.status]);
 
   const status = statusCopy(state.status);
   const canOperate = canManage && state.configured && state.reachable;
@@ -95,7 +106,8 @@ export function WahaConnect({
           </p>
         ) : null}
 
-        {state.status === "SCAN_QR_CODE" && canManage ? (
+        {state.qrDataUrl || state.status === "SCAN_QR_CODE" ? (
+          canManage ? (
           <div className="mt-6 grid gap-6 sm:grid-cols-[220px_1fr] sm:items-center">
             <div className="grid aspect-square place-items-center rounded-2xl bg-white p-3">
               {state.qrDataUrl ? (
@@ -124,11 +136,11 @@ export function WahaConnect({
               </p>
             </div>
           </div>
-        ) : null}
-        {state.status === "SCAN_QR_CODE" && !canManage ? (
+          ) : (
           <p className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
             An organization owner or admin must scan the pairing code.
           </p>
+          )
         ) : null}
 
         <div className="mt-6 flex flex-wrap gap-2">

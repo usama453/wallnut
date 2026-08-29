@@ -53,6 +53,8 @@ let latestQr = null;
 let pairingCodePromise = null;
 let reconnectTimer = null;
 let startingPromise = null;
+let freshPairingPromise = null;
+let freshPairingAttempts = 0;
 let socketGeneration = 0;
 /** mediaId -> {buffer, mimetype, filename} */
 const mediaStore = new Map();
@@ -188,17 +190,21 @@ async function createSocket() {
     if (qr) {
       latestQr = qr;
       status = "SCAN_QR_CODE";
+      freshPairingAttempts = 0;
       console.log(
         `[bridge] QR received — scan /api/${SESSION}/auth/qr or use the pairing-code endpoint.`,
       );
     }
     if (connection === "connecting") {
-      status = nextSocket.authState.creds.registered ? "STARTING" : "SCAN_QR_CODE";
+      // Only advertise SCAN_QR_CODE once a QR actually exists. Otherwise the
+      // Connect page shows "QR code is loading…" forever.
+      if (!latestQr) status = "STARTING";
       console.log(`[bridge] connecting... status=${status}`);
     }
     if (connection === "open") {
       status = "WORKING";
       latestQr = null;
+      freshPairingAttempts = 0;
       me = {
         id: nextSocket.user?.id || "",
         pushName: nextSocket.user?.name || undefined,
@@ -211,7 +217,17 @@ async function createSocket() {
       const loggedOut = code === DisconnectReason.loggedOut;
       status = loggedOut ? "STOPPED" : "FAILED";
       console.log(`[bridge] closed (${code}) loggedOut=${loggedOut}`);
-      if (!loggedOut) {
+      if (loggedOut) {
+        if (freshPairingAttempts >= 2) {
+          console.error("[bridge] still logged out after clearing session; waiting for Start");
+          return;
+        }
+        freshPairingAttempts += 1;
+        console.log("[bridge] WhatsApp logged out — clearing session for a new QR");
+        beginFreshPairing().catch((err) => {
+          console.error("[bridge] fresh pairing failed:", err?.message || err);
+        });
+      } else {
         console.log("[bridge] reconnecting in 5s...");
         scheduleReconnect();
       }
@@ -252,6 +268,59 @@ function scheduleReconnect() {
   }, 5000);
 }
 
+function clearAuthFiles() {
+  // Delete files inside the auth dir — never the directory itself. Production
+  // mounts a Docker volume at AUTH_DIR, so rmdir(AUTH_DIR) fails with EBUSY
+  // and the dead credentials stay on disk.
+  fs.mkdirSync(AUTH_DIR, { recursive: true });
+  for (const name of fs.readdirSync(AUTH_DIR)) {
+    fs.rmSync(path.join(AUTH_DIR, name), { recursive: true, force: true });
+  }
+}
+
+async function closeCurrentSocket(reason) {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  const previous = sock;
+  ++socketGeneration;
+  sock = null;
+  me = null;
+  latestQr = null;
+  try {
+    previous?.end?.(new Error(reason));
+  } catch {
+    // The old socket may already be closed.
+  }
+}
+
+async function beginFreshPairing() {
+  if (freshPairingPromise) return freshPairingPromise;
+  freshPairingPromise = (async () => {
+    if (startingPromise) {
+      try {
+        await startingPromise;
+      } catch {
+        // Credentials are removed below even if startup failed.
+      }
+    }
+    await closeCurrentSocket("Fresh pairing");
+    try {
+      clearAuthFiles();
+    } catch (err) {
+      console.error("[bridge] could not clear session files:", err?.message || err);
+    }
+    status = "STARTING";
+    await startSocket();
+  })();
+  try {
+    await freshPairingPromise;
+  } finally {
+    freshPairingPromise = null;
+  }
+}
+
 async function restartSocket() {
   if (startingPromise) {
     try {
@@ -260,44 +329,13 @@ async function restartSocket() {
       // Continue with a clean socket after a failed start.
     }
   }
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-  const previous = sock;
-  ++socketGeneration;
-  sock = null;
-  me = null;
-  latestQr = null;
+  await closeCurrentSocket("Manual restart");
   status = "STARTING";
-  try {
-    previous?.end?.(new Error("Manual restart"));
-  } catch {
-    // The old socket may already be closed.
-  }
   await startSocket();
 }
 
 async function resetPairing() {
-  if (startingPromise) {
-    try {
-      await startingPromise;
-    } catch {
-      // The credentials are removed below even if startup failed.
-    }
-  }
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-
   const previous = sock;
-  ++socketGeneration;
-  sock = null;
-  me = null;
-  latestQr = null;
-  status = "STOPPED";
-
   try {
     if (previous?.logout) {
       await Promise.race([
@@ -308,11 +346,7 @@ async function resetPairing() {
   } catch (err) {
     console.warn("[bridge] remote logout failed; clearing local session:", err?.message || err);
   }
-
-  fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-  fs.mkdirSync(AUTH_DIR, { recursive: true });
-  status = "STARTING";
-  await startSocket();
+  await beginFreshPairing();
 }
 
 /* ------------------------------------------------------------------ */
@@ -603,7 +637,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === `/api/sessions/${SESSION}/start`) {
-    if (!sock || status === "STOPPED" || status === "FAILED") await startSocket();
+    if (status === "STOPPED") await beginFreshPairing();
+    else if (!sock || status === "FAILED") await startSocket();
     return json(res, 201, { name: SESSION, status });
   }
 
