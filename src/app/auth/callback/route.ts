@@ -56,27 +56,36 @@ export async function GET(request: NextRequest) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organizations(slug)")
-        .eq("id", user?.id ?? "")
-        .maybeSingle();
-      const organization = Array.isArray(profile?.organizations)
-        ? profile.organizations[0] ?? null
-        : profile?.organizations ?? null;
-
-      if (!organization?.slug || organization.slug !== expectedOrg) {
-        await supabase.auth.signOut();
-        const reason = organization?.slug ? "wrong_org" : "profile_not_ready";
+      if (!user) {
         const response = NextResponse.redirect(
-          scopedLoginUrl(origin, expectedOrg, reason, next),
+          scopedLoginUrl(origin, expectedOrg, "profile_not_ready", next),
+        );
+        copyCookies(pending, response);
+        return response;
+      }
+
+      const { listUserMemberships, userCanAccessOrg } = await import(
+        "@/lib/org-membership"
+      );
+      const allowed = await userCanAccessOrg(user.id, expectedOrg);
+      if (!allowed) {
+        const memberships = await listUserMemberships(user.id);
+        const fallback = memberships.find((membership) => membership.isPublic)?.slug;
+        if (fallback) {
+          const response = NextResponse.redirect(new URL(`/${fallback}`, origin));
+          copyCookies(pending, response);
+          return response;
+        }
+        await supabase.auth.signOut();
+        const response = NextResponse.redirect(
+          scopedLoginUrl(origin, expectedOrg, "wrong_org", next),
         );
         copyCookies(pending, response);
         return response;
       }
     }
 
-    const destination = next === "/" ? await homeForSession(supabase) : next;
+    const destination = next === "/" ? await homeForSession() : next;
     const response = NextResponse.redirect(new URL(destination, origin));
     copyCookies(pending, response);
     return response;
@@ -86,22 +95,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function homeForSession(
-  supabase: ReturnType<typeof createServerClient>,
-) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return "/";
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("organizations(slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-  const organization = Array.isArray(profile?.organizations)
-    ? profile.organizations[0] ?? null
-    : profile?.organizations ?? null;
-  return organization?.slug ? `/${organization.slug}` : "/";
+async function homeForSession() {
+  const { getAuthedOrgSlug } = await import("@/lib/org-access");
+  const slug = await getAuthedOrgSlug();
+  return slug ? `/${slug}` : "/";
 }
 
 function failureUrl(origin: string, expectedOrg: string | null, next: string) {

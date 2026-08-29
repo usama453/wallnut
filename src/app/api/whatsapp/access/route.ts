@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/lib/org-membership";
 import { canonicalChatId } from "@/lib/whatsapp/jid";
 
 /**
@@ -10,15 +11,10 @@ import { canonicalChatId } from "@/lib/whatsapp/jid";
  * Controls which chats the WhatsApp bot responds to. Scoped to the
  * authenticated user's org.
  */
-export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  const orgId = await getOrgId(supabase, user.id);
-  if (!orgId) return NextResponse.json({ error: "No organization" }, { status: 400 });
+export async function GET(req: NextRequest) {
+  const ctx = await requireOrgContext(req.nextUrl.searchParams.get("org"));
+  if (ctx.error) return ctx.error;
+  const orgId = ctx.orgId;
 
   const admin = await createAdminClient();
   const [{ data: settings }, { data: allowed }, { data: recent }] = await Promise.all([
@@ -45,16 +41,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  const orgId = await getOrgId(supabase, user.id);
-  if (!orgId) return NextResponse.json({ error: "No organization" }, { status: 400 });
-
   const body = await req.json().catch(() => ({}));
+  const ctx = await requireOrgContext(
+    typeof body.org === "string" ? body.org : req.nextUrl.searchParams.get("org"),
+  );
+  if (ctx.error) return ctx.error;
+  const orgId = ctx.orgId;
   const admin = await createAdminClient();
 
   try {
@@ -101,13 +93,4 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-}
-
-async function getOrgId(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id")
-    .eq("id", userId)
-    .maybeSingle();
-  return profile?.org_id ?? null;
 }

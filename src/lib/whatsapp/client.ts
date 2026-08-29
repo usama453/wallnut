@@ -152,6 +152,24 @@ function assertConfigured() {
   }
 }
 
+export async function fetchWahaContactName(phone: string): Promise<string | null> {
+  if (!WAHA_API_KEY || !phone) return null;
+  const jid = phone.includes("@")
+    ? phone
+    : `${phone.replace(/\D/g, "")}@s.whatsapp.net`;
+  try {
+    const response = await wahaFetch(
+      `/api/${encodeURIComponent(WAHA_SESSION)}/contacts/${encodeURIComponent(jid)}`,
+      { method: "GET", signal: AbortSignal.timeout(800) },
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as { name?: string | null };
+    return data.name?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 function messageId(data: {
   id?: string | { _serialized?: string; id?: string };
 }) {

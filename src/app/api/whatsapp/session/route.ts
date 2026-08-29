@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { canCreateWhatsAppGroup, userIsSuperAdmin } from "@/lib/roles";
 import {
   getWahaSessionState,
   runWahaSessionAction,
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireUser();
   if (auth.error) return auth.error;
 
-  const canManage = auth.role === "owner" || auth.role === "admin";
+  const canManage = canCreateWhatsAppGroup(auth.role, auth.isSuperAdmin);
   const includeQr =
     canManage && request.nextUrl.searchParams.get("qr") === "1";
   const state = await getWahaSessionState(includeQr);
@@ -23,9 +24,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireUser();
   if (auth.error) return auth.error;
-  if (auth.role !== "owner" && auth.role !== "admin") {
+  if (!canCreateWhatsAppGroup(auth.role, auth.isSuperAdmin)) {
     return NextResponse.json(
-      { error: "Only owners and admins can manage the WhatsApp connection" },
+      { error: "Only owners, admins, and super admins can manage the WhatsApp connection" },
       { status: 403 },
     );
   }
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
 async function requireUser(): Promise<{
   error: NextResponse | null;
   role: string | null;
+  isSuperAdmin: boolean;
 }> {
   const supabase = await createClient();
   const {
@@ -73,6 +75,7 @@ async function requireUser(): Promise<{
     return {
       error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
       role: null,
+      isSuperAdmin: false,
     };
   }
 
@@ -85,8 +88,13 @@ async function requireUser(): Promise<{
     return {
       error: NextResponse.json({ error: "No organization" }, { status: 400 }),
       role: null,
+      isSuperAdmin: false,
     };
   }
 
-  return { error: null, role: profile.role as string | null };
+  return {
+    error: null,
+    role: profile.role as string | null,
+    isSuperAdmin: await userIsSuperAdmin(user.id, user.email),
+  };
 }

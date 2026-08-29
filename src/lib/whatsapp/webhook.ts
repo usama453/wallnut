@@ -44,6 +44,12 @@ export function extractWahaMessages(
       payload._data?.author,
       payload._data?.key?.participant,
     ) ?? from;
+  const pushName = firstString(
+    payload.pushName,
+    payload.notifyName,
+    payload._data?.notifyName,
+    payload._data?.pushName,
+  );
   const groupId = from.endsWith("@g.us") ? from : undefined;
   const buttonId = extractWahaButtonId(payload);
   const media = payload.media as
@@ -64,6 +70,7 @@ export function extractWahaMessages(
     type: "text",
     text: { body },
     context: groupId ? { group_id: groupId } : undefined,
+    pushName: pushName || undefined,
   };
 
   if (buttonId) {

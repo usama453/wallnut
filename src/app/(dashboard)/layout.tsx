@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/wallnut/app-header";
+import { listUserMemberships } from "@/lib/org-membership";
 
 export default async function DashboardLayout({
   children,
@@ -25,8 +26,13 @@ export default async function DashboardLayout({
   const organization = Array.isArray(profile?.organizations)
     ? (profile.organizations[0] as { name?: string; slug?: string } | undefined)
     : (profile?.organizations as { name?: string; slug?: string } | null | undefined);
-  const orgName = organization?.name ?? "My workspace";
-  const orgSlug = organization?.slug ?? null;
+  const memberships = user ? await listUserMemberships(user.id) : [];
+  const active =
+    memberships.find((membership) => membership.slug === organization?.slug)
+    ?? memberships[0]
+    ?? null;
+  const orgName = active?.name ?? organization?.name ?? "My workspace";
+  const orgSlug = active?.slug ?? organization?.slug ?? null;
 
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
@@ -36,6 +42,11 @@ export default async function DashboardLayout({
         orgSlug={orgSlug}
         userName={profile?.full_name}
         userEmail={user.email}
+        memberships={memberships.map((membership) => ({
+          name: membership.name,
+          slug: membership.slug,
+          role: membership.role,
+        }))}
       />
       <main className="min-h-[calc(100vh-3.5rem)] px-4 py-6 sm:px-6">{children}</main>
     </div>

@@ -56,6 +56,11 @@ let startingPromise = null;
 let socketGeneration = 0;
 /** mediaId -> {buffer, mimetype, filename} */
 const mediaStore = new Map();
+/** WhatsApp contacts seen this session (jid -> { id, name, notify }). */
+const contactBook = new Map();
+/** Profile picture cache: jid -> { buffer, mimetype, at }. */
+const pictureCache = new Map();
+const PICTURE_TTL_MS = 6 * 60 * 60 * 1000;
 /** msgId -> original WAMessage, kept so outbound sends can quote-reply. */
 const msgCache = new Map();
 const MSG_CACHE_MAX = 300;
@@ -82,6 +87,63 @@ function normalizeJid(chatId) {
   if (s.includes("@")) return s;
   const digits = s.replace(/[^0-9]/g, "");
   return `${digits}@s.whatsapp.net`;
+}
+
+function rememberContacts(contacts) {
+  if (!Array.isArray(contacts)) return;
+  for (const contact of contacts) {
+    const id = contact?.id;
+    if (!id) continue;
+    const previous = contactBook.get(id) || { id };
+    const name = contact.name || contact.notify || contact.verifiedName || previous.name;
+    const notify = contact.notify || contact.pushname || previous.notify;
+    contactBook.set(id, { id, name: name || notify, notify: notify || name });
+    const digits = digitsOf(id);
+    if (digits) contactBook.set(`${digits}@s.whatsapp.net`, contactBook.get(id));
+    if (digits) contactBook.set(`${digits}@c.us`, contactBook.get(id));
+  }
+}
+
+function contactNameFor(jid, pushName) {
+  const remembered = contactBook.get(jid) || contactBook.get(normalizeJid(jid));
+  return (
+    pushName ||
+    remembered?.name ||
+    remembered?.notify ||
+    null
+  );
+}
+
+function lookupContact(rawId) {
+  const jid = normalizeJid(rawId);
+  const digits = digitsOf(jid);
+  return (
+    contactBook.get(rawId) ||
+    contactBook.get(jid) ||
+    contactBook.get(`${digits}@s.whatsapp.net`) ||
+    contactBook.get(`${digits}@c.us`) ||
+    { id: jid, name: null, notify: null }
+  );
+}
+
+async function profilePictureFor(rawId) {
+  if (!sock || status !== "WORKING") return null;
+  const jid = normalizeJid(rawId);
+  const cached = pictureCache.get(jid);
+  if (cached && Date.now() - cached.at < PICTURE_TTL_MS) return cached;
+  try {
+    const url = await sock.profilePictureUrl(jid, "image");
+    if (!url) return null;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const mimetype = response.headers.get("content-type") || "image/jpeg";
+    const entry = { buffer, mimetype, at: Date.now() };
+    pictureCache.set(jid, entry);
+    return entry;
+  } catch {
+    return null;
+  }
 }
 
 function digitsOf(jid) {
@@ -154,6 +216,15 @@ async function createSocket() {
         scheduleReconnect();
       }
     }
+  });
+
+  nextSocket.ev.on("contacts.upsert", (contacts) => {
+    if (generation !== socketGeneration) return;
+    rememberContacts(contacts);
+  });
+  nextSocket.ev.on("contacts.update", (contacts) => {
+    if (generation !== socketGeneration) return;
+    rememberContacts(contacts);
   });
 
   nextSocket.ev.on("messages.upsert", async ({ type, messages }) => {
@@ -312,6 +383,10 @@ function mapMessage(m) {
 
   if (!body && !hasMedia && !selectedButtonId) return null;
 
+  const personJid = m.key.participant || jid;
+  const pushName = m.pushName || m.verifiedBizName || null;
+  if (pushName) rememberContacts([{ id: personJid, notify: pushName }]);
+
   return {
     event: "message",
     session: SESSION,
@@ -328,6 +403,9 @@ function mapMessage(m) {
       hasMedia,
       media,
       mentions,
+      _data: { notifyName: pushName },
+      notifyName: contactNameFor(personJid, pushName),
+      pushName: contactNameFor(personJid, pushName),
       ...(m.key.participant ? { participant: m.key.participant } : {}),
       ...(selectedButtonId ? { selectedButtonId } : {}),
     },
@@ -611,6 +689,29 @@ const server = http.createServer(async (req, res) => {
     } catch (err) {
       return json(res, 404, { message: err?.message || "group not found" });
     }
+  }
+
+  const contactPrefix = `/api/${encodeURIComponent(SESSION)}/contacts/`;
+  if (req.method === "GET" && url.pathname.startsWith(contactPrefix)) {
+    const rest = url.pathname.slice(contactPrefix.length);
+    const [contactId, extra] = rest.split("/");
+    if (!contactId) return json(res, 404, { message: "contact not found" });
+    const decoded = decodeURIComponent(contactId);
+    if (extra === "profile-picture") {
+      const picture = await profilePictureFor(decoded);
+      if (!picture) return json(res, 404, { message: "no profile picture" });
+      res.writeHead(200, {
+        "content-type": picture.mimetype,
+        "cache-control": "private, max-age=3600",
+      });
+      return res.end(picture.buffer);
+    }
+    if (extra) return json(res, 404, { message: `no route: ${req.method} ${url.pathname}` });
+    const contact = lookupContact(decoded);
+    return json(res, 200, {
+      id: contact.id,
+      name: contact.name || contact.notify || null,
+    });
   }
 
   // ---- media ----

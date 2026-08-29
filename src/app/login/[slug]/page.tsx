@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import LoginForm from "@/components/login-form";
 import { AppHeader } from "@/components/wallnut/app-header";
-import { getPublicOrganization } from "@/lib/organizations";
+import { getOrganizationForLogin } from "@/lib/organizations";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const organization = await getPublicOrganization(slug);
+  const organization = await getOrganizationForLogin(slug);
   return { title: organization ? `Sign in to ${organization.name}` : "Organization not found" };
 }
 
@@ -22,7 +22,7 @@ export default async function OrganizationLoginPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const organization = await getPublicOrganization(slug);
+  const organization = await getOrganizationForLogin(slug);
   if (!organization) notFound();
 
   return (

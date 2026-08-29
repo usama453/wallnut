@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { avatarPalette, InitialAvatar } from "@/components/wallnut/avatar";
+import { PersonAvatar } from "@/components/wallnut/person-avatar";
+import { avatarPalette } from "@/components/wallnut/avatar";
 import { BackIcon } from "@/components/wallnut/icons";
 import { MetricChip } from "@/components/wallnut/metric-chip";
 import { Reveal } from "@/components/wallnut/reveal";
@@ -168,7 +169,12 @@ function Champion({
             ✦
           </span>
           <span className="relative rounded-full ring-2 ring-[#e8c547]/80 shadow-[0_0_0_6px_rgba(232,197,71,0.12)]">
-            <InitialAvatar label={person.display} size={92} className="ring-0" />
+            <PersonAvatar
+              label={person.display}
+              src={person.avatarUrl}
+              size={92}
+              className="ring-0"
+            />
           </span>
         </div>
         <Laurel side="right" />
@@ -204,7 +210,11 @@ function Leaderboard({
               <span className="w-4 text-[11px] tabular-nums text-[#6c6c6c]">
                 {startRank + index}
               </span>
-              <InitialAvatar label={person.display} size={22} />
+              <PersonAvatar
+                label={person.display}
+                src={person.avatarUrl}
+                size={22}
+              />
               <span className="min-w-0 flex-1 truncate text-[12px] text-[#919191]">
                 {person.display}
               </span>

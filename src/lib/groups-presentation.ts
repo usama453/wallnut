@@ -19,6 +19,13 @@ export interface GroupCard {
   reports: ReportRow[];
 }
 
+export interface PendingWhatsAppInvite {
+  id: string;
+  code: string;
+  expiresAt: string | null;
+  createdAt: string | null;
+}
+
 export const PLATFORM_LABEL: Record<GroupPlatform, string> = {
   whatsapp: "WhatsApp",
   slack: "Slack",

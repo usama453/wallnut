@@ -1,3 +1,13 @@
+/** Shared catch-all workspace for 1:1 chats and unclaimed WhatsApp groups. */
+export const PUBLIC_ORG_SLUG = "public";
+export const LEGACY_PUBLIC_ORG_SLUG = "default";
+export const ORG_COOKIE = "wallnut_org";
+
+export function isPublicOrgSlug(slug: string | null | undefined) {
+  const value = slug?.trim().toLowerCase();
+  return value === PUBLIC_ORG_SLUG || value === LEGACY_PUBLIC_ORG_SLUG;
+}
+
 /** Static app routes that must never be treated as organization slugs. */
 export const RESERVED_ORG_SLUGS = new Set([
   "api",

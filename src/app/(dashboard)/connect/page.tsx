@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { WahaConnect } from "@/components/waha-connect";
 import { createClient } from "@/lib/supabase/server";
+import { canCreateWhatsAppGroup, userIsSuperAdmin } from "@/lib/roles";
 import { getWahaSessionState } from "@/lib/whatsapp/session";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,10 @@ export default async function ConnectPage() {
     .select("role")
     .eq("id", user?.id ?? "")
     .maybeSingle();
-  const canManage = profile?.role === "owner" || profile?.role === "admin";
+  const isSuperAdmin = user
+    ? await userIsSuperAdmin(user.id, user.email)
+    : false;
+  const canManage = canCreateWhatsAppGroup(profile?.role, isSuperAdmin);
   const initialState = await getWahaSessionState(canManage);
 
   return (

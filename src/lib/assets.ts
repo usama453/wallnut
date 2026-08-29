@@ -30,7 +30,7 @@ export async function createAssetVersionFromBytes(args: {
 
   // Resolve a group JID to a groups.id if a lookupGroupId was provided.
   let resolvedGroupId: string | null = args.groupId ?? null;
-  if (args.lookupGroupId) {
+  if (!resolvedGroupId && args.lookupGroupId) {
     const { data: groupRow } = await admin
       .from("groups")
       .select("id")

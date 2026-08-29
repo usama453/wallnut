@@ -17,7 +17,7 @@ export default async function OrgRankingsPage({
     redirect("/");
   }
 
-  const stats = await getStats();
+  const stats = await getStats(access.org.id);
   if (!stats) notFound();
 
   return (

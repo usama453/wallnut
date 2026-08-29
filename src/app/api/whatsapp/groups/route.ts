@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/lib/org-membership";
+import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { randomInt } from "crypto";
 
-export async function GET() {
-  const ctx = await requireOrg();
+export async function GET(req: NextRequest) {
+  const ctx = await requireOrgContext(req.nextUrl.searchParams.get("org"));
   if (ctx.error) return ctx.error;
 
   const admin = await createAdminClient();
@@ -41,18 +43,19 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const ctx = await requireOrg();
+  const body = await req.json().catch(() => ({}));
+  const ctx = await requireOrgContext(
+    typeof body.org === "string" ? body.org : req.nextUrl.searchParams.get("org"),
+  );
   if (ctx.error) return ctx.error;
 
-  // Only owners and admins can create auth codes.
-  if (ctx.role !== "owner" && ctx.role !== "admin") {
+  if (!canCreateWhatsAppGroup(ctx.role, ctx.isSuperAdmin)) {
     return NextResponse.json(
-      { error: "Only owners and admins can create auth codes" },
+      { error: "Only owners, admins, and super admins can create codes" },
       { status: 403 },
     );
   }
 
-  const body = await req.json().catch(() => ({}));
   const action = body.action;
 
   if (action !== "create") {
@@ -102,21 +105,4 @@ function createAuthCode() {
     code += chars[randomInt(chars.length)];
   }
   return code;
-}
-
-async function requireOrg() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id, role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile?.org_id) {
-    return { error: NextResponse.json({ error: "No organization" }, { status: 400 }) };
-  }
-  return { orgId: profile.org_id, role: profile.role };
 }

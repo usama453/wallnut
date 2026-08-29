@@ -398,7 +398,14 @@ async function verifyOrganizationOrSignOut(
   }
 
   if (actualSlug !== expectedSlug) {
-    await supabase.auth.signOut();
-    throw new Error("This account does not have access to the selected organization.");
+    const memberships = (body?.memberships ?? []) as Array<{ slug?: string }>;
+    const allowed =
+      expectedSlug === "public" ||
+      expectedSlug === "default" ||
+      memberships.some((membership) => membership.slug === expectedSlug);
+    if (!allowed) {
+      await supabase.auth.signOut();
+      throw new Error("This account does not have access to the selected organization.");
+    }
   }
 }

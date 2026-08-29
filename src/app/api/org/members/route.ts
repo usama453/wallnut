@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/lib/org-membership";
 
 const ROLES = ["owner", "admin", "member", "viewer"] as const;
 
@@ -11,8 +12,8 @@ const ROLES = ["owner", "admin", "member", "viewer"] as const;
  *
  * Manages the authenticated user's org membership and pending email invites.
  */
-export async function GET() {
-  const ctx = await requireOrg();
+export async function GET(req: NextRequest) {
+  const ctx = await requireOrgContext(req.nextUrl.searchParams.get("org"));
   if (ctx.error) return ctx.error;
 
   const admin = await createAdminClient();
@@ -53,10 +54,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const ctx = await requireOrg();
-  if (ctx.error) return ctx.error;
-
   const body = await req.json().catch(() => ({}));
+  const ctx = await requireOrgContext(
+    typeof body.org === "string" ? body.org : req.nextUrl.searchParams.get("org"),
+  );
+  if (ctx.error) return ctx.error;
   const admin = await createAdminClient();
 
   switch (body.action) {
@@ -81,19 +83,14 @@ export async function POST(req: NextRequest) {
 
       let result;
       if (existing?.id) {
-        const { data: curMember } = await admin
-          .from("organizations_users")
-          .select("id, org_id")
-          .eq("user_id", existing.id)
-          .maybeSingle();
-        if (curMember?.org_id === ctx.orgId) {
+      const { data: already } = await admin
+        .from("organizations_users")
+        .select("id")
+        .eq("user_id", existing.id)
+        .eq("org_id", ctx.orgId)
+        .maybeSingle();
+        if (already) {
           return NextResponse.json({ error: "This person is already in your org" }, { status: 400 });
-        }
-        if (curMember) {
-          return NextResponse.json(
-            { error: "This person belongs to another org; ask them to leave first" },
-            { status: 400 },
-          );
         }
         result = await admin.from("organizations_users").insert({
           org_id: ctx.orgId,
@@ -151,21 +148,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
-}
-
-async function requireOrg() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id, role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile?.org_id) {
-    return { error: NextResponse.json({ error: "No organization" }, { status: 400 }) };
-  }
-  return { orgId: profile.org_id, role: profile.role, userId: user.id };
 }

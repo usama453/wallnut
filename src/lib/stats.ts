@@ -1,9 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
+import { WAHA_API_KEY } from "@/lib/whatsapp/config";
+import { fetchWahaContactName } from "@/lib/whatsapp/client";
+import {
+  loadWhatsAppContactNames,
+  rememberWhatsAppContact,
+} from "@/lib/whatsapp/contacts";
+import { phoneDigits } from "@/lib/whatsapp/jid";
 
 export interface PersonStats {
   key: string;
   phone: string | null;
   display: string;
+  avatarUrl: string | null;
   uploads: number;
   typos: number;
   avgScore: number | null;
@@ -19,7 +27,7 @@ export interface PersonStats {
  * Uploads + typos are counted for every distinct phone that sent a design in
  * for proofing. Assets not tied to a phone are grouped under "Dashboard".
  */
-export async function getStats() {
+export async function getStats(orgIdOverride?: string | null) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,23 +36,33 @@ export async function getStats() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organizations(name, slug)")
+    .select("org_id, organizations(name, slug)")
     .eq("id", user.id)
     .maybeSingle();
   const organization = Array.isArray(profile?.organizations)
     ? profile.organizations[0] ?? null
     : profile?.organizations ?? null;
+  const orgId = orgIdOverride ?? ((profile?.org_id as string | null) ?? null);
 
-  // Proofing activity, org-scoped via RLS.
-  const { data: usage } = await supabase
-    .from("whatsapp_usage")
-    .select("from_phone, asset_id, status")
-    .eq("direction", "inbound")
-    .eq("msg_type", "proof")
-    .not("asset_id", "is", null)
-    .limit(500);
+  const { data: orgAssets } = orgId
+    ? await supabase.from("assets").select("id").eq("org_id", orgId).limit(500)
+    : { data: null };
+  const orgAssetIds = new Set((orgAssets ?? []).map((asset) => asset.id));
 
-  const usageRows = usage ?? [];
+  // Proofing activity, scoped to this workspace.
+  const { data: usage } = orgAssetIds.size
+    ? await supabase
+        .from("whatsapp_usage")
+        .select("from_phone, asset_id, status")
+        .eq("direction", "inbound")
+        .eq("msg_type", "proof")
+        .in("asset_id", [...orgAssetIds])
+        .limit(500)
+    : { data: [] };
+
+  const usageRows = (usage ?? []).filter(
+    (row) => row.asset_id && orgAssetIds.has(row.asset_id),
+  );
 
   const assetIds = [...new Set(usageRows.map((u) => u.asset_id as string))];
   const { data: versions } = assetIds.length
@@ -90,6 +108,7 @@ export async function getStats() {
         key,
         phone,
         display: phone ? formatPhone(phone) : "Dashboard",
+        avatarUrl: null,
         uploads: 0,
         typos: 0,
         avgScore: null as number | null,
@@ -104,7 +123,7 @@ export async function getStats() {
     byPerson.set(key, entry);
   }
 
-  const people = [...byPerson.values()];
+  const people = await enrichPeople([...byPerson.values()], orgId);
 
   const byUploads = [...people].sort((a, b) => b.uploads - a.uploads || b.typos - a.typos);
   const byTypos = [...people].sort((a, b) => b.typos - a.typos || a.uploads - b.uploads);
@@ -128,6 +147,42 @@ export async function getStats() {
           : null,
     },
   };
+}
+
+async function enrichPeople(
+  people: PersonStats[],
+  orgId: string | null,
+): Promise<PersonStats[]> {
+  const phones = people.map((person) => person.phone).filter(Boolean) as string[];
+  const stored = await loadWhatsAppContactNames(phones).catch(
+    () => new Map<string, string>(),
+  );
+
+  const missing = phones.filter((phone) => !stored.get(phoneDigits(phone)));
+  const live = await Promise.all(
+    missing.slice(0, 20).map(async (phone) => {
+      const name = await fetchWahaContactName(phone);
+      return [phone, phoneDigits(phone), name] as const;
+    }),
+  );
+  for (const [phone, digits, name] of live) {
+    if (!name) continue;
+    stored.set(digits, name);
+    rememberWhatsAppContact({ orgId, phone, displayName: name });
+  }
+
+  return people.map((person) => {
+    const digits = phoneDigits(person.phone);
+    const display = (digits && stored.get(digits)) || person.display;
+    return {
+      ...person,
+      display,
+      avatarUrl:
+        digits && WAHA_API_KEY
+          ? `/api/whatsapp/avatar?phone=${encodeURIComponent(digits)}`
+          : null,
+    };
+  });
 }
 
 function formatPhone(raw: string): string {

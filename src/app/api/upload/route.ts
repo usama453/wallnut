@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes, randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/lib/org-membership";
 import { runProof, BUCKET } from "@/lib/proof/runProof";
 
 export const runtime = "nodejs";
@@ -28,19 +29,16 @@ export async function POST(request: Request) {
   // Resolve the target org: the signed-in user's org, else the default workspace.
   let orgId: string | null = null;
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("org_id, role")
-      .eq("id", user.id)
-      .single();
-    orgId = profile?.org_id ?? null;
+    const ctx = await requireOrgContext();
+    if (!ctx.error) orgId = ctx.orgId;
   }
   if (!orgId) {
     const { data: org } = await admin
       .from("organizations")
       .select("id")
-      .eq("slug", "default")
-      .single();
+      .in("slug", ["public", "default"])
+      .limit(1)
+      .maybeSingle();
     orgId = org?.id ?? null;
   }
   if (!orgId) {

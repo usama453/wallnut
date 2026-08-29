@@ -3,10 +3,10 @@ import { DashboardGrid } from "@/components/dashboard-grid";
 import { TeamManager } from "@/components/team-manager";
 import { InitialAvatar } from "@/components/wallnut/avatar";
 import { Reveal } from "@/components/wallnut/reveal";
-import { WhatsAppGroups } from "@/components/whatsapp-groups";
 import { getDashboardData } from "@/lib/groups";
 import { resolveOrgAccess } from "@/lib/org-access";
-import { createClient } from "@/lib/supabase/server";
+import { canCreateWhatsAppGroup } from "@/lib/roles";
+import { createAdminClient } from "@/lib/supabase/server";
 import { getStats } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +24,8 @@ export default async function OrganizationHome({
   }
 
   const [data, rankings, members] = await Promise.all([
-    getDashboardData(),
-    getStats(),
+    getDashboardData(access.org.id),
+    getStats(access.org.id),
     listOrgMembers(access.org.id),
   ]);
   if (!data || !rankings || data.orgSlug !== slug) notFound();
@@ -38,6 +38,11 @@ export default async function OrganizationHome({
         cards={data.cards}
         stats={data.stats}
         leaders={rankings.byTypos}
+        pendingInvites={data.pendingInvites}
+        canAddGroup={canCreateWhatsAppGroup(
+          access.profile.role,
+          access.isSuperAdmin,
+        )}
       />
 
       <Reveal className="mx-auto mt-16 max-w-[720px]" delayMs={80}>
@@ -74,22 +79,34 @@ export default async function OrganizationHome({
       </Reveal>
 
       <div className="mx-auto mt-10 max-w-[720px]">
-        <TeamManager />
-      </div>
-
-      <div className="mx-auto mt-16 max-w-[720px] border-t border-[#1b1b1b] pt-8">
-        <WhatsAppGroups codes={data.codes} />
+        <TeamManager orgSlug={slug} />
       </div>
     </div>
   );
 }
 
 async function listOrgMembers(orgId: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, role")
+  const admin = await createAdminClient();
+  const { data: memberships } = await admin
+    .from("organizations_users")
+    .select("user_id, role")
     .eq("org_id", orgId)
-    .order("full_name");
-  return data ?? [];
+    .eq("status", "active");
+  const userIds = [...new Set((memberships ?? []).map((row) => row.user_id).filter(Boolean))] as string[];
+  if (userIds.length === 0) return [];
+
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", userIds);
+  const nameById = new Map((profiles ?? []).map((profile) => [profile.id, profile.full_name]));
+  const roleById = new Map((memberships ?? []).map((row) => [row.user_id, row.role]));
+
+  return userIds
+    .map((id) => ({
+      id,
+      full_name: nameById.get(id) ?? null,
+      role: roleById.get(id) ?? "member",
+    }))
+    .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 }

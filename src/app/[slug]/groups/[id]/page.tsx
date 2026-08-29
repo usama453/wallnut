@@ -34,6 +34,7 @@ export default async function OrgGroupReportsPage({
     .from("groups")
     .select("id, name, platform, external_id, created_at")
     .eq("id", id)
+    .eq("org_id", access.org.id)
     .maybeSingle<GroupRow>();
   if (!group) notFound();
 

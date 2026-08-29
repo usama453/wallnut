@@ -69,6 +69,30 @@ test("maps image metadata and a downloadable URL", () => {
   assert.match(event.payload.media.url, /\/api\/files\/[a-f0-9]+$/);
 });
 
+test("includes WhatsApp push names on mapped messages", async () => {
+  const event = mapMessage({
+    key: {
+      id: "name-1",
+      remoteJid: "120363000000@g.us",
+      participant: "15551234567@s.whatsapp.net",
+    },
+    pushName: "Ayesha",
+    messageTimestamp: 126,
+    message: { conversation: "hello" },
+  });
+
+  assert.equal(event.payload.pushName, "Ayesha");
+  assert.equal(event.payload.notifyName, "Ayesha");
+  assert.equal(event.payload._data.notifyName, "Ayesha");
+
+  const response = await fetch(
+    `${baseUrl}/api/default/contacts/${encodeURIComponent("15551234567@s.whatsapp.net")}`,
+    { headers: { "X-Api-Key": process.env.WAHA_API_KEY } },
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).name, "Ayesha");
+});
+
 test("maps button replies to their action id", () => {
   const event = mapMessage({
     key: { id: "button-1", remoteJid: "15551234567@s.whatsapp.net" },

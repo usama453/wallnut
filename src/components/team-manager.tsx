@@ -26,7 +26,7 @@ const ROLE_LABEL: Record<Role, string> = {
 
 const ROLE_ORDER: Record<Role, number> = { owner: 0, admin: 1, member: 2, viewer: 3 };
 
-export function TeamManager() {
+export function TeamManager({ orgSlug }: { orgSlug?: string }) {
   const [myRole, setMyRole] = useState<Role>("member");
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -39,7 +39,9 @@ export function TeamManager() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/org/members");
+      const res = await fetch(
+        orgSlug ? `/api/org/members?org=${encodeURIComponent(orgSlug)}` : "/api/org/members",
+      );
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed to load");
       const data = await res.json();
       setMyRole(data.role);
@@ -54,7 +56,7 @@ export function TeamManager() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [orgSlug]);
 
   useEffect(() => {
     void load();
@@ -70,7 +72,7 @@ export function TeamManager() {
       const res = await fetch("/api/org/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, org: orgSlug }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Request failed");
       await load();

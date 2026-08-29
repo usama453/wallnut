@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Group } from "@/types";
 import type { GroupCard, ReportRow } from "./groups-presentation";
-export type { GroupCard, ReportRow };
+export type { GroupCard, ReportRow, PendingWhatsAppInvite } from "./groups-presentation";
 export { PLATFORM_LABEL, platformColor, platformIcon, timeAgo } from "./groups-presentation";
 
 /**
  * Fetch the org's groups together with each group's latest proofreading
  * reports (thumbnails, issue counts, timestamps) plus org stats.
  */
-export async function getDashboardData() {
+export async function getDashboardData(orgIdOverride?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,10 +21,18 @@ export async function getDashboardData() {
     .eq("id", user.id)
     .maybeSingle();
 
-  const orgId = profile?.org_id as string | undefined;
-  const organization = Array.isArray(profile?.organizations)
-    ? (profile.organizations[0] as { name?: string; slug?: string } | undefined)
-    : (profile?.organizations as { name?: string; slug?: string } | null | undefined);
+  const orgId = orgIdOverride ?? (profile?.org_id as string | undefined);
+  const { data: orgRow } = orgId
+    ? await supabase
+        .from("organizations")
+        .select("name, slug")
+        .eq("id", orgId)
+        .maybeSingle()
+    : { data: null };
+  const organization = orgRow
+    ?? (Array.isArray(profile?.organizations)
+      ? (profile.organizations[0] as { name?: string; slug?: string } | undefined)
+      : (profile?.organizations as { name?: string; slug?: string } | null | undefined));
   const orgName = organization?.name ?? "My workspace";
   const orgSlug = organization?.slug ?? null;
 
@@ -37,16 +45,22 @@ export async function getDashboardData() {
 
   // Communication groups are org-scoped via RLS. Include empty groups so a
   // newly connected workspace does not disappear from the dashboard.
-  const { data: groups } = await supabase
-    .from("groups")
-    .select("id, org_id, name, platform, external_id, created_at")
-    .order("created_at", { ascending: true });
+  const { data: groups } = orgId
+    ? await supabase
+        .from("groups")
+        .select("id, org_id, name, platform, external_id, created_at")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: true })
+    : { data: null };
 
-  const { data: assets } = await supabase
-    .from("assets")
-    .select("id, name, kind, status, created_at, created_by, slug, group_id")
-    .order("created_at", { ascending: false })
-    .limit(300);
+  const { data: assets } = orgId
+    ? await supabase
+        .from("assets")
+        .select("id, name, kind, status, created_at, created_by, slug, group_id")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(300)
+    : { data: null };
 
   const assetIds = (assets ?? []).map((a) => a.id);
   const { data: versions } = assetIds.length
@@ -80,13 +94,18 @@ export async function getDashboardData() {
     issueByProof.set(i.proof_id, (issueByProof.get(i.proof_id) ?? 0) + 1);
   }
 
-  const visibleGroups = (groups ?? []).filter(
-    (group) =>
-      group.platform !== "whatsapp" ||
-      !group.external_id ||
-      group.name === "General" ||
-      group.external_id.endsWith("@g.us"),
-  );
+  const visibleGroups = (groups ?? []).filter((group) => {
+    if (group.platform !== "whatsapp") return true;
+    const externalId = group.external_id ?? "";
+    if (!externalId || group.name === "General") return true;
+    if (externalId.endsWith("@g.us")) return true;
+    // Direct 1:1 chats with Wallnut belong on Public.
+    return (
+      externalId.endsWith("@c.us") ||
+      externalId.endsWith("@s.whatsapp.net") ||
+      externalId.endsWith("@lid")
+    );
+  });
   const byGroup = new Map<string, Group>();
   for (const g of visibleGroups) byGroup.set(g.id, g as Group);
 
@@ -157,20 +176,28 @@ export async function getDashboardData() {
     );
   }
 
-  const allReports = [...groupMap.values()].flatMap((c) => c.reports);
+  const cards = [...groupMap.values()]
+    .filter((card) => {
+      const externalId = card.group.external_id ?? "";
+      if (!externalId || card.group.name === "General" || externalId.endsWith("@g.us")) {
+        return true;
+      }
+      return card.reports.length > 0;
+    })
+    .sort((a, b) => {
+      const ra = a.reports[0]?.createdAt ?? "";
+      const rb = b.reports[0]?.createdAt ?? "";
+      return rb.localeCompare(ra) || a.group.name.localeCompare(b.group.name);
+    });
+
+  const allReports = cards.flatMap((c) => c.reports);
   const stats = {
-    groups: groupMap.size,
+    groups: cards.length,
     reports: allReports.length,
     filesChecked: allReports.filter((r) => r.score != null).length,
     issues: allReports.reduce((n, r) => n + r.issueCount, 0),
     members: memberCount ?? 0,
   };
-
-  const cards = [...groupMap.values()].sort((a, b) => {
-    const ra = a.reports[0]?.createdAt ?? "";
-    const rb = b.reports[0]?.createdAt ?? "";
-    return rb.localeCompare(ra) || a.group.name.localeCompare(b.group.name);
-  });
 
   // Fetch pending and used WhatsApp auth codes for the org (for the
   // dashboard sidebar).
@@ -197,5 +224,9 @@ export async function getDashboardData() {
     };
   });
 
-  return { orgId, orgName, orgSlug, cards, stats, codes };
+  const pendingInvites = codes.filter(
+    (code) => code.status === "pending" && !code.isExpired,
+  );
+
+  return { orgId, orgName, orgSlug, cards, stats, codes, pendingInvites };
 }

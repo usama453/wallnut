@@ -76,6 +76,24 @@ check(
 check("extracts PDF", extractMedia(groupPdf)?.mime === "application/pdf");
 check("preserves group JID", groupPdf.context.group_id === "120363000000@g.us");
 check("preserves group sender", groupPdf.sender === "15557654321@c.us");
+check(
+  "extracts WhatsApp push names",
+  extractWahaMessages(
+    {
+      event: "message",
+      session: "default",
+      payload: {
+        id: "msg-name",
+        from: "120363000000@g.us",
+        participant: "15551234567@c.us",
+        body: "hello",
+        pushName: "Ayesha",
+        notifyName: "Ayesha",
+      },
+    },
+    "default",
+  )[0]?.pushName === "Ayesha",
+);
 check("preserves bot identity", groupPdf.botId === "15550000000:1@s.whatsapp.net");
 check("preserves structured mentions", groupPdf.mentions.length === 1);
 check("detects button reply", isButtonReply(button));

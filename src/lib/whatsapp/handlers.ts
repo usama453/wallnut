@@ -13,8 +13,9 @@ import {
 } from "./webhook";
 import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
+import { rememberWhatsAppContact } from "./contacts";
 import { getGroupName } from "./group-name";
-import { canonicalChatId, whatsappGroupIdVariants } from "./jid";
+import { canonicalChatId, whatsappChatIdVariants } from "./jid";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -84,7 +85,13 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
       groupOrgId = await resolveGroupOrg(admin, groupId);
     }
 
-    const orgId = groupOrgId ?? (await resolveOrgId(sender));
+    const orgId =
+      groupOrgId ?? (await resolveOrgId(sender, admin));
+    rememberWhatsAppContact({
+      orgId,
+      phone: sender,
+      displayName: message.pushName,
+    });
     const accessChatId = canonicalChatId(message.from);
     void trackSeenChat(admin, orgId, accessChatId, message.text?.body).catch(() => {});
     const cached =
@@ -161,14 +168,6 @@ async function dispatchMessage(
   }
 
   const media = extractMedia(message);
-  if (groupId && !orgId) {
-    if (media || (message.type === "text" && wasMentioned(message))) {
-      await sendGroupLinkPrompt(from, groupId, message.id);
-      return { handled: true, action: "text" };
-    }
-    return { handled: false, action: "ignored" };
-  }
-
   if (media) {
     return handleMedia(from, media, message, groupId, orgId);
   }
@@ -196,20 +195,6 @@ async function dispatchMessage(
 
 /** Chats that already received the intro. */
 const introSentChats = new Set<string>();
-/** Groups that already received the "link this group" prompt. */
-const linkPromptSentGroups = new Set<string>();
-
-async function sendGroupLinkPrompt(
-  chatId: string,
-  groupId: string,
-  replyToMessageId?: string,
-) {
-  if (linkPromptSentGroups.has(groupId)) return;
-  linkPromptSentGroups.add(groupId);
-  const prompt =
-    "This group isn't linked to a workspace yet. An admin can link it from the dashboard: open WhatsApp Groups, create an auth code, then paste that code (for example WN-A7F3K2) in this group.";
-  await sendTextWaha(chatId, prompt, replyToMessageId).catch(() => {});
-}
 
 /** Best-effort intro for new conversations. */
 const INTRO_LINES = [
@@ -258,10 +243,21 @@ async function handleMedia(
     const bytes = await downloadMediaWaha(media.reference);
     const kind = media.mime === "application/pdf" ? "pdf" : "image";
     const sender = message.sender ?? from;
-    const resolvedOrg = orgId ?? (await resolveOrgId(sender));
+    const admin = await createAdminClient();
+    const resolvedOrg = orgId ?? (await resolveOrgId(sender, admin));
     if (!resolvedOrg) {
       throw new Error("this chat is not linked to a Wallnut workspace");
     }
+
+    const chatId = groupId ?? canonicalChatId(from);
+    const groupRowId = await ensureWhatsAppGroup(
+      admin,
+      resolvedOrg,
+      chatId,
+      groupId
+        ? await getGroupName(groupId)
+        : message.pushName || `Chat ${phoneLabel(from)}`,
+    );
 
     const providedName =
       message?.image?.caption ||
@@ -280,7 +276,8 @@ async function handleMedia(
       mime: media.mime,
       kind,
       bytes,
-      lookupGroupId: groupId,
+      lookupGroupId: chatId,
+      groupId: groupRowId,
     });
 
     const result = await proofSemaphore.run(() => runProof(created.versionId));
@@ -397,7 +394,7 @@ async function resolveGroupOrg(
     const { data } = await admin
       .from("groups")
       .select("org_id")
-      .in("external_id", whatsappGroupIdVariants(groupJid))
+      .in("external_id", whatsappChatIdVariants(groupJid))
       .eq("platform", "whatsapp")
       .limit(1)
       .maybeSingle();
@@ -407,32 +404,77 @@ async function resolveGroupOrg(
   }
 }
 
-/** Resolve org for a WhatsApp sender (1:1 chat or fallback). */
-async function resolveOrgId(phone: string): Promise<string | null> {
+/** Direct chats and unclaimed groups land in Public. */
+async function resolveOrgId(
+  _phone: string,
+  admin: Awaited<ReturnType<typeof createAdminClient>>,
+): Promise<string | null> {
   const fromEnv = process.env.WHATSAPP_DEFAULT_ORG_ID;
   if (fromEnv) return fromEnv;
+  return getPublicOrgId(admin);
+}
 
-  try {
-    const digits = phone.replace(/\D/g, "");
-    const candidates = Array.from(
-      new Set([
-        phone,
-        digits,
-        `${digits}@c.us`,
-        `${digits}@s.whatsapp.net`,
-      ]),
-    ).filter(Boolean);
-    const admin = await createAdminClient();
-    const { data } = await admin
-      .from("whatsapp_contacts")
-      .select("org_id")
-      .in("phone", candidates)
-      .limit(1)
-      .maybeSingle();
-    return data?.org_id ?? null;
-  } catch {
-    return null;
+let publicOrgCache: { id: string; at: number } | null = null;
+
+async function getPublicOrgId(
+  admin: Awaited<ReturnType<typeof createAdminClient>>,
+): Promise<string | null> {
+  if (publicOrgCache && Date.now() - publicOrgCache.at < 60_000) {
+    return publicOrgCache.id;
   }
+  const { data } = await admin
+    .from("organizations")
+    .select("id")
+    .in("slug", ["public", "default"])
+    .limit(1)
+    .maybeSingle();
+  if (data?.id) publicOrgCache = { id: data.id, at: Date.now() };
+  return data?.id ?? null;
+}
+
+async function ensureWhatsAppGroup(
+  admin: Awaited<ReturnType<typeof createAdminClient>>,
+  orgId: string,
+  chatId: string,
+  name: string,
+): Promise<string | null> {
+  const variants = whatsappChatIdVariants(chatId);
+  const { data: existing } = await admin
+    .from("groups")
+    .select("id, org_id")
+    .in("external_id", variants)
+    .eq("platform", "whatsapp")
+    .limit(1)
+    .maybeSingle();
+  if (existing?.id) return existing.id;
+
+  const externalId = chatId.includes("@") ? chatId : canonicalChatId(chatId);
+  const label = name.trim().slice(0, 120) || externalId;
+  const { data: created } = await admin
+    .from("groups")
+    .insert({
+      org_id: orgId,
+      name: label,
+      platform: "whatsapp",
+      external_id: externalId,
+    })
+    .select("id")
+    .maybeSingle();
+  if (created?.id) return created.id;
+
+  const { data: raced } = await admin
+    .from("groups")
+    .select("id")
+    .in("external_id", variants)
+    .eq("platform", "whatsapp")
+    .limit(1)
+    .maybeSingle();
+  return raced?.id ?? null;
+}
+
+function phoneLabel(raw: string) {
+  const digits = raw.split("@")[0].replace(/\D/g, "");
+  return digits ? `+${digits}` : raw;
 }
 
 /** Try to claim a WhatsApp group using an auth code sent in a group text. */
@@ -470,13 +512,25 @@ async function tryClaimGroupAuthCode(
 
   const { data: existingGroup } = await admin
     .from("groups")
-    .select("org_id")
-    .in("external_id", whatsappGroupIdVariants(groupId))
+    .select("id, org_id")
+    .in("external_id", whatsappChatIdVariants(groupId))
     .eq("platform", "whatsapp")
     .limit(1)
     .maybeSingle();
   if (existingGroup && existingGroup.org_id !== codeRow.org_id) {
-    return { ok: false, error: "group is already linked to another organization" };
+    const publicOrgId = await getPublicOrgId(admin);
+    if (existingGroup.org_id === publicOrgId) {
+      await admin
+        .from("groups")
+        .update({ org_id: codeRow.org_id, name: groupName })
+        .eq("id", existingGroup.id);
+      await admin
+        .from("assets")
+        .update({ org_id: codeRow.org_id })
+        .eq("group_id", existingGroup.id);
+    } else {
+      return { ok: false, error: "group is already linked to another organization" };
+    }
   }
 
   if (!existingGroup) {

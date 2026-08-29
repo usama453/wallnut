@@ -13,12 +13,14 @@ export function AppHeader({
   orgSlug,
   userName,
   userEmail,
+  memberships = [],
 }: {
   authenticated?: boolean;
   orgName?: string | null;
   orgSlug?: string | null;
   userName?: string | null;
   userEmail?: string | null;
+  memberships?: Array<{ name: string; slug: string; role?: string }>;
 }) {
   const homeHref = orgSlug ? orgHomePath(orgSlug) : "/";
   const navItems = [
@@ -101,6 +103,28 @@ export function AppHeader({
                 ) : null}
                 <p className="mt-1 truncate text-[11px] text-[#919191]">{orgName}</p>
               </div>
+
+              {memberships.length > 1 ? (
+                <div className="border-b border-[#222] p-2">
+                  <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6c6c6c]">
+                    Workspaces
+                  </p>
+                  {memberships.map((membership) => (
+                    <Link
+                      key={membership.slug}
+                      role="menuitem"
+                      href={orgHomePath(membership.slug)}
+                      className={`block rounded-[7px] px-3 py-2 text-[12px] transition ${
+                        membership.slug === orgSlug
+                          ? "bg-[#202020] font-bold text-white"
+                          : "text-[#919191] hover:bg-[#181818] hover:text-white"
+                      }`}
+                    >
+                      {membership.name}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
 
               <nav className="grid grid-cols-2 gap-1 p-2" aria-label="Workspace">
                 {navItems.map((item) => {

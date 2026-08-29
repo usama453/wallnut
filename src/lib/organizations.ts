@@ -52,8 +52,14 @@ export async function getPublicOrganizations(): Promise<PublicOrganization[]> {
   if (rows.length === 0) return [];
 
   const ids = rows.map((org) => org.id);
-  const [profilesResult, groupsResult, assetsResult] = await Promise.all([
-    admin.from("profiles").select("org_id").in("org_id", ids).limit(5000),
+  const [profilesResult, membersResult, groupsResult, assetsResult] = await Promise.all([
+    admin.from("profiles").select("id, org_id").in("org_id", ids).limit(5000),
+    admin
+      .from("organizations_users")
+      .select("org_id, user_id")
+      .in("org_id", ids)
+      .eq("status", "active")
+      .limit(5000),
     admin.from("groups").select("org_id").in("org_id", ids).limit(5000),
     admin
       .from("assets")
@@ -63,7 +69,10 @@ export async function getPublicOrganizations(): Promise<PublicOrganization[]> {
       .limit(5000),
   ]);
 
-  const memberCount = countByOrg(profilesResult.data ?? []);
+  const memberCount = uniqueMembersByOrg(
+    profilesResult.data ?? [],
+    membersResult.data ?? [],
+  );
   const groupCount = countByOrg(groupsResult.data ?? []);
   const reportCount = countByOrg(assetsResult.data ?? []);
   const latestByOrg = new Map<string, string>();
@@ -89,6 +98,57 @@ export async function getPublicOrganizations(): Promise<PublicOrganization[]> {
 export async function getPublicOrganization(slug: string) {
   const organizations = await getPublicOrganizations();
   return organizations.find((org) => org.slug === slug) ?? null;
+}
+
+export async function getOrganizationForLogin(slug: string) {
+  const published = await getPublicOrganization(slug);
+  if (published) return published;
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    return null;
+  }
+  const admin = await createAdminClient();
+  const { data } = await admin
+    .from("organizations")
+    .select("id, name, slug, tagline, accent_color")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    slug: data.slug,
+    tagline: data.tagline ?? null,
+    accentColor: data.accent_color ?? "#3d5a80",
+    members: 0,
+    groups: 0,
+    reports: 0,
+    lastActive: null,
+  } satisfies PublicOrganization;
+}
+
+function uniqueMembersByOrg(
+  profiles: Array<{ id?: string; org_id: string | null }>,
+  memberships: Array<{ org_id: string | null; user_id?: string | null }>,
+) {
+  const byOrg = new Map<string, Set<string>>();
+  for (const row of memberships) {
+    if (!row.org_id || !row.user_id) continue;
+    const set = byOrg.get(row.org_id) ?? new Set<string>();
+    set.add(row.user_id);
+    byOrg.set(row.org_id, set);
+  }
+  for (const row of profiles) {
+    if (!row.org_id || !row.id) continue;
+    const set = byOrg.get(row.org_id) ?? new Set<string>();
+    set.add(row.id);
+    byOrg.set(row.org_id, set);
+  }
+  const counts = new Map<string, number>();
+  for (const [orgId, users] of byOrg) counts.set(orgId, users.size);
+  return counts;
 }
 
 function countByOrg(rows: Array<{ org_id: string | null }>) {
