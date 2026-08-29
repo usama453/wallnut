@@ -353,7 +353,7 @@ function DashboardGroupCard({
             pendingLabel="Loading…"
             className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
           >
-            View more
+            Open Group
           </PendingLink>
         )}
       </div>
