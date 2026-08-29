@@ -105,12 +105,13 @@ export function DashboardGrid({
             className="relative z-10 mt-12 flex items-end justify-center gap-1 overflow-visible pt-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8"
             aria-label="Open team rankings"
           >
-            {leaders.slice(0, 5).map((leader, index) => (
+            {podiumDisplayOrder(leaders).map(({ leader, rank, index, total }) => (
               <RankedAvatar
                 key={leader.key}
                 leader={leader}
+                rank={rank}
                 index={index}
-                total={Math.min(leaders.length, 5)}
+                total={total}
               />
             ))}
           </Link>
@@ -183,12 +184,37 @@ export function DashboardGrid({
   );
 }
 
+function podiumDisplayOrder(leaders: PersonStats[], max = 5) {
+  const ranked = leaders.slice(0, max);
+  const slots =
+    ranked.length === 1
+      ? [0]
+      : ranked.length === 2
+        ? [1, 0]
+        : ranked.length === 3
+          ? [1, 0, 2]
+          : ranked.length === 4
+            ? [2, 0, 1, 3]
+            : [3, 1, 0, 2, 4];
+
+  return slots
+    .filter((rankIndex) => ranked[rankIndex])
+    .map((rankIndex, index) => ({
+      leader: ranked[rankIndex]!,
+      rank: rankIndex + 1,
+      index,
+      total: ranked.length,
+    }));
+}
+
 function RankedAvatar({
   leader,
+  rank,
   index,
   total,
 }: {
   leader: PersonStats;
+  rank: number;
   index: number;
   total: number;
 }) {
@@ -203,8 +229,8 @@ function RankedAvatar({
           {leader.display}
         </span>
         <span className="mt-0.5 block text-[10px] text-[#919191]">
-          {index + 1}
-          {ordinalSuffix(index + 1)} place · {leader.typos} issue
+          {rank}
+          {ordinalSuffix(rank)} place · {leader.typos} typo
           {leader.typos === 1 ? "" : "s"}
         </span>
       </span>
