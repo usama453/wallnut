@@ -1,21 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { InitialAvatar } from "@/components/wallnut/avatar";
 import { PlatformIcon } from "@/components/wallnut/icons";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { GroupCard, ReportRow } from "@/lib/groups-presentation";
-import {
-  PLATFORM_LABEL,
-  timeAgo,
-} from "@/lib/groups-presentation";
+import { timeAgo } from "@/lib/groups-presentation";
 import { orgGroupPath, orgRankingsPath } from "@/lib/org-paths";
 import type { PersonStats } from "@/lib/stats";
-import type { GroupPlatform } from "@/types";
-
-type PlatformFilter = "all" | GroupPlatform;
-const PLATFORMS: PlatformFilter[] = ["all", "whatsapp", "slack", "teams"];
 
 export function DashboardGrid({
   orgName,
@@ -36,33 +29,6 @@ export function DashboardGrid({
   };
   leaders: PersonStats[];
 }) {
-  const [query, setQuery] = useState("");
-  const [platform, setPlatform] = useState<PlatformFilter>("all");
-  const [status, setStatus] = useState("all");
-
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return cards
-      .filter((card) => platform === "all" || card.group.platform === platform)
-      .map((card) => {
-        const groupMatches = card.group.name.toLowerCase().includes(normalized);
-        const reports = card.reports.filter((report) => {
-          if (status !== "all" && report.status !== status) return false;
-          return !normalized || groupMatches || report.name.toLowerCase().includes(normalized);
-        });
-        return { ...card, reports, groupMatches };
-      })
-      .filter((card) => {
-        if (status !== "all" && card.reports.length === 0) return false;
-        return !normalized || card.groupMatches || card.reports.length > 0;
-      });
-  }, [cards, platform, query, status]);
-
-  const visibleReports =
-    status === "all"
-      ? stats.reports
-      : filtered.reduce((total, card) => total + card.reports.length, 0);
-
   return (
     <section className="flex flex-col items-center py-4 sm:py-8">
       <Reveal dramatic>
@@ -75,7 +41,7 @@ export function DashboardGrid({
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-[#919191]">
           <span>{stats.members} members</span>
           <span>{stats.groups} groups</span>
-          <span>{visibleReports} reports</span>
+          <span>{stats.reports} reports</span>
           <span>{stats.issues} issues found</span>
         </div>
       </Reveal>
@@ -108,66 +74,10 @@ export function DashboardGrid({
         </Reveal>
       )}
 
-      <Reveal dramatic delayMs={620} className="mt-8 w-full max-w-[680px]">
-        <div className="rounded-[8px] border border-[#1b1b1b] bg-[#0b0b0b] p-2">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <label className="relative flex-1">
-              <span className="sr-only">Search groups and reports</span>
-              <svg
-                aria-hidden
-                className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#555]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-              </svg>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search groups or reports"
-                className="w-full rounded-[6px] border border-transparent bg-[#141414] py-2 pl-9 pr-3 text-[12px] text-[#d0d0d0] placeholder:text-[#555] focus:border-[#343434] focus:outline-none"
-              />
-            </label>
-            <select
-              aria-label="Filter report status"
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              className="rounded-[6px] border border-transparent bg-[#141414] px-3 py-2 text-[11px] text-[#919191] focus:border-[#343434] focus:outline-none"
-            >
-              <option value="all">All statuses</option>
-              <option value="approved">Approved</option>
-              <option value="in_review">In review</option>
-              <option value="changes_requested">Changes requested</option>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {PLATFORMS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setPlatform(value)}
-                className={`rounded-[5px] px-2.5 py-1.5 text-[10px] font-medium transition ${
-                  platform === value
-                    ? "bg-[#242424] text-white"
-                    : "text-[#6c6c6c] hover:text-[#bdbdbd]"
-                }`}
-              >
-                {value === "all" ? "All channels" : PLATFORM_LABEL[value]}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Reveal>
-
-      <div className="mt-3 flex w-full max-w-[680px] flex-col gap-3">
-        {filtered.length > 0 ? (
-          filtered.map((card, index) => (
-            <Reveal key={card.group.id} dramatic delayMs={760 + index * 110}>
+      <div className="mt-8 flex w-full max-w-[680px] flex-col gap-3">
+        {cards.length > 0 ? (
+          cards.map((card, index) => (
+            <Reveal key={card.group.id} dramatic delayMs={620 + index * 110}>
               <DashboardGroupCard
                 card={card}
                 orgSlug={orgSlug}
@@ -177,9 +87,9 @@ export function DashboardGrid({
           ))
         ) : (
           <div className="rounded-[8px] border border-dashed border-[#252525] px-6 py-14 text-center">
-            <p className="text-[12px] font-bold text-[#bdbdbd]">No matching reports</p>
+            <p className="text-[12px] font-bold text-[#bdbdbd]">No groups yet</p>
             <p className="mt-1 text-[11px] text-[#5f5f5f]">
-              Try another search, channel, or status.
+              Linked WhatsApp groups will appear here.
             </p>
           </div>
         )}
