@@ -125,27 +125,33 @@ export function whatsAppContactHint(digits: string): string {
 
 /** Human-readable phone when we have no saved contact name. */
 export function formatWhatsAppPhone(digits: string): string {
-  if (!digits) return "WhatsApp contact";
-  if (digits.length >= 10) return `+${digits.slice(0, 2)} …${digits.slice(-4)}`;
-  if (digits.length >= 4) return `+${digits}`;
-  return "WhatsApp contact";
+  if (!digits || digits.length < 4) return "WhatsApp contact";
+  return `+${digits}`;
 }
 
-/** Human label for who sent a proof (never raw @lid JIDs or full phone strings). */
+/** Human label for who sent a proof (never raw @lid JIDs). */
 export function displayWhatsAppSender(
   raw: string | null | undefined,
   contactNames?: Map<string, string>,
+  options?: { withPhone?: boolean },
 ): string | null {
   if (!raw?.trim()) return null;
   const digits = phoneDigits(raw);
   if (!digits) {
     return raw.includes("@") ? "WhatsApp contact" : raw.trim();
   }
+  const phone = formatWhatsAppPhone(digits);
   const saved = contactNames?.get(digits);
   if (saved && !looksLikePhoneLabel(saved) && !looksLikeMessageText(saved)) {
-    return saved;
+    return options?.withPhone ? `${saved} · ${phone}` : saved;
   }
-  return formatWhatsAppPhone(digits);
+  return phone;
+}
+
+function privateChatPhoneLabel(digits: string): string | null {
+  if (!digits) return null;
+  const phone = formatWhatsAppPhone(digits);
+  return phone === "WhatsApp contact" ? null : phone;
 }
 
 /** Stable label for a 1:1 WhatsApp contact — never show a full message as the title. */
@@ -154,7 +160,7 @@ export function displayPrivateChatTitle(
   contactName?: string | null,
 ): string {
   const digits = phoneDigits(group.external_id ?? "");
-  const hint = digits ? whatsAppContactHint(digits) : null;
+  const phone = privateChatPhoneLabel(digits);
 
   const savedName = contactName?.trim();
   if (
@@ -162,7 +168,7 @@ export function displayPrivateChatTitle(
     !looksLikeMessageText(savedName) &&
     !looksLikePhoneLabel(savedName)
   ) {
-    return hint ? `${savedName} (${hint})` : savedName;
+    return phone ? `${savedName} · ${phone}` : savedName;
   }
 
   const raw = group.name?.trim() ?? "";
@@ -178,12 +184,12 @@ export function displayPrivateChatTitle(
   if (shortName) {
     const nameDigits = phoneDigits(raw);
     if (nameDigits && digits && nameDigits === digits) {
-      return hint ? `WhatsApp contact (${hint})` : "WhatsApp contact";
+      return phone ?? "WhatsApp contact";
     }
-    return hint ? `${shortName} (${hint})` : shortName;
+    return phone ? `${shortName} · ${phone}` : shortName;
   }
 
-  return hint ? `WhatsApp contact (${hint})` : "Private chat";
+  return phone ?? "Private chat";
 }
 
 export function cardLastActiveAt(card: GroupCard): string | null {

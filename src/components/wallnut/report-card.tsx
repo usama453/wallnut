@@ -4,8 +4,9 @@ import { displayWhatsAppSender, timeAgo, type ReportRow } from "@/lib/groups-pre
 
 export function ReportCard({ report }: { report: ReportRow }) {
   const href = report.slug ? `/reports/${report.slug}` : `/reports/${report.assetId}`;
-  const uploader =
-    displayWhatsAppSender(report.uploader, undefined) ?? report.uploader ?? "Workspace";
+  const uploader = report.uploader?.includes("@")
+    ? displayWhatsAppSender(report.uploader, undefined) ?? report.uploader ?? "Workspace"
+    : report.uploader ?? "Workspace";
   const scoreTone =
     report.score == null
       ? "text-[#6c6c6c]"

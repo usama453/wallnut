@@ -11,9 +11,12 @@ import { displayWhatsAppSender } from "@/lib/groups-presentation";
 import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
 import {
   displayGroupName,
+  displayPrivateChatTitle,
   displayPublicUnlinkedGroupName,
   isPublicDirectMessageCard,
+  isWhatsAppDirectChat,
 } from "@/lib/groups-presentation";
+import { phoneDigits } from "@/lib/whatsapp/jid";
 import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
 import { isPublicOrgSlug, orgHomePath } from "@/lib/org-paths";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
@@ -44,6 +47,8 @@ export default async function OrgGroupReportsPage({
     .eq("org_id", access.org.id)
     .maybeSingle<GroupRow>();
   if (!group) notFound();
+
+  const isPublic = isPublicOrgSlug(slug);
 
   const { data: assets } = await supabase
     .from("assets")
@@ -142,7 +147,12 @@ export default async function OrgGroupReportsPage({
 
   const contactNames = await loadWhatsAppContactNamesForPhones(
     access.org.id,
-    phoneByAsset.values(),
+    [
+      ...(isPublic && isWhatsAppDirectChat(group.external_id)
+        ? [group.external_id ?? ""]
+        : []),
+      ...phoneByAsset.values(),
+    ],
   );
 
   const reports: ReportRow[] = (assets ?? []).map((asset) => {
@@ -164,7 +174,11 @@ export default async function OrgGroupReportsPage({
       groupId: id,
       uploader:
         (asset.created_by ? creatorName.get(asset.created_by) : null) ??
-        displayWhatsAppSender(phoneByAsset.get(asset.id), contactNames) ??
+        displayWhatsAppSender(
+          phoneByAsset.get(asset.id),
+          contactNames,
+          isPublic ? { withPhone: true } : undefined,
+        ) ??
         null,
     };
   });
@@ -174,11 +188,14 @@ export default async function OrgGroupReportsPage({
   const canRemoveGroup =
     group.platform === "whatsapp" &&
     canCreateWhatsAppGroup(access.profile.role, access.isSuperAdmin);
-  const isPublic = isPublicOrgSlug(slug);
+  const contactDigits = phoneDigits(group.external_id ?? "");
+  const contactName = contactDigits ? contactNames.get(contactDigits) : undefined;
   const groupTitle =
-    isPublic && !isPublicDirectMessageCard(group)
-      ? displayPublicUnlinkedGroupName(group)
-      : displayGroupName(group);
+    isPublic && isWhatsAppDirectChat(group.external_id)
+      ? displayPrivateChatTitle(group, contactName)
+      : isPublic && !isPublicDirectMessageCard(group)
+        ? displayPublicUnlinkedGroupName(group)
+        : displayGroupName(group);
 
   return (
     <div className="mx-auto w-full max-w-[880px] pb-10 pt-2">

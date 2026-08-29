@@ -222,7 +222,11 @@ export async function getDashboardData(orgIdOverride?: string) {
       groupId: gid,
       uploader:
         (a.created_by ? creatorName.get(a.created_by) : null) ??
-        displayWhatsAppSender(phoneByAsset.get(a.id), contactNames) ??
+        displayWhatsAppSender(
+          phoneByAsset.get(a.id),
+          contactNames,
+          isPublicOrgSlug(orgSlug) ? { withPhone: true } : undefined,
+        ) ??
         null,
     };
     const card = groupMap.get(gid)!;
