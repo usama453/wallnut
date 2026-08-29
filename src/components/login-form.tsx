@@ -64,15 +64,9 @@ export default function LoginForm({
   async function handleGoogle() {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: callbackUrl },
-    });
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-    }
+    const params = new URLSearchParams({ next: redirectTo });
+    if (organization?.slug) params.set("org", organization.slug);
+    window.location.assign(`/api/auth/google?${params.toString()}`);
   }
 
   async function handleCredentials(event: React.FormEvent) {
