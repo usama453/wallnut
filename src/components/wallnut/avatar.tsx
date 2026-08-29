@@ -33,10 +33,12 @@ export function InitialAvatar({
   label,
   size = 36,
   className = "",
+  style,
 }: {
   label: string | null | undefined;
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const palette = avatarPalette(label);
 
@@ -50,6 +52,7 @@ export function InitialAvatar({
         background: palette.background,
         color: palette.foreground,
         fontSize: Math.max(9, Math.round(size * 0.29)),
+        ...style,
       }}
     >
       {initialsFor(label)}

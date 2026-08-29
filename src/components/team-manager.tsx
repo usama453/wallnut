@@ -41,7 +41,13 @@ const PANEL =
 const FIELD =
   "rounded-[6px] border border-[#2e2e2e] bg-[#161616] px-3 py-2 text-[12px] text-[#fbfbfb] outline-none placeholder:text-[#555] focus:border-[#3a3a3a]";
 
-export function TeamManager({ orgSlug }: { orgSlug?: string }) {
+export function TeamManager({
+  orgSlug,
+  onUpdated,
+}: {
+  orgSlug?: string;
+  onUpdated?: () => void;
+}) {
   const [myRole, setMyRole] = useState<Role>("member");
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -98,6 +104,7 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Request failed");
       await load();
+      onUpdated?.();
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed");
@@ -269,7 +276,7 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
       ) : null}
 
       {removeTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4">
           <div
             role="dialog"
             aria-modal="true"

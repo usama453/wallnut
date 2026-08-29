@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { orgHomePath, orgRankingsPath } from "@/lib/org-paths";
+import { TeamAccess } from "@/components/team-access";
 import { InitialAvatar } from "./avatar";
 import { Spinner } from "./icons";
 import { NavigationProgress } from "./pending";
@@ -79,7 +80,9 @@ export function AppHeader({
       {!authenticated ? (
         <span className="text-[12px] text-[#6c6c6c]">Public</span>
       ) : (
-        <div ref={menuRef} className="relative">
+        <div className="flex items-center gap-2.5">
+          {orgSlug ? <TeamAccess orgSlug={orgSlug} /> : null}
+          <div ref={menuRef} className="relative">
           <button
             type="button"
             aria-haspopup="menu"
@@ -145,6 +148,7 @@ export function AppHeader({
               </div>
             </div>
           ) : null}
+          </div>
         </div>
       )}
     </header>

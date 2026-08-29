@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { DashboardGrid } from "@/components/dashboard-grid";
-import { TeamManager } from "@/components/team-manager";
 import { getDashboardData } from "@/lib/groups";
 import { resolveOrgAccess } from "@/lib/org-access";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
@@ -41,9 +40,6 @@ export default async function OrganizationHome({
         )}
       />
 
-      <div className="mx-auto mt-10 flex w-full max-w-[680px] flex-col">
-        <TeamManager orgSlug={slug} />
-      </div>
     </div>
   );
 }
