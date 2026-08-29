@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Group } from "@/types";
 import type { GroupCard, ReportRow } from "./groups-presentation";
-import { displayGroupName } from "./groups-presentation";
+import {
+  displayGroupName,
+  displayWhatsAppSender,
+  isWhatsAppDirectChat,
+} from "./groups-presentation";
 import { isPublicOrgSlug } from "@/lib/org-paths";
 import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
 import {
@@ -9,6 +13,12 @@ import {
   ensurePlaceholderWhatsAppGroups,
   isPendingGroupExternalId,
 } from "@/lib/whatsapp/placeholder-groups";
+import { fetchWahaContactName } from "@/lib/whatsapp/client";
+import {
+  loadOrgWhatsAppContacts,
+  rememberWhatsAppContact,
+} from "@/lib/whatsapp/contacts";
+import { phoneDigits } from "@/lib/whatsapp/jid";
 export type { GroupCard, ReportRow, PendingWhatsAppInvite } from "./groups-presentation";
 export {
   PLATFORM_LABEL,
@@ -175,12 +185,20 @@ export async function getDashboardData(orgIdOverride?: string) {
     }
   }
 
+  const contactNames = await loadContactNamesForDashboard(
+    orgId,
+    visibleGroups,
+    phoneByAsset,
+  );
+
   const groupMap = new Map<string, GroupCard>();
   for (const group of byGroup.values()) {
+    const digits = phoneDigits(group.external_id ?? "");
     groupMap.set(group.id, {
       group,
       reports: [],
       inviteCode: codeFromPendingExternalId(group.external_id) ?? undefined,
+      contactName: digits ? contactNames.get(digits) : undefined,
     });
   }
 
@@ -204,7 +222,7 @@ export async function getDashboardData(orgIdOverride?: string) {
       groupId: gid,
       uploader:
         (a.created_by ? creatorName.get(a.created_by) : null) ??
-        phoneByAsset.get(a.id) ??
+        displayWhatsAppSender(phoneByAsset.get(a.id), contactNames) ??
         null,
     };
     const card = groupMap.get(gid)!;
@@ -221,6 +239,12 @@ export async function getDashboardData(orgIdOverride?: string) {
     .filter((card) => {
       const externalId = card.group.external_id ?? "";
       if (isPublicOrgSlug(orgSlug)) {
+        if (
+          isWhatsAppDirectChat(externalId) &&
+          card.reports.length === 0
+        ) {
+          return false;
+        }
         return true;
       }
       if (
@@ -284,4 +308,67 @@ export async function getDashboardData(orgIdOverride?: string) {
   );
 
   return { orgId, orgName, orgSlug, cards, stats, codes, pendingInvites };
+}
+
+function looksLikePhoneLabel(label: string): boolean {
+  const trimmed = label.trim();
+  if (!trimmed) return false;
+  return /^[+\d\s().-]+$/.test(trimmed) || phoneDigits(trimmed).length >= 8;
+}
+
+function buildContactNameMap(
+  rows: Array<{ phone: string; display_name: string | null }>,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    const digits = phoneDigits(row.phone);
+    const name = row.display_name?.trim();
+    if (digits && name) map.set(digits, name);
+  }
+  return map;
+}
+
+async function loadContactNamesForDashboard(
+  orgId: string | undefined,
+  groups: Array<Pick<Group, "external_id">>,
+  phoneByAsset: Map<string, string>,
+): Promise<Map<string, string>> {
+  if (!orgId) return new Map();
+
+  const wanted = new Set<string>();
+  for (const group of groups) {
+    const digits = phoneDigits(group.external_id ?? "");
+    if (digits) wanted.add(digits);
+  }
+  for (const phone of phoneByAsset.values()) {
+    const digits = phoneDigits(phone);
+    if (digits) wanted.add(digits);
+  }
+  if (wanted.size === 0) return new Map();
+
+  const contactNames = buildContactNameMap(await loadOrgWhatsAppContacts(orgId));
+
+  const missing = [...wanted].filter((digits) => {
+    const saved = contactNames.get(digits);
+    return !saved || looksLikePhoneLabel(saved);
+  });
+  if (missing.length === 0) return contactNames;
+
+  const live = await Promise.all(
+    missing.slice(0, 8).map(async (digits) => {
+      const name = await fetchWahaContactName(digits);
+      return [digits, name] as const;
+    }),
+  );
+  for (const [digits, name] of live) {
+    if (!name || looksLikePhoneLabel(name)) continue;
+    contactNames.set(digits, name);
+    rememberWhatsAppContact({
+      orgId,
+      phone: digits,
+      displayName: name,
+    });
+  }
+
+  return contactNames;
 }

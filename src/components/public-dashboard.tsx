@@ -54,13 +54,8 @@ export function PublicDashboard({
             <div>
               <dt className="sr-only">Private chats</dt>
               <dd>
-                <span className="font-bold text-white">{inbox.privateChats.length}</span> with proofs
-              </dd>
-            </div>
-            <div>
-              <dt className="sr-only">Awaiting proof</dt>
-              <dd>
-                <span className="font-bold text-white">{inbox.privateIdle.length}</span> awaiting proof
+                <span className="font-bold text-white">{inbox.privateChats.length}</span> private chat
+                {inbox.privateChats.length === 1 ? "" : "s"}
               </dd>
             </div>
             <div>
@@ -90,16 +85,6 @@ export function PublicDashboard({
         emptyTitle="No private chats with proofs yet"
         emptyDescription="When someone sends Wallnut an image or PDF in a direct message, their chat appears here."
         defaultOpen
-      />
-
-      <PublicSection
-        title="Awaiting proof"
-        description="Contacts who messaged Wallnut in WhatsApp but have not sent proofable media yet. These rows are created when a chat is first seen."
-        cards={inbox.privateIdle}
-        orgSlug={orgSlug}
-        delayMs={160}
-        emptyTitle="No contacts awaiting proof"
-        emptyDescription="Text-only messages or hellos show up here until an image or PDF is sent."
       />
 
       <PublicSection

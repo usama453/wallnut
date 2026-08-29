@@ -20,6 +20,8 @@ export interface GroupCard {
   group: Group;
   reports: ReportRow[];
   inviteCode?: string;
+  /** Saved WhatsApp push / address-book name for 1:1 chats. */
+  contactName?: string;
 }
 
 export interface PendingWhatsAppInvite {
@@ -107,25 +109,73 @@ function looksLikeMessageText(name: string): boolean {
   return false;
 }
 
+function looksLikePhoneLabel(label: string): boolean {
+  const trimmed = label.trim();
+  if (!trimmed) return false;
+  if (/^[+\d\s().-]+$/.test(trimmed)) return true;
+  return phoneDigits(trimmed).length >= 8;
+}
+
+/** Last four digits — enough to tell contacts apart without a full number. */
+export function whatsAppContactHint(digits: string): string {
+  if (!digits) return "";
+  if (digits.length <= 4) return `···${digits}`;
+  return `···${digits.slice(-4)}`;
+}
+
+/** Human label for who sent a proof (never raw @lid JIDs or full phone strings). */
+export function displayWhatsAppSender(
+  raw: string | null | undefined,
+  contactNames?: Map<string, string>,
+): string | null {
+  if (!raw?.trim()) return null;
+  const digits = phoneDigits(raw);
+  if (!digits) {
+    return raw.includes("@") ? "WhatsApp contact" : raw.trim();
+  }
+  const saved = contactNames?.get(digits);
+  if (saved && !looksLikePhoneLabel(saved) && !looksLikeMessageText(saved)) {
+    return saved;
+  }
+  return `WhatsApp ${whatsAppContactHint(digits)}`;
+}
+
 /** Stable label for a 1:1 WhatsApp contact — never show a full message as the title. */
 export function displayPrivateChatTitle(
   group: Pick<Group, "name" | "platform" | "external_id">,
+  contactName?: string | null,
 ): string {
   const digits = phoneDigits(group.external_id ?? "");
-  const phone = digits ? `+${digits}` : null;
-  const raw = group.name?.trim() ?? "";
+  const hint = digits ? whatsAppContactHint(digits) : null;
 
+  const savedName = contactName?.trim();
+  if (
+    savedName &&
+    !looksLikeMessageText(savedName) &&
+    !looksLikePhoneLabel(savedName)
+  ) {
+    return hint ? `${savedName} (${hint})` : savedName;
+  }
+
+  const raw = group.name?.trim() ?? "";
   const shortName =
     raw &&
     !looksLikeMessageText(raw) &&
+    !looksLikePhoneLabel(raw) &&
     raw.split(/\s+/).length <= 3 &&
     raw.length <= 32
       ? raw
       : null;
 
-  if (shortName && phone) return `${shortName} · ${phone}`;
-  if (shortName) return shortName;
-  return phone ?? "Private chat";
+  if (shortName) {
+    const nameDigits = phoneDigits(raw);
+    if (nameDigits && digits && nameDigits === digits) {
+      return hint ? `WhatsApp contact (${hint})` : "WhatsApp contact";
+    }
+    return hint ? `${shortName} (${hint})` : shortName;
+  }
+
+  return hint ? `WhatsApp contact (${hint})` : "Private chat";
 }
 
 export function cardLastActiveAt(card: GroupCard): string | null {
@@ -165,8 +215,6 @@ export function isPublicDirectMessageCard(
 export interface PublicInboxSections {
   /** 1:1 chats that have sent at least one proof. */
   privateChats: GroupCard[];
-  /** 1:1 chats seen on WhatsApp but with no proofed media yet. */
-  privateIdle: GroupCard[];
   /** Legacy General bucket from before per-contact threads. */
   directArchive: GroupCard[];
   /** Unlinked @g.us groups that have sent proofs. */
@@ -186,7 +234,6 @@ function sortPublicCards(cards: GroupCard[]): GroupCard[] {
 /** Categorise every Public inbox row by where the traffic came from. */
 export function categorizePublicInbox(cards: GroupCard[]): PublicInboxSections {
   const privateChats: GroupCard[] = [];
-  const privateIdle: GroupCard[] = [];
   const directArchive: GroupCard[] = [];
   const groupProofs: GroupCard[] = [];
   const idleGroups: GroupCard[] = [];
@@ -199,7 +246,6 @@ export function categorizePublicInbox(cards: GroupCard[]): PublicInboxSections {
     }
     if (isWhatsAppDirectChat(group.external_id)) {
       if (card.reports.length > 0) privateChats.push(card);
-      else privateIdle.push(card);
       continue;
     }
     if (card.inviteCode || isPendingGroupExternalId(group.external_id)) {
@@ -215,7 +261,6 @@ export function categorizePublicInbox(cards: GroupCard[]): PublicInboxSections {
 
   return {
     privateChats: sortPublicCards(privateChats),
-    privateIdle: sortPublicCards(privateIdle),
     directArchive: sortPublicCards(directArchive),
     groupProofs: sortPublicCards(groupProofs),
     idleGroups: sortPublicCards(idleGroups),
@@ -248,7 +293,7 @@ export function publicCardPresentation(card: GroupCard): PublicCardPresentation 
 
   if (isWhatsAppDirectChat(group.external_id)) {
     return {
-      title: displayPrivateChatTitle(group),
+      title: displayPrivateChatTitle(group, card.contactName),
       badge: "Private chat",
       hint:
         count > 0
