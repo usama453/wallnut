@@ -6,15 +6,18 @@ import { avatarPalette, InitialAvatar } from "@/components/wallnut/avatar";
 import { BackIcon } from "@/components/wallnut/icons";
 import { MetricChip } from "@/components/wallnut/metric-chip";
 import { Reveal } from "@/components/wallnut/reveal";
+import { orgHomePath } from "@/lib/org-paths";
 import type { PersonStats } from "@/lib/stats";
 
 export function Rankings({
   orgName,
+  orgSlug,
   byTypos,
   byUploads,
   totals,
 }: {
   orgName: string;
+  orgSlug?: string | null;
   byTypos: PersonStats[];
   byUploads: PersonStats[];
   totals: {
@@ -48,8 +51,8 @@ export function Rankings({
         <p className="mt-3 text-[12px] text-[#919191]">
           Rankings will appear after your team sends its first design.
         </p>
-        <Link href="/dashboard" className="mt-6 text-[12px] text-[#919191] hover:text-white">
-          Back to dashboard
+        <Link href={orgSlug ? orgHomePath(orgSlug) : "/"} className="mt-6 text-[12px] text-[#919191] hover:text-white">
+          Back to workspace
         </Link>
       </div>
     );
@@ -59,7 +62,7 @@ export function Rankings({
     <div className="relative min-h-[calc(100vh-7rem)] overflow-hidden">
       <Confetti active={stage === "celebrate"} />
       <Link
-        href="/dashboard"
+        href={orgSlug ? orgHomePath(orgSlug) : "/"}
         className="absolute left-0 top-0 z-20 flex items-center gap-1 text-[12px] text-[#919191] transition hover:text-white"
       >
         <BackIcon />

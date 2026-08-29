@@ -29,7 +29,10 @@ export default function LoginForm({
       ? requestedMode
       : "signin";
   const callbackError = searchParams.get("error");
-  const redirectTo = safePath(searchParams.get("redirect"), "/dashboard");
+  const redirectTo = safePath(
+    searchParams.get("redirect"),
+    organization ? `/${organization.slug}` : "/",
+  );
 
   const [step, setStep] = useState<"email" | "credentials">("email");
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -100,7 +103,7 @@ export default function LoginForm({
 
         if (data.session) {
           await verifyOrganizationOrSignOut(supabase, organization?.slug);
-          router.push(redirectTo);
+          router.push(await destinationAfterAuth(organization?.slug, redirectTo));
           router.refresh();
         } else {
           setMessage(
@@ -118,7 +121,7 @@ export default function LoginForm({
       });
       if (authError) throw authError;
       await verifyOrganizationOrSignOut(supabase, organization?.slug);
-      router.push(redirectTo);
+      router.push(await destinationAfterAuth(organization?.slug, redirectTo));
       router.refresh();
     } catch (caught) {
       setError(
@@ -349,6 +352,17 @@ function AuthNotice({
       {children}
     </p>
   );
+}
+
+async function destinationAfterAuth(orgSlug: string | undefined, fallback: string) {
+  if (orgSlug) return fallback.startsWith("/") ? fallback : `/${orgSlug}`;
+  const response = await fetch("/api/me", {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const body = await response.json().catch(() => null);
+  const slug = body?.organization?.slug as string | undefined;
+  return slug ? `/${slug}` : fallback;
 }
 
 function safePath(value: string | null, fallback: string) {

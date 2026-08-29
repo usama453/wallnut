@@ -28,7 +28,7 @@ export async function getStats() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organizations(name)")
+    .select("organizations(name, slug)")
     .eq("id", user.id)
     .maybeSingle();
   const organization = Array.isArray(profile?.organizations)
@@ -111,6 +111,7 @@ export async function getStats() {
 
   return {
     orgName: organization?.name ?? "My workspace",
+    orgSlug: organization?.slug ?? null,
     byUploads,
     byTypos,
     totals: {

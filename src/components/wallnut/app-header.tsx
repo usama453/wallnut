@@ -4,30 +4,33 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { orgHomePath, orgRankingsPath } from "@/lib/org-paths";
 import { InitialAvatar } from "./avatar";
-
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/upload", label: "Upload" },
-  { href: "/connect", label: "Connect" },
-  { href: "/stats", label: "Rankings" },
-  { href: "/usage", label: "Usage" },
-  { href: "/brand", label: "Brand profile" },
-  { href: "/team", label: "Team" },
-  { href: "/settings", label: "Settings" },
-] as const;
 
 export function AppHeader({
   authenticated = false,
   orgName,
+  orgSlug,
   userName,
   userEmail,
 }: {
   authenticated?: boolean;
   orgName?: string | null;
+  orgSlug?: string | null;
   userName?: string | null;
   userEmail?: string | null;
 }) {
+  const homeHref = orgSlug ? orgHomePath(orgSlug) : "/";
+  const navItems = [
+    { href: homeHref, label: "Overview" },
+    { href: orgSlug ? orgRankingsPath(orgSlug) : "/stats", label: "Rankings" },
+    { href: "/connect", label: "Connect" },
+    { href: "/team", label: "Team" },
+    { href: "/upload", label: "Upload" },
+    { href: "/usage", label: "Usage" },
+    { href: "/brand", label: "Brand profile" },
+    { href: "/settings", label: "Settings" },
+  ];
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -62,7 +65,7 @@ export function AppHeader({
   return (
     <header className="relative z-40 flex h-14 shrink-0 items-center justify-between bg-black/90 px-[22px] backdrop-blur-md">
       <Link
-        href={authenticated ? "/dashboard" : "/"}
+        href={authenticated ? homeHref : "/"}
         className="text-[12px] font-bold leading-none text-white transition-opacity hover:opacity-75"
       >
         Wallnut
@@ -100,9 +103,9 @@ export function AppHeader({
               </div>
 
               <nav className="grid grid-cols-2 gap-1 p-2" aria-label="Workspace">
-                {NAV_ITEMS.map((item) => {
+                {navItems.map((item) => {
                   const active =
-                    item.href === "/dashboard"
+                    item.label === "Overview"
                       ? pathname === item.href
                       : pathname.startsWith(item.href);
                   return (

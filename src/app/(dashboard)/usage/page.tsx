@@ -181,7 +181,7 @@ export default async function UsagePage() {
       </div>
 
       <p className="text-xs text-slate-600">
-        Tracking from 30-day window. Proofs also count toward your <Link href="/dashboard" className="text-indigo-400 hover:underline">asset reports</Link>.
+        Tracking from 30-day window. Proofs also count toward your <Link href="/" className="text-indigo-400 hover:underline">workspace reports</Link>.
       </p>
     </div>
   );

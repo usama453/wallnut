@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TeamManager } from "@/components/team-manager";
-import { WhatsAppGroups } from "@/components/whatsapp-groups";
 
 export const dynamic = "force-dynamic";
 
@@ -12,14 +11,15 @@ export default async function TeamPage() {
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, role, organizations(name)")
+    .select("org_id, role, organizations(name, slug)")
     .eq("id", user?.id ?? "")
     .maybeSingle();
 
-  const orgName =
-    Array.isArray(profile?.organizations) && profile.organizations.length
-      ? (profile.organizations as { name: string }[])[0].name
-      : "My workspace";
+  const organization = Array.isArray(profile?.organizations)
+    ? (profile.organizations[0] as { name?: string; slug?: string } | undefined)
+    : (profile?.organizations as { name?: string; slug?: string } | null | undefined);
+  const orgName = organization?.name ?? "My workspace";
+  const orgSlug = organization?.slug ?? null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -37,8 +37,11 @@ export default async function TeamPage() {
         WhatsApp remain viewable by anyone with the link.
       </p>
 
-      <Link href="/dashboard" className="text-sm text-indigo-400 hover:underline">
-        ← Back to dashboard
+      <Link
+        href={orgSlug ? `/${orgSlug}` : "/"}
+        className="text-sm text-indigo-400 hover:underline"
+      >
+        ← Back to workspace
       </Link>
     </div>
   );

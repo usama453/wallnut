@@ -8,8 +8,11 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = safePath(searchParams.get("next"), "/dashboard");
   const expectedOrg = searchParams.get("org");
+  const next = safePath(
+    searchParams.get("next"),
+    expectedOrg ? `/${expectedOrg}` : "/",
+  );
 
   if (code) {
     const supabase = await createClient();
@@ -37,7 +40,11 @@ export async function GET(request: Request) {
         }
       }
 
-      return NextResponse.redirect(new URL(next, origin));
+      const destination =
+        next === "/"
+          ? await homeForSession(supabase)
+          : next;
+      return NextResponse.redirect(new URL(destination, origin));
     }
   }
 
@@ -49,6 +56,24 @@ export async function GET(request: Request) {
   return NextResponse.redirect(
     `${origin}/login?error=auth_callback_failed&redirect=${encodeURIComponent(next)}`,
   );
+}
+
+async function homeForSession(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return "/";
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organizations(slug)")
+    .eq("id", user.id)
+    .maybeSingle();
+  const organization = Array.isArray(profile?.organizations)
+    ? profile.organizations[0] ?? null
+    : profile?.organizations ?? null;
+  return organization?.slug ? `/${organization.slug}` : "/";
 }
 
 function safePath(value: string | null, fallback: string) {

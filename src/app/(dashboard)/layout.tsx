@@ -18,20 +18,22 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, org_id, organizations(name)")
+    .select("full_name, org_id, organizations(name, slug)")
     .eq("id", user.id)
     .maybeSingle();
 
   const organization = Array.isArray(profile?.organizations)
-    ? (profile.organizations[0] as { name?: string } | undefined)
-    : (profile?.organizations as { name?: string } | null | undefined);
+    ? (profile.organizations[0] as { name?: string; slug?: string } | undefined)
+    : (profile?.organizations as { name?: string; slug?: string } | null | undefined);
   const orgName = organization?.name ?? "My workspace";
+  const orgSlug = organization?.slug ?? null;
 
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
       <AppHeader
         authenticated
         orgName={orgName}
+        orgSlug={orgSlug}
         userName={profile?.full_name}
         userEmail={user.email}
       />

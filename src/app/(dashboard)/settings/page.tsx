@@ -54,8 +54,8 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-slate-400">Subscriptions and usage-based plans are coming soon.</p>
       </div>
 
-      <Link href="/dashboard" className="text-sm text-indigo-400 hover:underline">
-        ← Back to dashboard
+      <Link href="/" className="text-sm text-indigo-400 hover:underline">
+        ← Back to organizations
       </Link>
     </div>
   );

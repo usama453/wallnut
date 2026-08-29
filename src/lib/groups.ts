@@ -17,15 +17,16 @@ export async function getDashboardData() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, organizations(name)")
+    .select("org_id, organizations(name, slug)")
     .eq("id", user.id)
     .maybeSingle();
 
   const orgId = profile?.org_id as string | undefined;
   const organization = Array.isArray(profile?.organizations)
-    ? (profile.organizations[0] as { name?: string } | undefined)
-    : (profile?.organizations as { name?: string } | null | undefined);
+    ? (profile.organizations[0] as { name?: string; slug?: string } | undefined)
+    : (profile?.organizations as { name?: string; slug?: string } | null | undefined);
   const orgName = organization?.name ?? "My workspace";
+  const orgSlug = organization?.slug ?? null;
 
   const { count: memberCount } = orgId
     ? await supabase
@@ -196,5 +197,5 @@ export async function getDashboardData() {
     };
   });
 
-  return { orgId, orgName, cards, stats, codes };
+  return { orgId, orgName, orgSlug, cards, stats, codes };
 }

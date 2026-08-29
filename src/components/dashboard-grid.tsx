@@ -10,6 +10,7 @@ import {
   PLATFORM_LABEL,
   timeAgo,
 } from "@/lib/groups-presentation";
+import { orgGroupPath, orgRankingsPath } from "@/lib/org-paths";
 import type { PersonStats } from "@/lib/stats";
 import type { GroupPlatform } from "@/types";
 
@@ -18,11 +19,13 @@ const PLATFORMS: PlatformFilter[] = ["all", "whatsapp", "slack", "teams"];
 
 export function DashboardGrid({
   orgName,
+  orgSlug,
   cards,
   stats,
   leaders,
 }: {
   orgName: string;
+  orgSlug: string;
   cards: GroupCard[];
   stats: {
     groups: number;
@@ -80,7 +83,7 @@ export function DashboardGrid({
       {leaders.length > 0 ? (
         <Reveal dramatic delayMs={400}>
           <Link
-            href="/stats"
+            href={orgRankingsPath(orgSlug)}
             className="mt-12 flex items-end justify-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8"
             aria-label="Open team rankings"
           >
@@ -97,7 +100,7 @@ export function DashboardGrid({
       ) : (
         <Reveal dramatic delayMs={400}>
           <Link
-            href="/stats"
+            href={orgRankingsPath(orgSlug)}
             className="mt-12 rounded-full border border-[#292929] px-3 py-1.5 text-[11px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white"
           >
             Rankings will appear after the first upload
@@ -167,6 +170,7 @@ export function DashboardGrid({
             <Reveal key={card.group.id} dramatic delayMs={760 + index * 110}>
               <DashboardGroupCard
                 card={card}
+                orgSlug={orgSlug}
                 defaultOpen={index === 0}
               />
             </Reveal>
@@ -214,9 +218,11 @@ function RankedAvatar({
 
 function DashboardGroupCard({
   card,
+  orgSlug,
   defaultOpen,
 }: {
   card: GroupCard;
+  orgSlug: string;
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -240,7 +246,7 @@ function DashboardGroupCard({
           </span>
         </button>
         <Link
-          href={`/groups/${card.group.id}`}
+          href={orgGroupPath(orgSlug, card.group.id)}
           className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
         >
           View more

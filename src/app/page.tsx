@@ -70,7 +70,7 @@ export default async function LandingPage() {
 function OrganizationCard({ org }: { org: PublicOrganization }) {
   return (
     <Link
-      href={`/login/${encodeURIComponent(org.slug)}`}
+      href={`/${encodeURIComponent(org.slug)}`}
       className="group relative w-full overflow-hidden rounded-[12px] border border-[#1b1b1b] bg-[#101010] px-5 py-6 text-left shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition-colors hover:border-[#2a2a2a] sm:px-7 sm:py-7"
     >
       <span

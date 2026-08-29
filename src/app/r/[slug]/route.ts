@@ -12,6 +12,6 @@ export async function GET(
   // first, then fall back to the public app URL.
   const proto = req.headers.get("x-forwarded-proto") ?? "https";
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  const base = host ? `${proto}://${host}` : process.env.NEXT_PUBLIC_APP_URL ?? "https://bot.usama.fun";
+  const base = host ? `${proto}://${host}` : process.env.NEXT_PUBLIC_APP_URL ?? "https://wallnut.usama.fun";
   return NextResponse.redirect(new URL(`/reports/${slug}`, base), 307);
 }
