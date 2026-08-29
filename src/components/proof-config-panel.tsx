@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "@/components/wallnut/icons";
 import { WALLNUT_PANEL } from "@/components/wallnut/panel";
 import {
@@ -10,75 +9,16 @@ import {
   PROOF_RESPONSE_STYLE_LABELS,
   PROOF_RESPONSE_STYLES,
   type ProofAdminSettings,
-  type ProofCheckType,
-  type ProofResponseStyle,
 } from "@/lib/proof/proof-settings";
+import { useProofConfig } from "@/components/proof-config/use-proof-config";
 
 export function ProofConfigPanel({
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
 }: {
   initialSettings?: ProofAdminSettings;
 }) {
-  const [settings, setSettings] = useState<ProofAdminSettings>(initialSettings);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/settings/proof-config", { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to load");
-      setSettings({
-        checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks, ...data.checks },
-        responseStyle: data.responseStyle ?? DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
-      });
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function save(next: ProofAdminSettings) {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/settings/proof-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to save");
-      setSettings({
-        checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks, ...data.checks },
-        responseStyle: data.responseStyle ?? DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function toggleCheck(key: ProofCheckType) {
-    const next = {
-      ...settings,
-      checks: { ...settings.checks, [key]: !settings.checks[key] },
-    };
-    setSettings(next);
-    void save(next);
-  }
-
-  function selectStyle(style: ProofResponseStyle) {
-    if (style === settings.responseStyle) return;
-    const next = { ...settings, responseStyle: style };
-    setSettings(next);
-    void save(next);
-  }
+  const { settings, busy, error, toggleCheck, selectStyle } =
+    useProofConfig(initialSettings);
 
   return (
     <article className={WALLNUT_PANEL}>

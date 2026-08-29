@@ -1,7 +1,9 @@
 "use client";
 
 import { DashboardGroupCard, PendingWhatsAppGroupCard } from "@/components/dashboard-grid";
+import { ProofConfigWidget } from "@/components/proof-config/proof-config-widget";
 import { Reveal } from "@/components/wallnut/reveal";
+import type { ProofAdminSettings } from "@/lib/proof/proof-settings";
 import type { GroupCard, PendingWhatsAppInvite } from "@/lib/groups-presentation";
 import {
   categorizePublicInbox,
@@ -15,6 +17,9 @@ export function PublicDashboard({
   stats,
   pendingInvites = [],
   canManageGroups = false,
+  canManageProofConfig = false,
+  proofAdminSettings,
+  showProofSettingsLink = false,
 }: {
   orgSlug: string;
   cards: GroupCard[];
@@ -27,6 +32,9 @@ export function PublicDashboard({
   };
   pendingInvites?: PendingWhatsAppInvite[];
   canManageGroups?: boolean;
+  canManageProofConfig?: boolean;
+  proofAdminSettings?: ProofAdminSettings;
+  showProofSettingsLink?: boolean;
 }) {
   const inbox = categorizePublicInbox(cards);
 
@@ -118,6 +126,17 @@ export function PublicDashboard({
           ) : null}
         </header>
       </Reveal>
+
+      {canManageProofConfig ? (
+        <Reveal dramatic delayMs={80}>
+          <div className="mt-6">
+            <ProofConfigWidget
+              initialSettings={proofAdminSettings}
+              showSettingsLink={showProofSettingsLink}
+            />
+          </div>
+        </Reveal>
+      ) : null}
 
       {allEmpty ? (
         <Reveal dramatic delayMs={120}>

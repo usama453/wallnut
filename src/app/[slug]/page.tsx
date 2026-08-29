@@ -4,6 +4,8 @@ import { PublicDashboard } from "@/components/public-dashboard";
 import { getDashboardData } from "@/lib/groups";
 import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
 import { isPublicOrgSlug } from "@/lib/org-paths";
+import { canManageProofConfig } from "@/lib/proof-config-access";
+import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { getStats } from "@/lib/stats";
 
@@ -19,6 +21,13 @@ export default async function OrganizationHome({
   if (!requireOrgPageAccess(access)) return null;
 
   const isPublic = isPublicOrgSlug(slug);
+  const canManageProof = await canManageProofConfig(
+    access.user.id,
+    access.user.email,
+  );
+  const proofAdminSettings = canManageProof
+    ? await getProofAdminSettings()
+    : undefined;
   const [data, rankings] = await Promise.all([
     getDashboardData(access.org.id),
     isPublic ? Promise.resolve(null) : getStats(access.org.id),
@@ -34,6 +43,9 @@ export default async function OrganizationHome({
         stats={data.stats}
         pendingInvites={data.pendingInvites}
         canManageGroups={access.isSuperAdmin}
+        canManageProofConfig={canManageProof}
+        proofAdminSettings={proofAdminSettings}
+        showProofSettingsLink={access.isSuperAdmin}
       />
     );
   }
@@ -56,6 +68,9 @@ export default async function OrganizationHome({
         pendingInvites={data.pendingInvites}
         canAddGroup={canAddGroup}
         isSuperAdmin={access.isSuperAdmin}
+        canManageProofConfig={canManageProof}
+        proofAdminSettings={proofAdminSettings}
+        showProofSettingsLink={access.isSuperAdmin}
       />
 
     </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
+import { ProofConfigWidget } from "@/components/proof-config/proof-config-widget";
 import { PersonAvatar } from "@/components/wallnut/person-avatar";
 import { PlatformIcon, Spinner } from "@/components/wallnut/icons";
 import { PendingLink } from "@/components/wallnut/pending";
@@ -23,6 +24,9 @@ export function DashboardGrid({
   pendingInvites = [],
   canAddGroup = false,
   isSuperAdmin = false,
+  canManageProofConfig = false,
+  proofAdminSettings,
+  showProofSettingsLink = false,
 }: {
   orgName: string;
   orgSlug: string;
@@ -38,6 +42,9 @@ export function DashboardGrid({
   pendingInvites?: PendingWhatsAppInvite[];
   canAddGroup?: boolean;
   isSuperAdmin?: boolean;
+  canManageProofConfig?: boolean;
+  proofAdminSettings?: import("@/lib/proof/proof-settings").ProofAdminSettings;
+  showProofSettingsLink?: boolean;
 }) {
   const router = useRouter();
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
@@ -133,6 +140,15 @@ export function DashboardGrid({
       )}
 
       <div className="mt-8 flex w-full max-w-[680px] flex-col gap-3">
+        {canManageProofConfig ? (
+          <Reveal dramatic delayMs={460}>
+            <ProofConfigWidget
+              initialSettings={proofAdminSettings}
+              showSettingsLink={showProofSettingsLink}
+            />
+          </Reveal>
+        ) : null}
+
         {showOnboarding ? (
           <Reveal dramatic delayMs={480}>
             <OnboardingChecklist

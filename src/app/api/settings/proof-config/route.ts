@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import {
   getProofAdminSettings,
   setProofAdminSettings,
@@ -9,26 +8,12 @@ import {
   PROOF_CHECK_TYPES,
   PROOF_RESPONSE_STYLES,
 } from "@/lib/proof/proof-settings";
-import { userIsSuperAdmin } from "@/lib/roles";
+import { requireProofConfigApi } from "@/lib/proof-config-access";
 
 export const dynamic = "force-dynamic";
 
-async function requireSuperAdminApi() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
-  }
-  if (!(await userIsSuperAdmin(user.id, user.email))) {
-    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  }
-  return { error: null };
-}
-
 export async function GET() {
-  const auth = await requireSuperAdminApi();
+  const auth = await requireProofConfigApi();
   if (auth.error) return auth.error;
 
   const settings = await getProofAdminSettings();
@@ -36,7 +21,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireSuperAdminApi();
+  const auth = await requireProofConfigApi();
   if (auth.error) return auth.error;
 
   const body = await request.json().catch(() => ({}));
