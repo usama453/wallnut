@@ -5,6 +5,7 @@ import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
 import { formatWhatsAppReply, whatsappReplyPreview } from "@/lib/reportSummary";
+import { getProofResponseStyle } from "@/lib/proof/proof-settings-store";
 import {
   extractMedia,
   extractWahaMessages,
@@ -304,7 +305,8 @@ async function handleMedia(
     const result = await proofSemaphore.run(() => runProof(created.versionId));
     console.log(`[whatsapp] proof done for ${created.assetId} score=${result.report.score}`);
 
-    const replyTitle = whatsappReplyPreview(result.report.issues);
+    const responseStyle = await getProofResponseStyle();
+    const replyTitle = whatsappReplyPreview(result.report.issues, responseStyle);
     await admin.from("assets").update({ name: replyTitle }).eq("id", created.assetId);
 
     logUsage({
@@ -318,7 +320,7 @@ async function handleMedia(
 
     const reportUrl = `${APP_URL}/r/${created.slug}`;
 
-    const replyBody = formatWhatsAppReply(result.report.issues);
+    const replyBody = formatWhatsAppReply(result.report.issues, responseStyle);
 
     await sendInteractiveWaha(from, replyBody, {
       reply: [

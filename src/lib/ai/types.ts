@@ -1,3 +1,5 @@
+import type { ProofChecksConfig } from "@/lib/proof/proof-settings";
+
 export type Severity = "low" | "medium" | "high";
 export type ProofStatus = "passed" | "needs_review" | "errors";
 
@@ -57,6 +59,8 @@ export interface AnalyzeInput {
   imageContext?: string;
   /** Single-shot Gemini proofing — no split pipeline or local spellcheck afterward. */
   standalone?: boolean;
+  /** Admin-enabled proof categories for this run. */
+  enabledChecks?: ProofChecksConfig;
 }
 
 export interface TranscribeInput {

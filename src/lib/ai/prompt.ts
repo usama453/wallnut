@@ -1,4 +1,58 @@
 import type { BrandContext, PreviousProofContext } from "./types";
+import type { ProofChecksConfig } from "@/lib/proof/proof-settings";
+import { DEFAULT_PROOF_CHECKS } from "@/lib/proof/proof-settings";
+
+function buildEnabledCheckSections(
+  checks: ProofChecksConfig,
+  options: { spellingHandled: boolean; includeTyposInModel: boolean },
+): string {
+  const lines: string[] = [];
+  let index = 1;
+
+  if (options.includeTyposInModel && checks.typos) {
+    lines.push(
+      `${index++}. TYPOS: spelling mistakes and clear misspellings. Use title Misspelled "word" and suggestion Did you mean: correction?`,
+    );
+  }
+
+  const grammarParts: string[] = [];
+  if (checks.grammar) grammarParts.push("grammar, subject-verb agreement, tense, awkward phrasing, sentence fragments");
+  if (checks.punctuation) grammarParts.push("punctuation, duplicate words, missing or wrong commas/apostrophes/periods, extra spaces");
+  if (checks.capitalization) grammarParts.push("capitalization inconsistencies and ALL-CAPS misuse");
+  if (grammarParts.length) {
+    const spellingNote = options.spellingHandled
+      ? " Do NOT report dictionary spelling errors — those are handled elsewhere."
+      : "";
+    lines.push(`${index++}. TEXT: ${grammarParts.join("; ")}.${spellingNote}`);
+  }
+
+  if (checks.readability) {
+    lines.push(
+      `${index++}. READABILITY: weak or inconsistent tone, overly long sentences, low contrast, small/unreadable text, poor type hierarchy, overflow, truncation, alignment, spacing, and font rendering problems.`,
+    );
+    lines.push(
+      `${index++}. BRAND & LINKS: brand profile violations (colors, fonts, tone, terminology, banned words) and broken/invalid URLs, emails, phone numbers, or QR codes.`,
+    );
+  }
+
+  if (checks.missing_content) {
+    lines.push(
+      `${index++}. MISSING CONTENT: missing or weak CTA, absent disclaimers, truncated copy, or required text that should be present but is not.`,
+    );
+  }
+
+  if (checks.consistency) {
+    lines.push(
+      `${index++}. CONSISTENCY: compare with the previous version if provided (changed prices, dates, phone numbers, removed text, etc.).`,
+    );
+  }
+
+  if (!lines.length) {
+    return "No proof categories are enabled. Return a clean report with score 100, status passed, and an empty issues list.";
+  }
+
+  return lines.join("\n");
+}
 
 /**
  * Stage 1 — read the artwork and capture verbatim text before any QA.
@@ -36,8 +90,13 @@ export function buildSystemPrompt(
   previous?: PreviousProofContext | null,
   extractedText?: string,
   imageContext?: string,
+  checks: ProofChecksConfig = DEFAULT_PROOF_CHECKS,
 ): string {
   const spellingHandled = Boolean(extractedText?.trim());
+  const checkSections = buildEnabledCheckSections(checks, {
+    spellingHandled,
+    includeTyposInModel: false,
+  });
 
   return `You are AI Proof, an expert proofreading and quality-assurance engine for marketing assets (social posts, ads, flyers, packaging, banners, print).
 
@@ -48,13 +107,7 @@ SPELLING: spelling and typos are checked separately against the canonical text a
 ` : `TRANSCRIBE EVERY WORD: in the field "extracted_text", transcribe VERBATIM every visible text element in the artwork. Preserve EXACT spelling even if wrong. This transcription is used by an automated spellchecker.\n`}
 
 CHECK THESE CATEGORIES:
-1. TEXT: ${spellingHandled ? "grammar, punctuation, duplicate words, capitalization inconsistencies — only when clearly wrong against the canonical text." : "spelling, grammar, punctuation, duplicate words, capitalization, inconsistent writing style."}
-2. MARKETING COPY: weak or missing CTA, inconsistent tone, overly long/unreadable sentences, missing disclaimers, incorrect pricing/date/phone formatting.
-3. TYPOGRAPHY: font rendering errors (missing glyphs, boxes/tofu \u25a1, garbled/mis-rendered characters), inconsistent font families or weights between items that belong to the same hierarchy, poor font pairing, broken type scale or hierarchy (e.g. heading smaller than body, mixed serif/sans where it hurts), letter-spacing/kerning/tracking problems, text overflow, truncation with ellipsis, overlapping text, line-height too tight, inconsistent capitalization or misuse of ALL-CAPS, wrong straight vs curly quotes/apostrophes, widows/orphans.${spellingHandled ? " Do NOT flag dictionary spelling errors — those are handled elsewhere." : ""}
-4. VISUAL QA: low contrast, small/unreadable text, elements too close to edges, safe-margin violations, alignment inconsistencies, cropped logos, poor spacing.
-5. BRAND: anything that violates the brand profile below (colors, fonts, tone, terminology, banned words).
-6. LINKS: URLs, email addresses, phone numbers, QR codes — flag format problems and obviously broken/invalid URLs.
-7. CONSISTENCY: compare with the previous version if provided (changed prices, dates, phone numbers, removed text, etc.).
+${checkSections}
 
 COORDINATES: for every issue, return a tight bounding box around the exact text or element affected (normalized 0–1: x, y = top-left; w, h = size). Place the box on the visible pixels of the word or UI element — not the general area. If you cannot locate it confidently, set location to null instead of guessing.
 
@@ -86,7 +139,13 @@ export function buildStandaloneProofPrompt(
   ocrText?: string,
   brand?: BrandContext | null,
   previous?: PreviousProofContext | null,
+  checks: ProofChecksConfig = DEFAULT_PROOF_CHECKS,
 ): string {
+  const checkSections = buildEnabledCheckSections(checks, {
+    spellingHandled: false,
+    includeTyposInModel: checks.typos,
+  });
+
   return `You are AI Proof, an expert proofreading and quality-assurance engine for marketing assets (social posts, ads, flyers, packaging, banners, print).
 
 Analyze the artwork image in ONE pass. Return JSON only.
@@ -98,15 +157,8 @@ FIELDS:
 - "status" — "passed" | "needs_review" | "errors".
 - "issues" — prioritized findings with category, severity, title, description, suggestion, location.
 
-CHECK EVERYTHING YOURSELF (no external spellchecker):
-1. TEXT: spelling, typos, grammar, punctuation, duplicate words, capitalization.
-   For clear typos use title Misspelled "word" and suggestion Did you mean: correction?
-2. MARKETING COPY: weak/missing CTA, tone, readability, disclaimers, pricing/date format.
-3. TYPOGRAPHY: rendering errors, hierarchy, overflow, truncation, kerning, wrong quotes.
-4. VISUAL QA: contrast, readability, margins, alignment, safe zones.
-5. BRAND: profile violations (colors, fonts, tone, terminology, banned words).
-6. LINKS: URL, email, phone, QR format problems.
-7. CONSISTENCY: changes vs previous version if provided.
+CHECK ONLY THESE ENABLED CATEGORIES:
+${checkSections}
 
 COORDINATES: tight normalized bounding box (0–1: x, y, w, h) on the affected pixels when confident.
 

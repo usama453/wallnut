@@ -1,9 +1,9 @@
 /**
  * Compact, human-readable issue summary for chat reports.
- * Groups issues by category into a single line, e.g.:
- *   "1 grammar, 2 nouns, 1 visual"
- * The aggregated proper-noun finding is labeled "nouns".
  */
+import type { ProofResponseStyle } from "@/lib/proof/proof-settings";
+import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
+
 export interface SummaryIssue {
   category?: string | null;
   title?: string;
@@ -150,7 +150,23 @@ export function getCorrectionLines(
 }
 
 /** One-line preview of the WhatsApp reply Wallnut sends after proofing. */
-export function whatsappReplyPreview(issues: SummaryIssue[]): string {
+export function whatsappReplyPreview(
+  issues: SummaryIssue[],
+  style: ProofResponseStyle = DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+): string {
+  if (style === "plain") {
+    const lines = buildCorrectionLines(issues).slice(0, 1);
+    if (lines.length) return `${lines[0].before} → ${lines[0].after}`;
+    return "No issues found";
+  }
+  if (style === "mixed") {
+    const typoWords = extractTypoWords(issues);
+    if (typoWords.length) {
+      return `Found ${typoWords.length} typo${typoWords.length === 1 ? "" : "s"}: ${quoteWords(typoWords.slice(0, 3))}`;
+    }
+    if (!issues.length) return "No issues found";
+    return summarizeIssues(issues);
+  }
   const typoLines = getTypoCorrections(issues);
   if (typoLines.length > 0) {
     const first = `${typoLines[0].before} → ${typoLines[0].after}`;
@@ -164,11 +180,61 @@ export function whatsappReplyPreview(issues: SummaryIssue[]): string {
 }
 
 /**
- * Human, concise WhatsApp reply after proofing, e.g.:
- * - Found 3 typos, Mein → mien, mext → next, aye → gate. Rest looks clean.
- * - No typos found. Consider slightly darkening the background overlay on the title.
+ * WhatsApp reply after proofing. Style is configured by admins on Settings.
  */
-export function formatWhatsAppReply(issues: SummaryIssue[]): string {
+export function formatWhatsAppReply(
+  issues: SummaryIssue[],
+  style: ProofResponseStyle = DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+): string {
+  switch (style) {
+    case "plain":
+      return formatPlainWhatsAppReply(issues);
+    case "mixed":
+      return formatMixedWhatsAppReply(issues);
+    case "human":
+    default:
+      return formatHumanWhatsAppReply(issues);
+  }
+}
+
+function formatPlainWhatsAppReply(issues: SummaryIssue[]): string {
+  const lines = buildCorrectionLines(issues);
+  if (!lines.length) return "No issues found.";
+  const body = lines
+    .slice(0, 8)
+    .map((line) => `"${line.before}" → "${line.after}"`)
+    .join(". ");
+  const extra = lines.length > 8 ? ` +${lines.length - 8} more.` : ".";
+  return `${body}${extra}`;
+}
+
+function formatMixedWhatsAppReply(issues: SummaryIssue[]): string {
+  const typoWords = extractTypoWords(issues);
+  const typoLines = getTypoCorrections(issues);
+  const parts: string[] = [];
+
+  if (typoWords.length) {
+    parts.push(
+      `Found ${typoWords.length} typo${typoWords.length === 1 ? "" : "s"} ${quoteWords(typoWords)}.`,
+    );
+  } else if (typoLines.length) {
+    parts.push(
+      `Found ${typoLines.length} typo${typoLines.length === 1 ? "" : "s"} ${quoteWords(
+        typoLines.map((line) => line.before),
+      )}.`,
+    );
+  }
+
+  const summary = summarizeIssues(
+    issues.filter((issue) => issueLabel(issue) !== "typos" && issueLabel(issue) !== "nouns"),
+  );
+  if (summary) parts.push(summary.endsWith(".") ? summary : `${summary}.`);
+
+  if (!parts.length) return issues.length ? `${summarizeIssues(issues)}.` : "No issues found.";
+  return parts.join(" ");
+}
+
+function formatHumanWhatsAppReply(issues: SummaryIssue[]): string {
   const typoLines = getTypoCorrections(issues);
   const tip = pickTopTip(issues);
 

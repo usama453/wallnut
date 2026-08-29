@@ -3,6 +3,9 @@ import { normalizeImage } from "@/lib/image";
 import { renderPdfAllPages } from "@/lib/pdf";
 import { getProvider } from "@/lib/ai";
 import { getProofPipelineMode, type ProofPipelineMode } from "./pipeline-mode-store";
+import { getProofAdminSettings } from "./proof-settings-store";
+import { filterIssuesByChecks } from "./issue-checks";
+import { hasEnabledProofChecks, type ProofChecksConfig } from "./proof-settings";
 import { spellcheck } from "./spellcheck";
 import { detectRomanUrduLines } from "./roman-urdu";
 import {
@@ -95,6 +98,8 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
 
   // 4. OCR — skipped in Gemini-only mode; split pipeline uses it as a transcription hint.
   const pipelineMode = await getProofPipelineMode();
+  const proofSettings = await getProofAdminSettings();
+  const enabledChecks = proofSettings.checks;
   let ocr: OcrResult = { text: "", confidence: 0, words: [], width: 0, height: 0 };
   const ocrEnabled =
     pipelineMode !== "gemini_only" &&
@@ -119,6 +124,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
       brand,
       previous,
       standalone: true,
+      enabledChecks,
     });
     report = standaloneReport;
     report.extractedText = sanitizeText(
@@ -152,6 +158,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
       previous,
       extractedText: canonicalText,
       imageContext: transcription.imageContext,
+      enabledChecks,
     });
     report = analyzed.report;
 
@@ -165,13 +172,18 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
       ocrWords: ocr.words,
     };
 
-    if (!brand?.allow_slang_roman_urdu && canonicalText) {
+    if (!brand?.allow_slang_roman_urdu && canonicalText && enabledChecks.typos) {
       mergeSpellcheck(report, canonicalText, brand, asset.name, locationContext);
     }
 
     enrichIssueLocations(report.issues, locationContext);
-    finalizeReport(report);
   }
+
+  report.issues = filterIssuesByChecks(report.issues, enabledChecks);
+  if (!hasEnabledProofChecks(enabledChecks)) {
+    report.issues = [];
+  }
+  finalizeReport(report);
 
   // 7. persist
   const proofId = await persistProof(admin, {
@@ -182,6 +194,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     ocrText: ocr.text,
     model: modelLabel,
     pipelineMode,
+    enabledChecks,
   });
 
   return {
@@ -264,6 +277,7 @@ async function persistProof(
     ocrText: string;
     model: string;
     pipelineMode: ProofPipelineMode;
+    enabledChecks: ProofChecksConfig;
   },
 ): Promise<string> {
   const { data: proof, error } = await admin
@@ -275,7 +289,11 @@ async function persistProof(
       summary: args.report.summary,
       ocr_text: args.ocrText,
       model: args.model,
-      raw: { ...args.report, pipeline_mode: args.pipelineMode },
+      raw: {
+        ...args.report,
+        pipeline_mode: args.pipelineMode,
+        enabled_checks: args.enabledChecks,
+      },
     })
     .select("id")
     .single();

@@ -1,0 +1,130 @@
+export const PROOF_CHECK_TYPES = [
+  "typos",
+  "grammar",
+  "punctuation",
+  "capitalization",
+  "consistency",
+  "readability",
+  "missing_content",
+] as const;
+
+export type ProofCheckType = (typeof PROOF_CHECK_TYPES)[number];
+
+export const PROOF_RESPONSE_STYLES = ["plain", "mixed", "human"] as const;
+
+export type ProofResponseStyle = (typeof PROOF_RESPONSE_STYLES)[number];
+
+export type ProofChecksConfig = Record<ProofCheckType, boolean>;
+
+export interface ProofAdminSettings {
+  checks: ProofChecksConfig;
+  responseStyle: ProofResponseStyle;
+}
+
+export const DEFAULT_PROOF_CHECKS: ProofChecksConfig = {
+  typos: true,
+  grammar: true,
+  punctuation: true,
+  capitalization: true,
+  consistency: true,
+  readability: true,
+  missing_content: true,
+};
+
+export const PROOF_CHECK_LABELS: Record<
+  ProofCheckType,
+  { title: string; description: string }
+> = {
+  typos: {
+    title: "Typos",
+    description: "Misspelled words and dictionary spelling mistakes.",
+  },
+  grammar: {
+    title: "Grammar",
+    description: "Subject-verb agreement, tense, fragments, and awkward phrasing.",
+  },
+  punctuation: {
+    title: "Punctuation",
+    description: "Missing or wrong commas, apostrophes, periods, and extra spaces.",
+  },
+  capitalization: {
+    title: "Capitalization",
+    description: "Wrong caps, inconsistent title case, and ALL-CAPS misuse.",
+  },
+  consistency: {
+    title: "Consistency",
+    description: "Changes vs a previous version — prices, dates, phone numbers, removed text.",
+  },
+  readability: {
+    title: "Readability",
+    description: "Contrast, font size, hierarchy, tone, and overly long sentences.",
+  },
+  missing_content: {
+    title: "Missing content",
+    description: "Missing CTA, disclaimers, truncated copy, or absent required text.",
+  },
+};
+
+export const PROOF_RESPONSE_STYLE_LABELS: Record<
+  ProofResponseStyle,
+  { title: string; description: string; example: string }
+> = {
+  plain: {
+    title: "Plain corrections",
+    description: "Short before → after pairs, one per line.",
+    example: '"postee" → "poster". "desing" → "design".',
+  },
+  mixed: {
+    title: "Counts + samples",
+    description: "A quick count with quoted examples.",
+    example: 'Found 3 typos: "Desing", "Jumop", "Largr".',
+  },
+  human: {
+    title: "Conversational",
+    description: "Natural sentences with a helpful tip when useful.",
+    example:
+      'There\'s a typo in the headline — "teh" should be "the". The background is a little light.',
+  },
+};
+
+export const DEFAULT_PROOF_ADMIN_SETTINGS: ProofAdminSettings = {
+  checks: { ...DEFAULT_PROOF_CHECKS },
+  responseStyle: "human",
+};
+
+export function normalizeProofChecks(
+  value: unknown,
+): ProofChecksConfig {
+  const checks = { ...DEFAULT_PROOF_CHECKS };
+  if (!value || typeof value !== "object") return checks;
+  for (const key of PROOF_CHECK_TYPES) {
+    const enabled = (value as Record<string, unknown>)[key];
+    if (typeof enabled === "boolean") checks[key] = enabled;
+  }
+  return checks;
+}
+
+export function normalizeProofResponseStyle(value: unknown): ProofResponseStyle {
+  if (
+    value === "plain" ||
+    value === "mixed" ||
+    value === "human"
+  ) {
+    return value;
+  }
+  return DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle;
+}
+
+export function normalizeProofAdminSettings(value: {
+  checks?: unknown;
+  responseStyle?: unknown;
+}): ProofAdminSettings {
+  return {
+    checks: normalizeProofChecks(value.checks),
+    responseStyle: normalizeProofResponseStyle(value.responseStyle),
+  };
+}
+
+export function hasEnabledProofChecks(checks: ProofChecksConfig): boolean {
+  return PROOF_CHECK_TYPES.some((key) => checks[key]);
+}

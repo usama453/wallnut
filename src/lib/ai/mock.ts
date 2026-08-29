@@ -21,13 +21,19 @@ export class MockProvider implements AiProvider {
 
   async analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput> {
     const prompt = input.standalone
-      ? buildStandaloneProofPrompt(input.ocrText, input.brand, input.previous)
+      ? buildStandaloneProofPrompt(
+          input.ocrText,
+          input.brand,
+          input.previous,
+          input.enabledChecks,
+        )
       : buildSystemPrompt(
           input.ocrText,
           input.brand,
           input.previous,
           input.extractedText,
           input.imageContext,
+          input.enabledChecks,
         );
     await delay(input.standalone ? 700 : 900);
 

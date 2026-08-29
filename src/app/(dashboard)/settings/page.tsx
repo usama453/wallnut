@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { WhatsAppAccess } from "@/components/whatsapp-access";
 import { ProofPipelineToggle } from "@/components/proof-pipeline-toggle";
+import { ProofConfigPanel } from "@/components/proof-config-panel";
 import { Reveal } from "@/components/wallnut/reveal";
 import { WALLNUT_PANEL } from "@/components/wallnut/panel";
 import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
+import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
 import { requireSuperAdmin } from "@/lib/super-admin-access";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   await requireSuperAdmin();
   const proofPipelineMode = await getProofPipelineMode();
+  const proofAdminSettings = await getProofAdminSettings();
   const aiProvider = process.env.AI_PROVIDER ?? "gemini";
   const model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
   const wahaConfigured = Boolean(
@@ -36,6 +39,10 @@ export default async function SettingsPage() {
 
       <Reveal dramatic delayMs={120}>
         <ProofPipelineToggle initialMode={proofPipelineMode} />
+      </Reveal>
+
+      <Reveal dramatic delayMs={140}>
+        <ProofConfigPanel initialSettings={proofAdminSettings} />
       </Reveal>
 
       <Reveal dramatic delayMs={160}>

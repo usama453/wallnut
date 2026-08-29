@@ -42,13 +42,19 @@ export class GeminiProvider implements AiProvider {
 
   async analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput> {
     const systemPrompt = input.standalone
-      ? buildStandaloneProofPrompt(input.ocrText, input.brand, input.previous)
+      ? buildStandaloneProofPrompt(
+          input.ocrText,
+          input.brand,
+          input.previous,
+          input.enabledChecks,
+        )
       : buildSystemPrompt(
           input.ocrText,
           input.brand,
           input.previous,
           input.extractedText,
           input.imageContext,
+          input.enabledChecks,
         );
     const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
 
