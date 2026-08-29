@@ -23,6 +23,16 @@ export function initialsFor(value: string | null | undefined) {
   return `${words[0]![0]}${words.at(-1)![0]}`.toUpperCase();
 }
 
+/** Single-letter avatar label for compact stacks and small avatars. */
+export function compactInitialFor(value: string | null | undefined) {
+  const initials = initialsFor(value);
+  return initials.slice(0, 1) || "?";
+}
+
+export function avatarInitials(value: string | null | undefined, size: number) {
+  return size <= 30 ? compactInitialFor(value) : initialsFor(value);
+}
+
 export function avatarPalette(seed: string | null | undefined) {
   let hash = 0;
   for (const char of seed ?? "") hash = (hash * 31 + char.charCodeAt(0)) | 0;
@@ -55,7 +65,7 @@ export function InitialAvatar({
         ...style,
       }}
     >
-      {initialsFor(label)}
+      {avatarInitials(label, size)}
     </span>
   );
 }

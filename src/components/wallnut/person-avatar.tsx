@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { initialsFor, avatarPalette } from "@/components/wallnut/avatar";
+import { avatarInitials, avatarPalette } from "@/components/wallnut/avatar";
 
 export function PersonAvatar({
   label,
@@ -36,7 +36,7 @@ export function PersonAvatar({
         fontSize: Math.max(9, Math.round(size * 0.29)),
       }}
     >
-      {status !== "loaded" ? initialsFor(label) : null}
+      {status !== "loaded" ? avatarInitials(label, size) : null}
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

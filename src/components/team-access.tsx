@@ -55,9 +55,12 @@ export function TeamAccess({ orgSlug }: { orgSlug: string }) {
       ...members.map((member) => member.email).filter(Boolean),
       ...invites.map((invite) => invite.invited_email),
     ] as string[];
-    const shown = labels.slice(0, 3);
-    const overflow = Math.max(labels.length - shown.length, 0);
-    return { shown, overflow, total: labels.length };
+    const unique = [...new Set(labels.map((label) => label.toLowerCase()))].map(
+      (key) => labels.find((label) => label.toLowerCase() === key)!,
+    );
+    const shown = unique.slice(0, 3);
+    const overflow = Math.max(unique.length - shown.length, 0);
+    return { shown, overflow, total: unique.length };
   }, [members, invites]);
 
   return (
@@ -66,7 +69,7 @@ export function TeamAccess({ orgSlug }: { orgSlug: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open team members and invites"
-        className="rounded-full p-0.5 transition hover:bg-[#161616] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="group rounded-full border border-transparent p-1 transition hover:border-[#2e2e2e] hover:bg-[#161616] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <AvatarStack
           labels={stack.shown}
@@ -143,20 +146,20 @@ function AvatarStack({
   }
 
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex items-center transition group-hover:opacity-95">
       <span className="flex -space-x-2">
         {labels.map((label, index) => (
           <InitialAvatar
             key={`${label}-${index}`}
             label={label}
             size={26}
-            className="ring-2 ring-black"
+            className="ring-2 ring-black transition group-hover:ring-[#2a2a2a]"
             style={{ zIndex: labels.length - index }}
           />
         ))}
       </span>
       {overflow > 0 ? (
-        <span className="ml-1.5 inline-flex size-[26px] items-center justify-center rounded-full bg-[#1a1a1a] text-[9px] font-bold text-[#919191] ring-[1.5px] ring-black">
+        <span className="ml-1.5 inline-flex size-[26px] items-center justify-center rounded-full bg-[#1a1a1a] text-[9px] font-bold text-[#919191] ring-[1.5px] ring-black transition group-hover:bg-[#222] group-hover:text-[#bdbdbd] group-hover:ring-[#2a2a2a]">
           +{overflow}
         </span>
       ) : null}
