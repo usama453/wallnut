@@ -9,7 +9,7 @@ import { PendingLink } from "@/components/wallnut/pending";
 import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { GroupCard, PendingWhatsAppInvite, ReportRow } from "@/lib/groups-presentation";
-import { timeAgo } from "@/lib/groups-presentation";
+import { displayGroupName, groupLinkLabel, timeAgo } from "@/lib/groups-presentation";
 import { orgGroupPath, orgRankingsPath } from "@/lib/org-paths";
 import type { PersonStats } from "@/lib/stats";
 
@@ -353,7 +353,7 @@ function DashboardGroupCard({
         >
           <PlatformIcon platform={card.group.platform} />
           <span className="truncate text-[12px] font-bold text-[#fbfbfb]">
-            {card.group.name}
+            {displayGroupName(card.group)}
           </span>
           {awaitingSync ? (
             <span className="font-mono text-[10px] tracking-wider text-[#25D366]">
@@ -379,7 +379,7 @@ function DashboardGroupCard({
             pendingLabel="Loading…"
             className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
           >
-            Open Group
+            {groupLinkLabel(card.group)}
           </PendingLink>
         )}
       </div>

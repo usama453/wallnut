@@ -15,6 +15,7 @@ import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
 import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts } from "./contacts";
 import { clearDisconnectedWhatsAppGroup, isWhatsAppGroupDisconnected } from "./disconnected-groups";
+import { directMessageGroupName } from "@/lib/groups-presentation";
 import { fallbackGroupName, getGroupName } from "./group-name";
 import { pendingGroupExternalId } from "./placeholder-groups";
 import { canonicalChatId, whatsappChatIdVariants } from "./jid";
@@ -276,7 +277,7 @@ async function handleMedia(
       chatId,
       groupId
         ? await getGroupName(groupId)
-        : message.pushName || `Chat ${phoneLabel(from)}`,
+        : directMessageGroupName(from, message.pushName),
     );
 
     const providedName =
@@ -320,12 +321,7 @@ async function handleMedia(
     const corrections = formatCorrectionList(result.report.issues);
     const status = reportStatus(result.report.issues);
 
-    let detailBody: string;
-    if (corrections) {
-      detailBody = `${corrections}\n${reportUrl}`;
-    } else {
-      detailBody = `${status.emoji} ${status.label}\n${reportUrl}`;
-    }
+    const detailBody = corrections || `${status.emoji} ${status.label}`;
 
     await sendInteractiveWaha(from, detailBody, {
       reply: [

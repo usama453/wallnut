@@ -1,7 +1,7 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { DashboardGrid } from "@/components/dashboard-grid";
 import { getDashboardData } from "@/lib/groups";
-import { resolveOrgAccess } from "@/lib/org-access";
+import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { getStats } from "@/lib/stats";
 
@@ -14,10 +14,7 @@ export default async function OrganizationHome({
 }) {
   const { slug } = await params;
   const access = await resolveOrgAccess(slug);
-  if (access.status !== "ok") {
-    if (access.status === "reserved" || access.status === "unknown") notFound();
-    redirect("/");
-  }
+  if (!requireOrgPageAccess(access)) return null;
 
   const [data, rankings] = await Promise.all([
     getDashboardData(access.org.id),

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   activateOrgForUser,
@@ -8,14 +9,23 @@ import {
   userCanAccessOrg,
 } from "@/lib/org-membership";
 import { getPublicOrganization } from "@/lib/organizations";
-import { isReservedOrgSlug } from "@/lib/org-paths";
+import { isReservedOrgSlug, orgHomePath, orgLoginPath } from "@/lib/org-paths";
 import { userIsSuperAdmin } from "@/lib/roles";
 
 export type OrgAccess =
   | { status: "reserved" }
   | { status: "unknown" }
   | { status: "unauthenticated"; slug: string }
-  | { status: "forbidden"; slug: string; userOrgSlug: string | null }
+  | {
+      status: "forbidden";
+      slug: string;
+      orgName: string;
+      userOrgSlug: string | null;
+      user: { email?: string };
+      profile: { full_name: string | null };
+      isSuperAdmin: boolean;
+      memberships: Array<{ name: string; slug: string; role: string }>;
+    }
   | {
       status: "ok";
       slug: string;
@@ -47,12 +57,27 @@ export async function resolveOrgAccess(slug: string): Promise<OrgAccess> {
   const isSuperAdmin = await userIsSuperAdmin(user.id, user.email);
   const allowed = isSuperAdmin || (await userCanAccessOrg(user.id, org.slug));
   if (!allowed) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
     return {
       status: "forbidden",
       slug: org.slug,
+      orgName: org.name,
       userOrgSlug: memberships.find((membership) => membership.isPublic)?.slug
         ?? memberships[0]?.slug
         ?? null,
+      user: { email: user.email },
+      profile: { full_name: profile?.full_name ?? null },
+      isSuperAdmin,
+      memberships: memberships.map((membership) => ({
+        name: membership.name,
+        slug: membership.slug,
+        role: membership.role,
+      })),
     };
   }
 
@@ -84,6 +109,17 @@ export async function resolveOrgAccess(slug: string): Promise<OrgAccess> {
       role: membership.role,
     })),
   };
+}
+
+export function requireOrgPageAccess(
+  access: OrgAccess,
+): access is Extract<OrgAccess, { status: "ok" }> {
+  if (access.status === "reserved" || access.status === "unknown") notFound();
+  if (access.status === "unauthenticated") {
+    redirect(orgLoginPath(access.slug, orgHomePath(access.slug)));
+  }
+  if (access.status === "forbidden") return false;
+  return true;
 }
 
 export async function getAuthedOrgSlug() {

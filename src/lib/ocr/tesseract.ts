@@ -1,8 +1,17 @@
 import { createWorker } from "tesseract.js";
 
+export interface OcrWord {
+  text: string;
+  confidence: number;
+  bbox: { x0: number; y0: number; x1: number; y1: number };
+}
+
 export interface OcrResult {
   text: string;
   confidence: number;
+  words: OcrWord[];
+  width: number;
+  height: number;
 }
 
 const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS ?? 15000);
@@ -18,7 +27,7 @@ export async function extractText(buffer: Buffer): Promise<OcrResult> {
     return await withTimeout(runOcr(buffer), OCR_TIMEOUT_MS, "OCR timed out");
   } catch (err) {
     console.warn(`[ocr] ${err instanceof Error ? err.message : err}; continuing without OCR text`);
-    return { text: "", confidence: 0 };
+    return { text: "", confidence: 0, words: [], width: 0, height: 0 };
   }
 }
 
@@ -40,7 +49,26 @@ async function runOcr(buffer: Buffer): Promise<OcrResult> {
       .filter(Boolean)
       .join("\n");
 
-    return { text, confidence: data.confidence ?? 0 };
+    const words: OcrWord[] = Array.isArray(data.words)
+      ? data.words
+          .map((word) => ({
+            text: String(word.text ?? "").trim(),
+            confidence: word.confidence ?? 0,
+            bbox: word.bbox,
+          }))
+          .filter((word) => word.text.length >= 2 && word.bbox)
+      : [];
+
+    const width = words.reduce((max, word) => Math.max(max, word.bbox.x1), 0);
+    const height = words.reduce((max, word) => Math.max(max, word.bbox.y1), 0);
+
+    return {
+      text,
+      confidence: data.confidence ?? 0,
+      words,
+      width,
+      height,
+    };
   } finally {
     await worker.terminate().catch(() => {});
   }

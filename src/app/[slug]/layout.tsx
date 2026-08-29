@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { OrgAccessDenied } from "@/components/org-access-denied";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { resolveOrgAccess } from "@/lib/org-access";
 import { orgHomePath, orgLoginPath } from "@/lib/org-paths";
@@ -18,8 +19,28 @@ export default async function OrgLayout({
     redirect(orgLoginPath(slug, orgHomePath(slug)));
   }
   if (access.status === "forbidden") {
-    if (access.userOrgSlug) redirect(orgHomePath(access.userOrgSlug));
-    redirect(`${orgLoginPath(slug, orgHomePath(slug))}&error=wrong_org`);
+    const homeMembership =
+      access.memberships.find((membership) => membership.slug === access.userOrgSlug)
+      ?? null;
+
+    return (
+      <div className="min-h-screen bg-black text-[#fbfbfb]">
+        <AppHeader
+          authenticated
+          orgName={homeMembership?.name ?? null}
+          orgSlug={access.userOrgSlug}
+          userName={access.profile.full_name}
+          userEmail={access.user.email}
+          memberships={access.memberships}
+          isSuperAdmin={access.isSuperAdmin}
+        />
+        <OrgAccessDenied
+          orgName={access.orgName}
+          userOrgSlug={access.userOrgSlug}
+          userOrgName={homeMembership?.name ?? null}
+        />
+      </div>
+    );
   }
 
   return (

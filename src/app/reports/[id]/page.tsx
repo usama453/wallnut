@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { ScoreRing, ProofBadge, SeverityBadge, CategoryBadge, StatusBadge, fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { MetricChip } from "@/components/wallnut/metric-chip";
+import { markerPosition } from "@/lib/proof/issue-locations";
 import type { ProofIssue } from "@/types";
 
 const MARKER_COLORS = ["#f43f5e", "#f59e0b", "#3b82f6", "#10b981", "#a855f7", "#ec4899", "#f97316", "#06b6d4"];
@@ -98,21 +99,25 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                   return (
                     <div key={p.url ?? i} className="relative mx-auto max-w-full" style={boxStyle}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.url} alt={`page ${i + 1}`} className="absolute inset-0 block h-full w-full object-contain" />
+                      <img src={p.url} alt={`page ${i + 1}`} className="absolute inset-0 block h-full w-full object-cover" />
                       {isPage1 &&
-                        sortedIssues.map((issue, i2) => (
+                        sortedIssues.map((issue, i2) => {
+                          const position = markerPosition(issue);
+                          if (!position) return null;
+                          return (
                           <span
                             key={issue.id}
-                            className="absolute grid size-[22px] place-items-center rounded-full text-[11px] font-bold text-white shadow-lg"
+                            className="absolute grid size-[22px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[11px] font-bold text-white shadow-lg"
                             style={{
-                              left: `${(issue.x ?? 0.05) * 100}%`,
-                              top: `${(issue.y ?? 0.05) * 100}%`,
+                              left: position.left,
+                              top: position.top,
                               background: MARKER_COLORS[i2 % MARKER_COLORS.length],
                             }}
                           >
                             {i2 + 1}
                           </span>
-                        ))}
+                          );
+                        })}
                     </div>
                   );
                 })}

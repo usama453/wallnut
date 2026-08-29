@@ -1,5 +1,5 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, TranscribeInput, TranscriptionOutput } from "./types";
 import { buildSystemPrompt } from "./prompt";
 
 /**
@@ -11,11 +11,25 @@ export class MockProvider implements AiProvider {
   readonly id = "mock" as const;
   readonly name = "Mock (offline)";
 
+  async transcribeAsset(input: TranscribeInput): Promise<TranscriptionOutput> {
+    await delay(400);
+    return {
+      extractedText: input.ocrText ?? "",
+      imageContext: "Mock marketing asset with visible copy.",
+    };
+  }
+
   async analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput> {
-    const prompt = buildSystemPrompt(input.ocrText, input.brand, input.previous);
+    const prompt = buildSystemPrompt(
+      input.ocrText,
+      input.brand,
+      input.previous,
+      input.extractedText,
+      input.imageContext,
+    );
     await delay(900); // simulate latency
 
-    const text = input.ocrText ?? "";
+    const text = input.extractedText || input.ocrText || "";
     const issues = [];
 
     const typos: [RegExp, string, string][] = [
@@ -25,16 +39,20 @@ export class MockProvider implements AiProvider {
       [/seperate/gi, "seperate", "separate"],
       [/definately/gi, "definately", "definitely"],
     ];
-    for (const [re, wrong, right] of typos) {
-      if (re.test(text)) {
-        issues.push({
-          category: "text",
-          severity: "high" as const,
-          title: `Misspelled "${wrong}"`,
-          description: `Found "${wrong}" in the copy.`,
-          suggestion: `Replace with "${right}".`,
-          location: { x: 0.12, y: 0.1, w: 0.3, h: 0.06 },
-        });
+    // Spelling is handled by the deterministic spellcheck pass in runProof.
+    // Mock QA skips typo injection when stage-1 text was provided.
+    if (!input.extractedText) {
+      for (const [re, wrong, right] of typos) {
+        if (re.test(text)) {
+          issues.push({
+            category: "text",
+            severity: "high" as const,
+            title: `Misspelled "${wrong}"`,
+            description: `Found "${wrong}" in the copy.`,
+            suggestion: `Replace with "${right}".`,
+            location: { x: 0.12, y: 0.1, w: 0.3, h: 0.06 },
+          });
+        }
       }
     }
 

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Group } from "@/types";
 import type { GroupCard, ReportRow } from "./groups-presentation";
+import { displayGroupName } from "./groups-presentation";
 import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
 import {
   codeFromPendingExternalId,
@@ -8,7 +9,17 @@ import {
   isPendingGroupExternalId,
 } from "@/lib/whatsapp/placeholder-groups";
 export type { GroupCard, ReportRow, PendingWhatsAppInvite } from "./groups-presentation";
-export { PLATFORM_LABEL, platformColor, platformIcon, timeAgo } from "./groups-presentation";
+export {
+  PLATFORM_LABEL,
+  displayGroupName,
+  groupLinkLabel,
+  isDirectMessagesBucket,
+  isWhatsAppDirectChat,
+  isWhatsAppGroupChat,
+  platformColor,
+  platformIcon,
+  timeAgo,
+} from "./groups-presentation";
 
 /**
  * Fetch the org's groups together with each group's latest proofreading
@@ -117,9 +128,10 @@ export async function getDashboardData(orgIdOverride?: string) {
   const visibleGroups = (groups ?? []).filter((group) => {
     if (group.platform !== "whatsapp") return true;
     const externalId = group.external_id ?? "";
-    if (!externalId || group.name === "General" || isPendingGroupExternalId(externalId)) {
+    if (group.name === "General" || isPendingGroupExternalId(externalId)) {
       return true;
     }
+    if (!externalId) return false;
     if (externalId.endsWith("@g.us")) return true;
     // Direct 1:1 chats with Wallnut belong on Public.
     return (
@@ -208,19 +220,22 @@ export async function getDashboardData(orgIdOverride?: string) {
     .filter((card) => {
       const externalId = card.group.external_id ?? "";
       if (
-        !externalId ||
         card.group.name === "General" ||
         isPendingGroupExternalId(externalId) ||
         externalId.endsWith("@g.us")
       ) {
         return true;
       }
+      if (!externalId) return card.reports.length > 0;
       return card.reports.length > 0;
     })
     .sort((a, b) => {
       const ra = a.reports[0]?.createdAt ?? "";
       const rb = b.reports[0]?.createdAt ?? "";
-      return rb.localeCompare(ra) || a.group.name.localeCompare(b.group.name);
+      return (
+        rb.localeCompare(ra)
+        || displayGroupName(a.group).localeCompare(displayGroupName(b.group))
+      );
     });
 
   const allReports = cards.flatMap((c) => c.reports);

@@ -51,6 +51,22 @@ export interface AnalyzeInput {
   ocrText?: string;
   brand?: BrandContext | null;
   previous?: PreviousProofContext | null;
+  /** Stage-1 verbatim transcription — when set, spelling is handled outside the model. */
+  extractedText?: string;
+  /** Stage-1 brief description of the asset layout/context. */
+  imageContext?: string;
+}
+
+export interface TranscribeInput {
+  imageBase64: string;
+  mimeType: string;
+  ocrText?: string;
+  brand?: BrandContext | null;
+}
+
+export interface TranscriptionOutput {
+  extractedText: string;
+  imageContext?: string;
 }
 
 export interface AnalyzeOutput {

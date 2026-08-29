@@ -21,6 +21,7 @@ import type {
   Proof,
   ProofIssue,
 } from "@/types";
+import { highlightBox, markerPosition } from "@/lib/proof/issue-locations";
 
 export interface ViewerData {
   asset: Asset;
@@ -221,27 +222,25 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                           <img
                             src={p.url}
                             alt={`${asset.name} — page ${i + 1}`}
-                            className="absolute inset-0 block h-full w-full object-contain"
+                            className="absolute inset-0 block h-full w-full object-cover"
                           />
                           {isPage1 && (
                             <>
                               {sortedIssues.map((issue) => {
                                 const markerIndex = issues.indexOf(issue);
                                 const color = MARKER_COLORS[markerIndex % MARKER_COLORS.length];
-                                const x = (issue.x ?? 0.05) * 100;
-                                const y = (issue.y ?? 0.05) * 100;
-                                const w = (issue.w ?? 0.15) * 100;
-                                const h = (issue.h ?? 0.1) * 100;
+                                const position = markerPosition(issue);
                                 const active = issue.id === activeIssueId;
+                                if (!position) return null;
 
                                 return (
                                   <button
                                     key={issue.id}
                                     onClick={() => setActiveIssueId(issue.id === activeIssueId ? null : issue.id)}
-                                    className="absolute"
+                                    className="absolute -translate-x-1/2 -translate-y-1/2"
                                     style={{
-                                      left: `${x}%`,
-                                      top: `${y}%`,
+                                      left: position.left,
+                                      top: position.top,
                                       zIndex: active ? 20 : 10,
                                     }}
                                     aria-label={issue.title}
@@ -272,18 +271,22 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                                 );
                               })}
 
-                              {activeIssue && activeIssue.x != null && activeIssue.y != null && (
+                              {activeIssue ? (() => {
+                                const box = highlightBox(activeIssue);
+                                if (!box) return null;
+                                return (
                                 <span
                                   className="pointer-events-none absolute border-2 border-white/70"
                                   style={{
-                                    left: `${activeIssue.x * 100}%`,
-                                    top: `${activeIssue.y * 100}%`,
-                                    width: `${(activeIssue.w ?? 0.15) * 100}%`,
-                                    height: `${(activeIssue.h ?? 0.1) * 100}%`,
+                                    left: `${box.x * 100}%`,
+                                    top: `${box.y * 100}%`,
+                                    width: `${box.w * 100}%`,
+                                    height: `${box.h * 100}%`,
                                     zIndex: 15,
                                   }}
                                 />
-                              )}
+                                );
+                              })() : null}
                             </>
                           )}
                         </div>

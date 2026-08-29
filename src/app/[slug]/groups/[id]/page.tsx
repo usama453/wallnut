@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { BackIcon, PlatformIcon } from "@/components/wallnut/icons";
 import { MetricChip } from "@/components/wallnut/metric-chip";
 import { ReportCard } from "@/components/wallnut/report-card";
@@ -7,7 +7,8 @@ import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { ReportRow } from "@/lib/groups";
 import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
-import { resolveOrgAccess } from "@/lib/org-access";
+import { displayGroupName } from "@/lib/groups-presentation";
+import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
 import { orgHomePath } from "@/lib/org-paths";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -27,10 +28,7 @@ export default async function OrgGroupReportsPage({
 }) {
   const { slug, id } = await params;
   const access = await resolveOrgAccess(slug);
-  if (access.status !== "ok") {
-    if (access.status === "reserved" || access.status === "unknown") notFound();
-    redirect("/");
-  }
+  if (!requireOrgPageAccess(access)) return null;
 
   const supabase = await createClient();
   const { data: group } = await supabase
@@ -193,7 +191,7 @@ export default async function OrgGroupReportsPage({
           <div className="flex items-center justify-center gap-2.5">
             <PlatformIcon platform={group.platform as GroupPlatform} size={22} />
             <h1 className="text-[clamp(24px,4vw,30px)] font-bold leading-none tracking-[-0.72px] text-white">
-              {group.name}
+              {displayGroupName(group)}
             </h1>
           </div>
         </Reveal>

@@ -1,4 +1,4 @@
-import type { AnalyzeInput, AnalyzeOutput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, TranscribeInput, TranscriptionOutput } from "./types";
 
 /**
  * Single interface for the proofing model.
@@ -7,7 +7,9 @@ import type { AnalyzeInput, AnalyzeOutput } from "./types";
 export interface AiProvider {
   readonly id: string;
   readonly name: string;
-  /** Analyze an artwork image + optional OCR text and brand rules. */
+  /** Stage 1: read visible text from the artwork without flagging issues. */
+  transcribeAsset(input: TranscribeInput): Promise<TranscriptionOutput>;
+  /** Stage 2: analyze an artwork image + optional OCR text and brand rules. */
   analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput>;
   /** Casual chat reply in the bot's persona (short, characterful). */
   chat(message: string): Promise<string>;

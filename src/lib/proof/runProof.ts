@@ -3,7 +3,14 @@ import { normalizeImage } from "@/lib/image";
 import { renderPdfAllPages } from "@/lib/pdf";
 import { getProvider } from "@/lib/ai";
 import { spellcheck } from "./spellcheck";
+import {
+  enrichIssueLocations,
+  extractQuotedWords,
+  locateWord,
+  type LocationContext,
+} from "./issue-locations";
 import { sanitizeText } from "@/lib/text";
+import type { OcrResult } from "@/lib/ocr/tesseract";
 import type { BrandContext, PreviousProofContext, RawIssue, RawReport } from "@/lib/ai";
 
 export const BUCKET = "artifacts";
@@ -19,9 +26,11 @@ export interface RunProofResult {
 /**
  * Full proof pipeline for a stored version:
  * 1. load bytes from storage   2. rasterize PDF if needed
- * 3. normalize image           4. OCR (Tesseract)
+ * 3. normalize image           4. OCR (Tesseract, when available)
  * 5. gather brand + previous version context
- * 6. run the configured AI provider
+ * 6a. AI stage 1 — transcribe visible text + image context
+ * 6b. AI stage 2 — visual/brand QA (no spelling)
+ * 6c. deterministic spellcheck on stage-1 text
  * 7. persist proof + issues
  */
 export async function runProof(assetVersionId: string): Promise<RunProofResult> {
@@ -83,7 +92,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
 
   // 4. OCR (skipped on serverless runtimes where Tesseract's wasm can't load;
   // the AI model reads the image directly when OCR text is empty)
-  let ocr = { text: "", confidence: 0 };
+  let ocr: OcrResult = { text: "", confidence: 0, words: [], width: 0, height: 0 };
   const ocrEnabled = process.env.OCR_ENABLED === "1" || process.env.VERCEL !== "1";
   if (ocrEnabled) {
     const { extractText } = await import("@/lib/ocr/tesseract");
@@ -94,22 +103,45 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
   const brand = await loadBrand(admin, asset.org_id);
   const previous = await loadPreviousProof(admin, version.asset_id, version.version);
 
-  // 6. AI
+  // 6. AI — two stages: (1) read text, (2) visual/brand QA without spelling
   const provider = getProvider();
+  const transcription = await provider.transcribeAsset({
+    imageBase64: normalized.base64,
+    mimeType: normalized.mimeType,
+    ocrText: ocr.text,
+    brand,
+  });
+  const canonicalText = sanitizeText(
+    (transcription.extractedText || ocr.text || "").trim(),
+  );
+
   const { report } = await provider.analyzeAsset({
     imageBase64: normalized.base64,
     mimeType: normalized.mimeType,
     ocrText: ocr.text,
     brand,
     previous,
+    extractedText: canonicalText,
+    imageContext: transcription.imageContext,
   });
 
-  // 6b. Deterministic spellcheck — only when OCR is enabled, since OCR text
-  // is noisy and benefits from dictionary correction. When OCR is off, the
-  // vision model's transcription is already high-quality.
-  if (ocrEnabled) {
-    mergeSpellcheck(report, ocr.text, brand, asset.name);
+  report.extractedText = canonicalText;
+  report.issues = stripSpellingIssues(report.issues, canonicalText);
+
+  const locationContext: LocationContext = {
+    canonicalText,
+    imageWidth: ocr.width || normalized.width,
+    imageHeight: ocr.height || normalized.height,
+    ocrWords: ocr.words,
+  };
+
+  // Deterministic spellcheck against the stage-1 transcription (not LLM guesses).
+  if (!brand?.allow_slang_roman_urdu && canonicalText) {
+    mergeSpellcheck(report, canonicalText, brand, asset.name, locationContext);
   }
+
+  enrichIssueLocations(report.issues, locationContext);
+  finalizeReport(report);
 
   // 7. persist
   const proofId = await persistProof(admin, {
@@ -251,6 +283,48 @@ async function persistProof(
 }
 
 /**
+ * Drop spelling/typo findings from the QA model — typos come from spellcheck
+ * against the stage-1 transcription, not from LLM imagination.
+ */
+function stripSpellingIssues(issues: RawIssue[], canonicalText: string): RawIssue[] {
+  const haystack = canonicalText.toLowerCase();
+  return issues.filter((issue) => {
+    if (!isSpellingIssue(issue)) return true;
+    const quoted = extractQuotedWords(issue);
+    if (!quoted.length) return false;
+    return quoted.some((word) => wordAppearsInText(word, haystack));
+  });
+}
+
+function isSpellingIssue(issue: RawIssue): boolean {
+  const cat = issue.category.toLowerCase();
+  const hay = `${issue.title} ${issue.description ?? ""} ${issue.suggestion ?? ""}`.toLowerCase();
+  if (cat !== "text" && cat !== "typography") return false;
+  return (
+    /misspell|typo|spelling|did you mean|should be spelled|wrong spelling/i.test(hay)
+    || /^misspelled "/i.test(issue.title)
+  );
+}
+
+function wordAppearsInText(word: string, haystack: string): boolean {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
+}
+
+function finalizeReport(report: RawReport) {
+  const hasHigh = report.issues.some((issue) => issue.severity === "high");
+  const penalty = report.issues.reduce((sum, issue) => {
+    if (issue.severity === "high") return sum + 15;
+    if (issue.severity === "medium") return sum + 8;
+    return sum + 3;
+  }, 0);
+  report.score = Math.max(0, Math.round(100 - penalty));
+  if (report.score >= 90 && !hasHigh) report.status = "passed";
+  else if (report.score >= 70) report.status = "needs_review";
+  else report.status = "errors";
+}
+
+/**
  * Merges deterministic spellcheck findings into the model report:
  * - skips words the model already flagged
  * - respects brand/asset terms as intentional
@@ -258,16 +332,17 @@ async function persistProof(
  */
 function mergeSpellcheck(
   report: RawReport,
-  ocrText: string,
+  sourceText: string,
   brand: BrandContext | null,
   assetName: string,
+  locationContext: LocationContext,
 ) {
   // Casual language mode: Roman Urdu spellings are intentionally loose, so a
   // dictionary spellcheck produces false positives. Semantic coherence is
   // handled by the AI provider instead (see the prompt's CASUAL LANGUAGE MODE).
   if (brand?.allow_slang_roman_urdu) return;
 
-  const source = sanitizeText((ocrText || report.extractedText || "").trim());
+  const source = sanitizeText(sourceText.trim());
   if (!source) return;
 
   const allow = [
@@ -307,6 +382,7 @@ function mergeSpellcheck(
     const lower = f.word.toLowerCase();
     if (alreadyFlagged.has(lower)) continue;
 
+    const location = locateWord(f.word, locationContext);
     newIssues.push({
       category: "typography",
       severity: f.severity,
@@ -318,21 +394,13 @@ function mergeSpellcheck(
         f.suggestions.length > 0
           ? `Did you mean: ${f.suggestions.join(", ")}?`
           : "Verify the intended spelling.",
+      location: location ?? null,
     });
   }
 
   if (!newIssues.length) return;
 
   report.issues = [...report.issues, ...newIssues];
-  const penalty = newIssues.reduce((sum, i) => sum + (i.severity === "medium" ? 3 : 1), 0);
-  report.score = Math.max(0, Math.round(report.score - penalty));
-  if (report.score >= 90 && !report.issues.some((i) => i.severity === "high")) {
-    report.status = "passed";
-  } else if (report.score >= 70) {
-    report.status = "needs_review";
-  } else {
-    report.status = "errors";
-  }
 }
 
 interface PreviewMeta {

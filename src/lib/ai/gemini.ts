@@ -1,6 +1,6 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput, RawReport } from "./types";
-import { buildSystemPrompt } from "./prompt";
+import type { AnalyzeInput, AnalyzeOutput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
+import { buildSystemPrompt, buildTranscriptionPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -24,8 +24,30 @@ export class GeminiProvider implements AiProvider {
     }
   }
 
+  async transcribeAsset(input: TranscribeInput): Promise<TranscriptionOutput> {
+    const systemPrompt = buildTranscriptionPrompt(input.ocrText, input.brand);
+    const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        return await this.attemptTranscription(url, input, systemPrompt);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+    }
+    throw lastError;
+  }
+
   async analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput> {
-    const systemPrompt = buildSystemPrompt(input.ocrText, input.brand, input.previous);
+    const systemPrompt = buildSystemPrompt(
+      input.ocrText,
+      input.brand,
+      input.previous,
+      input.extractedText,
+      input.imageContext,
+    );
     const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     // The model occasionally returns truncated/invalid JSON; retry a few times.
@@ -95,6 +117,70 @@ export class GeminiProvider implements AiProvider {
     return { rawText, report };
   }
 
+  private async attemptTranscription(
+    url: string,
+    input: TranscribeInput,
+    systemPrompt: string,
+  ): Promise<TranscriptionOutput> {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: systemPrompt },
+              {
+                inline_data: {
+                  mime_type: input.mimeType,
+                  data: input.imageBase64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 4096,
+          responseMimeType: "application/json",
+          responseSchema: TRANSCRIPTION_SCHEMA,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Gemini transcription error ${res.status}: ${body.slice(0, 500)}`);
+    }
+
+    const data = await res.json();
+    const rawText =
+      data?.candidates?.[0]?.content?.parts
+        ?.map((part: { text?: string }) => part.text ?? "")
+        .filter(Boolean)
+        .join("\n") ?? "";
+    if (!rawText) throw new Error("Gemini transcription returned an empty response");
+
+    const object = extractFirstJsonObject(rawText.trim());
+    if (!object) throw new Error("Transcription model did not return valid JSON");
+
+    const json = JSON.parse(object) as {
+      extracted_text?: string;
+      image_context?: string;
+    };
+
+    return {
+      extractedText: sanitizeText(
+        typeof json.extracted_text === "string" ? json.extracted_text : "",
+      ),
+      imageContext:
+        typeof json.image_context === "string"
+          ? sanitizeText(json.image_context)
+          : undefined,
+    };
+  }
+
   async chat(message: string): Promise<string> {
     const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
     const res = await fetch(url, {
@@ -127,6 +213,15 @@ export class GeminiProvider implements AiProvider {
  * Chat persona: a wise, slow, warm tortoise who happens to be an AI proofreader.
  */
 export const TORTOISE_PERSONA = `You are Wallnut, a friendly, slow-spoken tortoise who works as the AI Proof assistant. You proof marketing images and PDFs (spelling, brand rules, design) and give a score. Chat warmly and unhurriedly, with gentle tortoise flavor — slow and steady, shell puns welcome. Keep every reply to 1-3 short sentences. If asked how you work, say: send me an image or PDF and I'll run a proof and reply with a score and report. Never say you are a real tortoise or claim to have a shell; you're a chatbot with a tortoise personality.`;
+
+const TRANSCRIPTION_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    extracted_text: { type: "STRING" },
+    image_context: { type: "STRING" },
+  },
+  required: ["extracted_text"],
+};
 
 const REPORT_SCHEMA = {
   type: "OBJECT",
