@@ -6,6 +6,7 @@ import english50 from "wordlist-english/english-words-50.json";
 import english55 from "wordlist-english/english-words-55.json";
 import english60 from "wordlist-english/english-words-60.json";
 import english70 from "wordlist-english/english-words-70.json";
+import { detectRomanUrduLines } from "./roman-urdu";
 
 const BASE = new Set(
   [
@@ -92,6 +93,8 @@ export interface SpellcheckFinding {
 export interface SpellcheckOptions {
   /** Words to treat as intentional (brand names, terminology, asset name tokens). */
   allow?: string[];
+  /** Skip spellcheck on these line indices (e.g. Roman Urdu captions). */
+  skipLineIndices?: boolean[];
 }
 
 const IGNORE_PATTERN =
@@ -108,6 +111,10 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
       .filter(Boolean),
   );
 
+  const lines = text.split("\n");
+  const skipLines =
+    options.skipLineIndices ?? detectRomanUrduLines(text);
+
   const tokens = text
     .replace(/\r/g, "\n")
     .split("\n")
@@ -123,9 +130,9 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
     })
     .flat();
 
-  const lines = text.split("\n");
   const seen = new Map<string, { context: string; count: number; word: string }>();
   for (const t of tokens) {
+    if (skipLines[t.lineIdx]) continue;
     const lower = t.word.toLowerCase();
     if (seen.has(lower)) {
       seen.get(lower)!.count++;

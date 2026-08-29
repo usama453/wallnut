@@ -19,6 +19,7 @@ CRITICAL RULES:
 - Copy ONLY text you can actually see. Never invent words, slogans, or corrections.
 - If a word is unclear, transcribe your best reading of the pixels — do NOT guess an alternative spelling.
 - Do NOT report issues, typos, or quality problems. Transcription only.
+- Roman Urdu (Urdu in Latin script) should be copied exactly as printed — do not anglicize or "correct" it to English words.
 
 ${ocrText ? `OCR HINT (may contain noise — trust your vision for spelling when they disagree):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : "No OCR hint provided."}
 
@@ -68,10 +69,11 @@ RULES:
 
 ${ocrText && !spellingHandled ? `OCR TEXT EXTRACTED FROM THE IMAGE (use it to double-check spelling, but trust your vision over OCR noise):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : spellingHandled ? "" : "No OCR text provided."}
 
-${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured."}${brand?.allow_slang_roman_urdu ? `\nCASUAL LANGUAGE MODE (ENABLED): The copy may intentionally use casual slang and Roman Urdu (Urdu written in Latin script). Roman Urdu spellings are intentionally loose and vary widely (e.g. "bohat"/"bahut", "boht", "yaar", "bhai", "kuch", "acha"/"accha" are all acceptable). Do NOT flag words merely for being non-standard, informally spelled, or absent from a dictionary — spelling irregularities are expected here.
-INSTEAD, judge whether each sentence or phrase makes sense:
+${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured."}
+
+ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu (Urdu written in Latin letters). Roman Urdu is about sound and meaning, not English dictionary spelling — variant spellings of the same word are normal (e.g. mein/main/mein, bohat/bahut/boht, accha/acha). When a phrase or sentence is clearly Roman Urdu, do NOT report spelling mistakes or English "did you mean" corrections for those words. Only flag text that is genuinely unreadable gibberish within its intended language.${brand?.allow_slang_roman_urdu ? `\nCASUAL LANGUAGE MODE (ENABLED): The brand expects loose Roman Urdu and casual slang throughout. Spelling irregularities are intentional.
 - If a sentence reads coherently — even with loose spelling — it PASSES. Do not flag it.
-- Raise a flag (category "typography" or "text") ONLY when a phrase or sentence genuinely does not make sense: unintelligible jumbles or runs of random characters, strings of letters that form no real word, scrambled text that loses meaning, mid-sentence truncation that cuts off the meaning, or gibberish that could not be intentional even by a relaxed standard.` : ""}
+- Raise a flag (category "typography" or "text") ONLY when a phrase genuinely does not make sense: unintelligible jumbles, random character runs, scrambled text that loses meaning, or mid-sentence truncation that breaks meaning.` : ""}
 
 ${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n${previous.issues.map((i) => `- [${i.category}] ${i.title}`).join("\n")}\n${previous.ocr_text ? `Previous OCR text:\n"""\n${previous.ocr_text.slice(0, 4000)}\n"""` : ""}` : "No previous version."}`;
 }

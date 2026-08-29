@@ -324,6 +324,7 @@ function DashboardGroupCard({
   sourceBadge,
   sourceHint,
   emptyMessage,
+  lastActiveLabel,
 }: {
   card: GroupCard;
   orgSlug: string;
@@ -332,6 +333,7 @@ function DashboardGroupCard({
   sourceBadge?: string;
   sourceHint?: string;
   emptyMessage?: string;
+  lastActiveLabel?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -382,9 +384,12 @@ function DashboardGroupCard({
                 </span>
               )}
             </span>
-            {sourceHint ? (
-              <span className="mt-1 block truncate text-[10px] text-[#6c6c6c]">
-                {sourceHint}
+            {sourceHint || lastActiveLabel ? (
+              <span className="mt-1 flex min-w-0 items-center gap-2 text-[10px] text-[#6c6c6c]">
+                {sourceHint ? <span className="min-w-0 truncate">{sourceHint}</span> : null}
+                {lastActiveLabel ? (
+                  <span className="shrink-0 text-[#555]">{lastActiveLabel}</span>
+                ) : null}
               </span>
             ) : null}
           </span>

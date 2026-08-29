@@ -6,6 +6,7 @@ import type { GroupCard, PendingWhatsAppInvite } from "@/lib/groups-presentation
 import {
   categorizePublicInbox,
   publicCardPresentation,
+  timeAgo,
 } from "@/lib/groups-presentation";
 
 export function PublicDashboard({
@@ -53,8 +54,13 @@ export function PublicDashboard({
             <div>
               <dt className="sr-only">Private chats</dt>
               <dd>
-                <span className="font-bold text-white">{inbox.privateChats.length}</span> private chat
-                {inbox.privateChats.length === 1 ? "" : "s"}
+                <span className="font-bold text-white">{inbox.privateChats.length}</span> with proofs
+              </dd>
+            </div>
+            <div>
+              <dt className="sr-only">Awaiting proof</dt>
+              <dd>
+                <span className="font-bold text-white">{inbox.privateIdle.length}</span> awaiting proof
               </dd>
             </div>
             <div>
@@ -77,12 +83,23 @@ export function PublicDashboard({
 
       <PublicSection
         title="Private chats"
-        description="Each person who messaged Wallnut 1:1 in WhatsApp. One row per contact."
+        description="Contacts who sent Wallnut an image or PDF in a 1:1 WhatsApp chat."
         cards={inbox.privateChats}
         orgSlug={orgSlug}
         delayMs={120}
-        emptyTitle="No private chats yet"
+        emptyTitle="No private chats with proofs yet"
         emptyDescription="When someone sends Wallnut an image or PDF in a direct message, their chat appears here."
+        defaultOpen
+      />
+
+      <PublicSection
+        title="Awaiting proof"
+        description="Contacts who messaged Wallnut in WhatsApp but have not sent proofable media yet. These rows are created when a chat is first seen."
+        cards={inbox.privateIdle}
+        orgSlug={orgSlug}
+        delayMs={160}
+        emptyTitle="No contacts awaiting proof"
+        emptyDescription="Text-only messages or hellos show up here until an image or PDF is sent."
       />
 
       <PublicSection
@@ -184,6 +201,9 @@ function PublicSection({
           <div className="flex flex-col gap-3">
             {cards.map((card, index) => {
               const presentation = publicCardPresentation(card);
+              const lastActiveLabel = presentation.lastActiveAt
+                ? timeAgo(presentation.lastActiveAt)
+                : undefined;
               return (
                 <Reveal key={card.group.id} dramatic delayMs={delayMs + 60 + index * 70}>
                   <DashboardGroupCard
@@ -194,6 +214,7 @@ function PublicSection({
                     sourceBadge={presentation.badge}
                     sourceHint={presentation.hint}
                     emptyMessage={presentation.emptyMessage}
+                    lastActiveLabel={lastActiveLabel}
                   />
                 </Reveal>
               );

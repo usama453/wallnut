@@ -3,6 +3,7 @@ import { normalizeImage } from "@/lib/image";
 import { renderPdfAllPages } from "@/lib/pdf";
 import { getProvider } from "@/lib/ai";
 import { spellcheck } from "./spellcheck";
+import { detectRomanUrduLines } from "./roman-urdu";
 import {
   enrichIssueLocations,
   extractQuotedWords,
@@ -288,12 +289,28 @@ async function persistProof(
  */
 function stripSpellingIssues(issues: RawIssue[], canonicalText: string): RawIssue[] {
   const haystack = canonicalText.toLowerCase();
+  const lines = canonicalText.split("\n");
+  const romanLines = detectRomanUrduLines(canonicalText);
   return issues.filter((issue) => {
     if (!isSpellingIssue(issue)) return true;
     const quoted = extractQuotedWords(issue);
     if (!quoted.length) return false;
+    if (
+      quoted.some((word) => {
+        const lineIdx = findWordLineIndex(lines, word);
+        return lineIdx >= 0 && romanLines[lineIdx];
+      })
+    ) {
+      return false;
+    }
     return quoted.some((word) => wordAppearsInText(word, haystack));
   });
+}
+
+function findWordLineIndex(lines: string[], word: string): number {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`\\b${escaped}\\b`, "i");
+  return lines.findIndex((line) => re.test(line));
 }
 
 function isSpellingIssue(issue: RawIssue): boolean {
@@ -360,7 +377,10 @@ function mergeSpellcheck(
     }
   }
 
-  const findings = spellcheck(source, { allow });
+  const findings = spellcheck(source, {
+    allow,
+    skipLineIndices: detectRomanUrduLines(source),
+  });
   const newIssues: RawIssue[] = [];
   for (const f of findings) {
     // Aggregated proper-noun / acronym bucket → a single low-severity issue.

@@ -15,7 +15,7 @@ import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
 import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts } from "./contacts";
 import { clearDisconnectedWhatsAppGroup, isWhatsAppGroupDisconnected } from "./disconnected-groups";
-import { directMessageGroupName } from "@/lib/groups-presentation";
+import { directMessageGroupName, isWhatsAppDirectChat } from "@/lib/groups-presentation";
 import { fallbackGroupName, getGroupName } from "./group-name";
 import { pendingGroupExternalId } from "./placeholder-groups";
 import { canonicalChatId, whatsappChatIdVariants } from "./jid";
@@ -469,7 +469,10 @@ async function ensureWhatsAppGroup(
   if (existing?.id) return existing.id;
 
   const externalId = chatId.includes("@") ? chatId : canonicalChatId(chatId);
-  const label = name.trim().slice(0, 120) || externalId;
+  const rawLabel = name.trim().slice(0, 120) || externalId;
+  const label = isWhatsAppDirectChat(externalId)
+    ? directMessageGroupName(chatId, rawLabel)
+    : rawLabel;
   const { data: created } = await admin
     .from("groups")
     .insert({
