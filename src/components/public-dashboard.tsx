@@ -176,7 +176,7 @@ export function PublicDashboard({
 
       {canManageProofConfig ? (
         <Reveal dramatic delayMs={420}>
-          <div className="mt-8">
+          <div className="mt-8 flex justify-center">
             <ProofConfigWidget initialSettings={proofAdminSettings} />
           </div>
         </Reveal>

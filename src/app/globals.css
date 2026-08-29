@@ -133,16 +133,16 @@ html.cursor-progress body {
 }
 
 .proof-segment-slider::-webkit-slider-runnable-track {
-  height: 2px;
-  border-radius: 999px;
-  background: #2a2a2a;
+  height: 14px;
+  border: none;
+  background: transparent;
 }
 
 .proof-segment-slider::-webkit-slider-thumb {
   appearance: none;
   width: 14px;
   height: 14px;
-  margin-top: -6px;
+  margin-top: 0;
   border: none;
   border-radius: 999px;
   background: #d4d4d4;
@@ -150,10 +150,9 @@ html.cursor-progress body {
 }
 
 .proof-segment-slider::-moz-range-track {
-  height: 2px;
+  height: 14px;
   border: none;
-  border-radius: 999px;
-  background: #2a2a2a;
+  background: transparent;
 }
 
 .proof-segment-slider::-moz-range-thumb {
