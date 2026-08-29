@@ -89,10 +89,14 @@ export function AppHeader({
             aria-expanded={open}
             aria-label="Open account and navigation menu"
             onClick={() => setOpen((value) => !value)}
-            className="flex items-center gap-2 rounded-full text-left text-[12px] text-[#919191] transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+            className="rounded-full transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
           >
-            <span className="hidden max-w-44 truncate sm:block">{orgName}</span>
-            <InitialAvatar label={userName || userEmail} size={28} />
+            <span className="group/pfp relative inline-flex">
+              <InitialAvatar label={userName || userEmail} size={28} />
+              <span className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-[#2a2a2a] bg-[#161616] px-2 py-1 text-[10px] font-medium text-[#fbfbfb] opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition group-hover/pfp:opacity-100">
+                You
+              </span>
+            </span>
           </button>
 
           {open ? (
