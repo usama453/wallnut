@@ -98,17 +98,17 @@ export function Rankings({
           <div className="mt-8 grid w-full max-w-[720px] grid-cols-1 gap-3 sm:grid-cols-2">
             <Reveal delayMs={120}>
               <Leaderboard
-                title="Highest issue maker"
+                title="Typos Rank"
                 rows={byTypos.slice(1)}
-                value={(person) => `${person.typos} issues`}
+                value={(person) => `${person.typos} typo${person.typos === 1 ? "" : "s"}`}
                 startRank={2}
               />
             </Reveal>
             <Reveal delayMs={220}>
               <Leaderboard
-                title="Highest designs sent"
+                title="Designs Uploaded Rank"
                 rows={byUploads}
-                value={(person) => `${person.uploads} sent`}
+                value={(person) => `${person.uploads} uploaded`}
               />
             </Reveal>
           </div>
@@ -149,10 +149,10 @@ function Champion({
   return (
     <div className="relative flex flex-col items-center">
       <p
-        className={`${animated ? "wallnut-hero-line" : ""} mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#e8c547]`}
+        className={`${animated ? "wallnut-hero-line" : ""} mb-3 text-[10px] font-bold tracking-[0.16em] text-[#e8c547]`}
         style={animated ? { animationDelay: "120ms" } : undefined}
       >
-        Issue champion
+        Top Typos Award
       </p>
       <div className="relative flex items-center justify-center">
         <Laurel side="left" />
@@ -185,7 +185,7 @@ function Champion({
       </div>
       <p className="mt-3 text-[16px] font-bold leading-none text-white">{person.display}</p>
       <p className="mt-1 text-[12px] text-[#919191]">
-        {person.typos} issue{person.typos === 1 ? "" : "s"} found
+        {person.typos} typo{person.typos === 1 ? "" : "s"}
       </p>
     </div>
   );
