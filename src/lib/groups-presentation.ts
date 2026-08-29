@@ -17,11 +17,13 @@ export interface ReportRow {
 export interface GroupCard {
   group: Group;
   reports: ReportRow[];
+  inviteCode?: string;
 }
 
 export interface PendingWhatsAppInvite {
   id: string;
   code: string;
+  name?: string;
   expiresAt: string | null;
   createdAt: string | null;
 }

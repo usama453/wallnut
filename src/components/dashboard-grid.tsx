@@ -65,6 +65,7 @@ export function DashboardGrid({
         {
           id: data.id ?? data.code,
           code: data.code,
+          name: data.groupName,
           expiresAt: data.expiresAt ?? null,
           createdAt: new Date().toISOString(),
         },
@@ -237,7 +238,7 @@ function PendingWhatsAppGroupCard({
         >
           <PlatformIcon platform="whatsapp" />
           <span className="truncate text-[12px] font-bold text-[#fbfbfb]">
-            Waiting to sync
+            {invite.name || "New whatsapp group"}
           </span>
           <span className="font-mono text-[10px] tracking-wider text-[#25D366]">
             {invite.code}
@@ -282,7 +283,21 @@ function DashboardGroupCard({
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [copied, setCopied] = useState(false);
   const preview = card.reports.slice(0, 5);
+  const inviteCode = card.inviteCode;
+  const awaitingSync = Boolean(inviteCode) && preview.length === 0;
+
+  async function copyCode() {
+    if (!inviteCode) return;
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   return (
     <article className="overflow-hidden rounded-[8px] border border-[#1b1b1b] bg-[#101010] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
@@ -297,17 +312,33 @@ function DashboardGroupCard({
           <span className="truncate text-[12px] font-bold text-[#fbfbfb]">
             {card.group.name}
           </span>
-          <span className="text-[10px] text-[#555]">
-            {card.reports.length}
-          </span>
+          {awaitingSync ? (
+            <span className="font-mono text-[10px] tracking-wider text-[#25D366]">
+              {inviteCode}
+            </span>
+          ) : (
+            <span className="text-[10px] text-[#555]">
+              {card.reports.length}
+            </span>
+          )}
         </button>
-        <PendingLink
-          href={orgGroupPath(orgSlug, card.group.id)}
-          pendingLabel="Loading…"
-          className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
-        >
-          View more
-        </PendingLink>
+        {awaitingSync ? (
+          <button
+            type="button"
+            onClick={() => void copyCode()}
+            className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
+          >
+            {copied ? "Copied" : "Copy code"}
+          </button>
+        ) : (
+          <PendingLink
+            href={orgGroupPath(orgSlug, card.group.id)}
+            pendingLabel="Loading…"
+            className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
+          >
+            View more
+          </PendingLink>
+        )}
       </div>
 
       <div
@@ -316,19 +347,30 @@ function DashboardGroupCard({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-[#222] px-4 py-3">
-            {preview.length > 0 ? (
-              <div className="flex flex-col gap-1">
-                {preview.map((report) => (
-                  <DashboardReportRow key={report.assetId} report={report} />
-                ))}
-              </div>
-            ) : (
-              <div className="py-7 text-center">
-                <p className="text-[11px] text-[#6c6c6c]">No reports in this group yet.</p>
-              </div>
-            )}
-          </div>
+          {awaitingSync && inviteCode ? (
+            <div className="border-t border-[#222] px-4 py-6 text-center">
+              <p className="font-mono text-[22px] font-bold tracking-[0.18em] text-white">
+                {inviteCode}
+              </p>
+              <p className="mt-3 text-[12px] leading-relaxed text-[#919191]">
+                Enter this code in your WhatsApp group chat to enable sync
+              </p>
+            </div>
+          ) : (
+            <div className="border-t border-[#222] px-4 py-3">
+              {preview.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  {preview.map((report) => (
+                    <DashboardReportRow key={report.assetId} report={report} />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-7 text-center">
+                  <p className="text-[11px] text-[#6c6c6c]">No reports in this group yet.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </article>

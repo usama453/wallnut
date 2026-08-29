@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/lib/org-membership";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
-import { randomInt } from "crypto";
+import { createPlaceholderWhatsAppGroup } from "@/lib/whatsapp/placeholder-groups";
 
 export async function GET(req: NextRequest) {
   const ctx = await requireOrgContext(req.nextUrl.searchParams.get("org"));
@@ -62,47 +62,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
-  // Ensure uniqueness (best-effort loop, very low collision probability).
-  const admin = await createAdminClient();
-  let code = createAuthCode();
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const { data: existing, error: lookupError } = await admin
-      .from("whatsapp_group_auth_codes")
-      .select("id")
-      .eq("code", code)
-      .maybeSingle();
-    if (lookupError) {
-      return NextResponse.json({ error: lookupError.message }, { status: 500 });
-    }
-    if (!existing) break;
-    code = createAuthCode();
+  try {
+    const created = await createPlaceholderWhatsAppGroup(ctx.orgId);
+    return NextResponse.json({
+      id: created.id,
+      code: created.code,
+      expiresAt: created.expiresAt,
+      groupId: created.groupId,
+      groupName: created.groupName,
+      hint:
+        "Paste this code inside the WhatsApp group. The bot will link the group to your workspace.",
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create code" },
+      { status: 500 },
+    );
   }
-
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  const { data, error } = await admin
-    .from("whatsapp_group_auth_codes")
-    .insert({ org_id: ctx.orgId, code, expires_at: expiresAt })
-    .select("id, code, expires_at")
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({
-    id: data.id,
-    code: data.code,
-    expiresAt: data.expires_at,
-    hint:
-      "Paste this code inside the WhatsApp group. The bot will link the group to your workspace.",
-  });
-}
-
-function createAuthCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I/L
-  let code = "WN-";
-  for (let i = 0; i < 6; i++) {
-    code += chars[randomInt(chars.length)];
-  }
-  return code;
 }

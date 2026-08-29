@@ -15,6 +15,7 @@ import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
 import { rememberWhatsAppContact } from "./contacts";
 import { getGroupName } from "./group-name";
+import { pendingGroupExternalId } from "./placeholder-groups";
 import { canonicalChatId, whatsappChatIdVariants } from "./jid";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -509,14 +510,24 @@ async function tryClaimGroupAuthCode(
 
   // Group name: fetch from WAHA groups API (falls back to truncated JID).
   const groupName = await getGroupName(groupId);
+  const pendingKey = pendingGroupExternalId(codeRow.code);
 
-  const { data: existingGroup } = await admin
-    .from("groups")
-    .select("id, org_id")
-    .in("external_id", whatsappChatIdVariants(groupId))
-    .eq("platform", "whatsapp")
-    .limit(1)
-    .maybeSingle();
+  const [{ data: existingGroup }, { data: placeholder }] = await Promise.all([
+    admin
+      .from("groups")
+      .select("id, org_id")
+      .in("external_id", whatsappChatIdVariants(groupId))
+      .eq("platform", "whatsapp")
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("groups")
+      .select("id")
+      .eq("org_id", codeRow.org_id)
+      .eq("platform", "whatsapp")
+      .eq("external_id", pendingKey)
+      .maybeSingle(),
+  ]);
   if (existingGroup && existingGroup.org_id !== codeRow.org_id) {
     const publicOrgId = await getPublicOrgId(admin);
     if (existingGroup.org_id === publicOrgId) {
@@ -534,31 +545,43 @@ async function tryClaimGroupAuthCode(
   }
 
   if (!existingGroup) {
-    let groupResult = await admin
-      .from("groups")
-      .upsert({
-        org_id: codeRow.org_id,
-        name: groupName,
-        platform: "whatsapp",
-        external_id: groupId,
-      }, { onConflict: "org_id,external_id" })
-      .select("id")
-      .single();
-    if (groupResult.error?.code === "23505") {
-      groupResult = await admin
+    if (placeholder) {
+      const { error: placeholderError } = await admin
+        .from("groups")
+        .update({ external_id: groupId, name: groupName })
+        .eq("id", placeholder.id);
+      if (placeholderError) {
+        return { ok: false, error: "failed to link group" };
+      }
+    } else {
+      let groupResult = await admin
         .from("groups")
         .upsert({
           org_id: codeRow.org_id,
-          name: `${groupName} (${groupId.slice(0, 6)})`,
+          name: groupName,
           platform: "whatsapp",
           external_id: groupId,
         }, { onConflict: "org_id,external_id" })
         .select("id")
         .single();
+      if (groupResult.error?.code === "23505") {
+        groupResult = await admin
+          .from("groups")
+          .upsert({
+            org_id: codeRow.org_id,
+            name: `${groupName} (${groupId.slice(0, 6)})`,
+            platform: "whatsapp",
+            external_id: groupId,
+          }, { onConflict: "org_id,external_id" })
+          .select("id")
+          .single();
+      }
+      if (groupResult.error) {
+        return { ok: false, error: "failed to link group" };
+      }
     }
-    if (groupResult.error) {
-      return { ok: false, error: "failed to link group" };
-    }
+  } else if (placeholder && placeholder.id !== existingGroup.id) {
+    await admin.from("groups").delete().eq("id", placeholder.id);
   }
 
   const now = new Date().toISOString();

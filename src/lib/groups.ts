@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Group } from "@/types";
 import type { GroupCard, ReportRow } from "./groups-presentation";
+import {
+  codeFromPendingExternalId,
+  ensurePlaceholderWhatsAppGroups,
+  isPendingGroupExternalId,
+} from "@/lib/whatsapp/placeholder-groups";
 export type { GroupCard, ReportRow, PendingWhatsAppInvite } from "./groups-presentation";
 export { PLATFORM_LABEL, platformColor, platformIcon, timeAgo } from "./groups-presentation";
 
@@ -22,6 +27,7 @@ export async function getDashboardData(orgIdOverride?: string) {
     .maybeSingle();
 
   const orgId = orgIdOverride ?? (profile?.org_id as string | undefined);
+  if (orgId) await ensurePlaceholderWhatsAppGroups(orgId);
   const { data: orgRow } = orgId
     ? await supabase
         .from("organizations")
@@ -97,7 +103,9 @@ export async function getDashboardData(orgIdOverride?: string) {
   const visibleGroups = (groups ?? []).filter((group) => {
     if (group.platform !== "whatsapp") return true;
     const externalId = group.external_id ?? "";
-    if (!externalId || group.name === "General") return true;
+    if (!externalId || group.name === "General" || isPendingGroupExternalId(externalId)) {
+      return true;
+    }
     if (externalId.endsWith("@g.us")) return true;
     // Direct 1:1 chats with Wallnut belong on Public.
     return (
@@ -142,7 +150,11 @@ export async function getDashboardData(orgIdOverride?: string) {
 
   const groupMap = new Map<string, GroupCard>();
   for (const group of byGroup.values()) {
-    groupMap.set(group.id, { group, reports: [] });
+    groupMap.set(group.id, {
+      group,
+      reports: [],
+      inviteCode: codeFromPendingExternalId(group.external_id) ?? undefined,
+    });
   }
 
   for (const a of assets ?? []) {
@@ -179,7 +191,12 @@ export async function getDashboardData(orgIdOverride?: string) {
   const cards = [...groupMap.values()]
     .filter((card) => {
       const externalId = card.group.external_id ?? "";
-      if (!externalId || card.group.name === "General" || externalId.endsWith("@g.us")) {
+      if (
+        !externalId ||
+        card.group.name === "General" ||
+        isPendingGroupExternalId(externalId) ||
+        externalId.endsWith("@g.us")
+      ) {
         return true;
       }
       return card.reports.length > 0;
@@ -225,7 +242,10 @@ export async function getDashboardData(orgIdOverride?: string) {
   });
 
   const pendingInvites = codes.filter(
-    (code) => code.status === "pending" && !code.isExpired,
+    (code) =>
+      code.status === "pending" &&
+      !code.isExpired &&
+      !cards.some((card) => card.inviteCode === code.code),
   );
 
   return { orgId, orgName, orgSlug, cards, stats, codes, pendingInvites };
