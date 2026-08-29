@@ -55,6 +55,7 @@ export default async function OrganizationHome({
         leaders={rankings.byTypos}
         pendingInvites={data.pendingInvites}
         canAddGroup={canAddGroup}
+        isSuperAdmin={access.isSuperAdmin}
       />
 
     </div>

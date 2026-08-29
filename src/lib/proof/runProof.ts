@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { normalizeImage } from "@/lib/image";
 import { renderPdfAllPages } from "@/lib/pdf";
 import { getProvider } from "@/lib/ai";
+import { getProofPipelineMode, type ProofPipelineMode } from "./pipeline-mode-store";
 import { spellcheck } from "./spellcheck";
 import { detectRomanUrduLines } from "./roman-urdu";
 import {
@@ -22,6 +23,7 @@ export interface RunProofResult {
   ocrText: string;
   model: string;
   ocrConfidence: number;
+  pipelineMode: ProofPipelineMode;
 }
 
 /**
@@ -91,10 +93,12 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
   }
 
 
-  // 4. OCR (skipped on serverless runtimes where Tesseract's wasm can't load;
-  // the AI model reads the image directly when OCR text is empty)
+  // 4. OCR — skipped in Gemini-only mode; split pipeline uses it as a transcription hint.
+  const pipelineMode = await getProofPipelineMode();
   let ocr: OcrResult = { text: "", confidence: 0, words: [], width: 0, height: 0 };
-  const ocrEnabled = process.env.OCR_ENABLED === "1" || process.env.VERCEL !== "1";
+  const ocrEnabled =
+    pipelineMode !== "gemini_only" &&
+    (process.env.OCR_ENABLED === "1" || process.env.VERCEL !== "1");
   if (ocrEnabled) {
     const { extractText } = await import("@/lib/ocr/tesseract");
     ocr = await extractText(normalized.buffer);
@@ -104,45 +108,70 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
   const brand = await loadBrand(admin, asset.org_id);
   const previous = await loadPreviousProof(admin, version.asset_id, version.version);
 
-  // 6. AI — two stages: (1) read text, (2) visual/brand QA without spelling
   const provider = getProvider();
-  const transcription = await provider.transcribeAsset({
-    imageBase64: normalized.base64,
-    mimeType: normalized.mimeType,
-    ocrText: ocr.text,
-    brand,
-  });
-  const canonicalText = sanitizeText(
-    (transcription.extractedText || ocr.text || "").trim(),
-  );
+  let report: RawReport;
+  let modelLabel = provider.name;
 
-  const { report } = await provider.analyzeAsset({
-    imageBase64: normalized.base64,
-    mimeType: normalized.mimeType,
-    ocrText: ocr.text,
-    brand,
-    previous,
-    extractedText: canonicalText,
-    imageContext: transcription.imageContext,
-  });
+  if (pipelineMode === "gemini_only") {
+    const { report: standaloneReport } = await provider.analyzeAsset({
+      imageBase64: normalized.base64,
+      mimeType: normalized.mimeType,
+      brand,
+      previous,
+      standalone: true,
+    });
+    report = standaloneReport;
+    report.extractedText = sanitizeText(
+      (report.extractedText || "").trim(),
+    );
+    modelLabel = `${provider.name} · standalone`;
 
-  report.extractedText = canonicalText;
-  report.issues = stripSpellingIssues(report.issues, canonicalText);
+    const locationContext: LocationContext = {
+      canonicalText: report.extractedText ?? "",
+      imageWidth: normalized.width,
+      imageHeight: normalized.height,
+      ocrWords: [],
+    };
+    enrichIssueLocations(report.issues, locationContext);
+  } else {
+    const transcription = await provider.transcribeAsset({
+      imageBase64: normalized.base64,
+      mimeType: normalized.mimeType,
+      ocrText: ocr.text,
+      brand,
+    });
+    const canonicalText = sanitizeText(
+      (transcription.extractedText || ocr.text || "").trim(),
+    );
 
-  const locationContext: LocationContext = {
-    canonicalText,
-    imageWidth: ocr.width || normalized.width,
-    imageHeight: ocr.height || normalized.height,
-    ocrWords: ocr.words,
-  };
+    const analyzed = await provider.analyzeAsset({
+      imageBase64: normalized.base64,
+      mimeType: normalized.mimeType,
+      ocrText: ocr.text,
+      brand,
+      previous,
+      extractedText: canonicalText,
+      imageContext: transcription.imageContext,
+    });
+    report = analyzed.report;
 
-  // Deterministic spellcheck against the stage-1 transcription (not LLM guesses).
-  if (!brand?.allow_slang_roman_urdu && canonicalText) {
-    mergeSpellcheck(report, canonicalText, brand, asset.name, locationContext);
+    report.extractedText = canonicalText;
+    report.issues = stripSpellingIssues(report.issues, canonicalText);
+
+    const locationContext: LocationContext = {
+      canonicalText,
+      imageWidth: ocr.width || normalized.width,
+      imageHeight: ocr.height || normalized.height,
+      ocrWords: ocr.words,
+    };
+
+    if (!brand?.allow_slang_roman_urdu && canonicalText) {
+      mergeSpellcheck(report, canonicalText, brand, asset.name, locationContext);
+    }
+
+    enrichIssueLocations(report.issues, locationContext);
+    finalizeReport(report);
   }
-
-  enrichIssueLocations(report.issues, locationContext);
-  finalizeReport(report);
 
   // 7. persist
   const proofId = await persistProof(admin, {
@@ -151,15 +180,17 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     versionNumber: version.version,
     report,
     ocrText: ocr.text,
-    model: provider.name,
+    model: modelLabel,
+    pipelineMode,
   });
 
   return {
     proofId,
     report,
     ocrText: ocr.text,
-    model: provider.name,
+    model: modelLabel,
     ocrConfidence: ocr.confidence,
+    pipelineMode,
   };
 }
 
@@ -232,6 +263,7 @@ async function persistProof(
     report: RawReport;
     ocrText: string;
     model: string;
+    pipelineMode: ProofPipelineMode;
   },
 ): Promise<string> {
   const { data: proof, error } = await admin
@@ -243,7 +275,7 @@ async function persistProof(
       summary: args.report.summary,
       ocr_text: args.ocrText,
       model: args.model,
-      raw: args.report,
+      raw: { ...args.report, pipeline_mode: args.pipelineMode },
     })
     .select("id")
     .single();

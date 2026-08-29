@@ -30,6 +30,66 @@ export function PublicDashboard({
 }) {
   const inbox = categorizePublicInbox(cards);
 
+  const sections = [
+    {
+      key: "private-chats",
+      title: "Private chats",
+      description:
+        "Contacts who sent Wallnut an image or PDF in a 1:1 WhatsApp chat.",
+      cards: inbox.privateChats,
+      delayMs: 120,
+    },
+    {
+      key: "direct-archive",
+      title: "Direct messages archive",
+      description:
+        "Older 1:1 proofs stored before Wallnut tracked each contact separately.",
+      cards: inbox.directArchive,
+      delayMs: 180,
+    },
+    {
+      key: "group-proofs",
+      title: "Unlinked group proofs",
+      description:
+        "WhatsApp groups that sent proofable images or PDFs but are not assigned to a team workspace yet.",
+      cards: inbox.groupProofs,
+      delayMs: 240,
+    },
+    {
+      key: "idle-groups",
+      title: "Idle groups",
+      description:
+        "Groups Wallnut has seen on WhatsApp but that have not sent proofable media yet.",
+      cards: inbox.idleGroups,
+      delayMs: 300,
+    },
+  ].filter((section) => section.cards.length > 0);
+
+  const statItems = [
+    { label: "proofs", value: stats.reports },
+    inbox.privateChats.length > 0
+      ? {
+          label: `private chat${inbox.privateChats.length === 1 ? "" : "s"}`,
+          value: inbox.privateChats.length,
+        }
+      : null,
+    inbox.groupProofs.length > 0
+      ? {
+          label: `group proof${inbox.groupProofs.length === 1 ? "" : "s"}`,
+          value: inbox.groupProofs.length,
+        }
+      : null,
+    inbox.idleGroups.length > 0
+      ? {
+          label: `idle group${inbox.idleGroups.length === 1 ? "" : "s"}`,
+          value: inbox.idleGroups.length,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ label: string; value: number }>;
+
+  const allEmpty =
+    sections.length === 0 && pendingInvites.length === 0;
+
   return (
     <section className="mx-auto w-full max-w-3xl pb-8 pt-2">
       <Reveal dramatic>
@@ -41,92 +101,55 @@ export function PublicDashboard({
             Public
           </h1>
           <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-[#919191]">
-            Everything here arrived before being assigned to a team workspace — private
-            WhatsApp chats on the left, unlinked group proofs below.
+            Everything here arrived before being assigned to a team workspace — sorted
+            below by source type.
           </p>
-          <dl className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-[#bdbdbd]">
-            <div>
-              <dt className="sr-only">Reports</dt>
-              <dd>
-                <span className="font-bold text-white">{stats.reports}</span> proofs
-              </dd>
-            </div>
-            <div>
-              <dt className="sr-only">Private chats</dt>
-              <dd>
-                <span className="font-bold text-white">{inbox.privateChats.length}</span> private chat
-                {inbox.privateChats.length === 1 ? "" : "s"}
-              </dd>
-            </div>
-            <div>
-              <dt className="sr-only">Group proofs</dt>
-              <dd>
-                <span className="font-bold text-white">{inbox.groupProofs.length}</span> group proof
-                {inbox.groupProofs.length === 1 ? "" : "s"}
-              </dd>
-            </div>
-            <div>
-              <dt className="sr-only">Idle groups</dt>
-              <dd>
-                <span className="font-bold text-white">{inbox.idleGroups.length}</span> idle group
-                {inbox.idleGroups.length === 1 ? "" : "s"}
-              </dd>
-            </div>
-          </dl>
+          {statItems.length > 0 ? (
+            <dl className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-[#bdbdbd]">
+              {statItems.map((item) => (
+                <div key={item.label}>
+                  <dt className="sr-only">{item.label}</dt>
+                  <dd>
+                    <span className="font-bold text-white">{item.value}</span> {item.label}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
         </header>
       </Reveal>
 
-      <PublicSection
-        title="Private chats"
-        description="Contacts who sent Wallnut an image or PDF in a 1:1 WhatsApp chat."
-        cards={inbox.privateChats}
-        orgSlug={orgSlug}
-        delayMs={120}
-        emptyTitle="No private chats with proofs yet"
-        emptyDescription="When someone sends Wallnut an image or PDF in a direct message, their chat appears here."
-        defaultOpen
-      />
+      {allEmpty ? (
+        <Reveal dramatic delayMs={120}>
+          <div className="mt-10 rounded-[8px] border border-dashed border-[#252525] px-6 py-14 text-center">
+            <p className="text-[12px] font-bold text-[#bdbdbd]">Nothing in Public yet</p>
+            <p className="mt-1 text-[11px] text-[#5f5f5f]">
+              When someone messages Wallnut on WhatsApp before a group is linked to a team,
+              their traffic appears here.
+            </p>
+          </div>
+        </Reveal>
+      ) : null}
 
-      <PublicSection
-        title="Direct messages archive"
-        description="Older 1:1 proofs stored before Wallnut tracked each contact separately."
-        cards={inbox.directArchive}
-        orgSlug={orgSlug}
-        delayMs={180}
-        emptyTitle="No archived direct messages"
-        emptyDescription="Legacy proofs from early direct-message traffic would appear in this bucket."
-        defaultOpen
-      />
-
-      <PublicSection
-        title="Unlinked group proofs"
-        description="WhatsApp groups that sent proofable images or PDFs but are not assigned to a team workspace yet."
-        cards={inbox.groupProofs}
-        orgSlug={orgSlug}
-        delayMs={240}
-        emptyTitle="No unlinked group proofs"
-        emptyDescription="To assign a group to a team, open that team's workspace and use Add WhatsApp group."
-        defaultOpen
-      />
-
-      <PublicSection
-        title="Idle groups"
-        description="Groups Wallnut has seen on WhatsApp but that have not sent proofable media yet."
-        cards={inbox.idleGroups}
-        orgSlug={orgSlug}
-        delayMs={300}
-        emptyTitle="No idle groups"
-        emptyDescription="Groups that message Wallnut without sending images or PDFs show up here."
-      />
+      {sections.map((section, index) => (
+        <PublicSection
+          key={section.key}
+          title={section.title}
+          description={section.description}
+          cards={section.cards}
+          orgSlug={orgSlug}
+          delayMs={section.delayMs}
+          defaultOpen={index === 0}
+        />
+      ))}
 
       {pendingInvites.length > 0 ? (
         <Reveal dramatic delayMs={360}>
           <section className="mt-10">
             <div className="mb-4">
-              <h2 className="text-[13px] font-bold text-white">Stale link codes</h2>
+              <h2 className="text-[13px] font-bold text-white">Unused link codes</h2>
               <p className="mt-1 max-w-lg text-[12px] leading-relaxed text-[#6c6c6c]">
-                Leftover codes on Public. Link codes should be created from a team workspace,
-                not here.
+                Leftover codes on Public. Create link codes from a team workspace instead.
               </p>
             </div>
             <div className="flex flex-col gap-3">
@@ -154,8 +177,6 @@ function PublicSection({
   cards,
   orgSlug,
   delayMs,
-  emptyTitle,
-  emptyDescription,
   defaultOpen = false,
 }: {
   title: string;
@@ -163,8 +184,6 @@ function PublicSection({
   cards: GroupCard[];
   orgSlug: string;
   delayMs: number;
-  emptyTitle: string;
-  emptyDescription: string;
   defaultOpen?: boolean;
 }) {
   return (
@@ -182,35 +201,28 @@ function PublicSection({
           </span>
         </div>
 
-        {cards.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {cards.map((card, index) => {
-              const presentation = publicCardPresentation(card);
-              const lastActiveLabel = presentation.lastActiveAt
-                ? timeAgo(presentation.lastActiveAt)
-                : undefined;
-              return (
-                <Reveal key={card.group.id} dramatic delayMs={delayMs + 60 + index * 70}>
-                  <DashboardGroupCard
-                    card={card}
-                    orgSlug={orgSlug}
-                    defaultOpen={defaultOpen && index === 0 && card.reports.length > 0}
-                    groupLabel={presentation.title}
-                    sourceBadge={presentation.badge}
-                    sourceHint={presentation.hint}
-                    emptyMessage={presentation.emptyMessage}
-                    lastActiveLabel={lastActiveLabel}
-                  />
-                </Reveal>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-[8px] border border-dashed border-[#252525] px-6 py-10 text-center">
-            <p className="text-[12px] font-bold text-[#bdbdbd]">{emptyTitle}</p>
-            <p className="mt-1 text-[11px] text-[#5f5f5f]">{emptyDescription}</p>
-          </div>
-        )}
+        <div className="flex flex-col gap-3">
+          {cards.map((card, index) => {
+            const presentation = publicCardPresentation(card);
+            const lastActiveLabel = presentation.lastActiveAt
+              ? timeAgo(presentation.lastActiveAt)
+              : undefined;
+            return (
+              <Reveal key={card.group.id} dramatic delayMs={delayMs + 60 + index * 70}>
+                <DashboardGroupCard
+                  card={card}
+                  orgSlug={orgSlug}
+                  defaultOpen={defaultOpen && index === 0 && card.reports.length > 0}
+                  groupLabel={presentation.title}
+                  sourceBadge={presentation.badge}
+                  sourceHint={presentation.hint}
+                  emptyMessage={presentation.emptyMessage}
+                  lastActiveLabel={lastActiveLabel}
+                />
+              </Reveal>
+            );
+          })}
+        </div>
       </section>
     </Reveal>
   );

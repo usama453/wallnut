@@ -1,6 +1,6 @@
 import type { AiProvider } from "./provider";
 import type { AnalyzeInput, AnalyzeOutput, TranscribeInput, TranscriptionOutput } from "./types";
-import { buildSystemPrompt } from "./prompt";
+import { buildSystemPrompt, buildStandaloneProofPrompt } from "./prompt";
 
 /**
  * Mock provider: no API keys, no network, deterministic output.
@@ -20,14 +20,16 @@ export class MockProvider implements AiProvider {
   }
 
   async analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput> {
-    const prompt = buildSystemPrompt(
-      input.ocrText,
-      input.brand,
-      input.previous,
-      input.extractedText,
-      input.imageContext,
-    );
-    await delay(900); // simulate latency
+    const prompt = input.standalone
+      ? buildStandaloneProofPrompt(input.ocrText, input.brand, input.previous)
+      : buildSystemPrompt(
+          input.ocrText,
+          input.brand,
+          input.previous,
+          input.extractedText,
+          input.imageContext,
+        );
+    await delay(input.standalone ? 700 : 900);
 
     const text = input.extractedText || input.ocrText || "";
     const issues = [];
@@ -39,9 +41,7 @@ export class MockProvider implements AiProvider {
       [/seperate/gi, "seperate", "separate"],
       [/definately/gi, "definately", "definitely"],
     ];
-    // Spelling is handled by the deterministic spellcheck pass in runProof.
-    // Mock QA skips typo injection when stage-1 text was provided.
-    if (!input.extractedText) {
+    if (input.standalone || !input.extractedText) {
       for (const [re, wrong, right] of typos) {
         if (re.test(text)) {
           issues.push({

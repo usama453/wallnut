@@ -55,6 +55,8 @@ export interface AnalyzeInput {
   extractedText?: string;
   /** Stage-1 brief description of the asset layout/context. */
   imageContext?: string;
+  /** Single-shot Gemini proofing — no split pipeline or local spellcheck afterward. */
+  standalone?: boolean;
 }
 
 export interface TranscribeInput {

@@ -36,10 +36,10 @@ const ROLE_ORDER: Record<string, number> = {
   viewer: 4,
 };
 
-const PANEL =
-  "overflow-hidden rounded-[8px] border border-[#1b1b1b] bg-[#101010] shadow-[0_24px_36px_rgba(0,0,0,0.48)]";
-const FIELD =
-  "rounded-[6px] border border-[#2e2e2e] bg-[#161616] px-3 py-2 text-[12px] text-[#fbfbfb] outline-none placeholder:text-[#555] focus:border-[#3a3a3a]";
+import { WALLNUT_FIELD, WALLNUT_PANEL } from "@/components/wallnut/panel";
+
+const PANEL = WALLNUT_PANEL;
+const FIELD = WALLNUT_FIELD;
 
 export function TeamManager({
   orgSlug,

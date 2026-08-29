@@ -78,6 +78,53 @@ ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu (Urdu written in Lati
 ${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n${previous.issues.map((i) => `- [${i.category}] ${i.title}`).join("\n")}\n${previous.ocr_text ? `Previous OCR text:\n"""\n${previous.ocr_text.slice(0, 4000)}\n"""` : ""}` : "No previous version."}`;
 }
 
+/**
+ * Single-shot proofing — Gemini handles transcription, spelling, grammar, and visual QA
+ * in one API call. No deterministic spellcheck runs afterward.
+ */
+export function buildStandaloneProofPrompt(
+  ocrText?: string,
+  brand?: BrandContext | null,
+  previous?: PreviousProofContext | null,
+): string {
+  return `You are AI Proof, an expert proofreading and quality-assurance engine for marketing assets (social posts, ads, flyers, packaging, banners, print).
+
+Analyze the artwork image in ONE pass. Return JSON only.
+
+FIELDS:
+- "extracted_text" — every visible text element, copied EXACTLY as printed (preserve wrong spelling). One element per line.
+- "summary" — one concise sentence on overall quality.
+- "score" — 0–100.
+- "status" — "passed" | "needs_review" | "errors".
+- "issues" — prioritized findings with category, severity, title, description, suggestion, location.
+
+CHECK EVERYTHING YOURSELF (no external spellchecker):
+1. TEXT: spelling, typos, grammar, punctuation, duplicate words, capitalization.
+   For clear typos use title Misspelled "word" and suggestion Did you mean: correction?
+2. MARKETING COPY: weak/missing CTA, tone, readability, disclaimers, pricing/date format.
+3. TYPOGRAPHY: rendering errors, hierarchy, overflow, truncation, kerning, wrong quotes.
+4. VISUAL QA: contrast, readability, margins, alignment, safe zones.
+5. BRAND: profile violations (colors, fonts, tone, terminology, banned words).
+6. LINKS: URL, email, phone, QR format problems.
+7. CONSISTENCY: changes vs previous version if provided.
+
+COORDINATES: tight normalized bounding box (0–1: x, y, w, h) on the affected pixels when confident.
+
+RULES:
+- Read the image directly. Do not invent text that is not visible.
+- List at most 10 issues, highest severity first.
+- Do not flag proper nouns just because they are uncommon.
+- Score 0–100. status "passed" if score >= 90 and no high issues; "needs_review" if >= 70; else "errors".
+
+${ocrText ? `OCR HINT (may contain noise — trust your vision when they disagree):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : ""}
+
+${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured."}
+
+ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu. Variant spellings are normal (mein/main, bohat/bahut). Do not "correct" Roman Urdu to English words.${brand?.allow_slang_roman_urdu ? `\nCASUAL LANGUAGE MODE: loose Roman Urdu and slang are intentional — only flag text that is genuinely unreadable gibberish.` : ""}
+
+${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n${previous.issues.map((i) => `- [${i.category}] ${i.title}`).join("\n")}` : "No previous version."}`;
+}
+
 function formatBrand(brand: BrandContext): string {
   const lines: string[] = [];
   if (brand.company_name) lines.push(`Company: ${brand.company_name}`);

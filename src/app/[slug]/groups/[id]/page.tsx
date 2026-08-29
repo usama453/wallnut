@@ -6,6 +6,8 @@ import { ReportCard } from "@/components/wallnut/report-card";
 import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { ReportRow } from "@/lib/groups";
+import { loadWhatsAppContactNamesForPhones } from "@/lib/groups";
+import { displayWhatsAppSender } from "@/lib/groups-presentation";
 import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
 import {
   displayGroupName,
@@ -138,6 +140,11 @@ export default async function OrgGroupReportsPage({
     }
   }
 
+  const contactNames = await loadWhatsAppContactNamesForPhones(
+    access.org.id,
+    phoneByAsset.values(),
+  );
+
   const reports: ReportRow[] = (assets ?? []).map((asset) => {
     const version = versionByAsset.get(asset.id);
     const proof = version ? proofByVersion.get(version.id) : undefined;
@@ -157,7 +164,7 @@ export default async function OrgGroupReportsPage({
       groupId: id,
       uploader:
         (asset.created_by ? creatorName.get(asset.created_by) : null) ??
-        phoneByAsset.get(asset.id) ??
+        displayWhatsAppSender(phoneByAsset.get(asset.id), contactNames) ??
         null,
     };
   });

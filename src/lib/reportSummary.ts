@@ -151,18 +151,159 @@ export function getCorrectionLines(
 
 /** One-line preview of the WhatsApp reply Wallnut sends after proofing. */
 export function whatsappReplyPreview(issues: SummaryIssue[]): string {
-  const corrections = formatCorrectionList(issues);
-  if (corrections) {
-    const lines = corrections.split("\n");
-    const more = lines.find((line) => line.startsWith("+"));
-    const body = lines.filter((line) => !line.startsWith("+"));
-    const headline = body[0] ?? corrections;
-    if (more) return `${headline} (${more})`;
-    if (body.length > 1) return `${headline} +${body.length - 1} more`;
-    return headline;
+  const typoLines = getTypoCorrections(issues);
+  if (typoLines.length > 0) {
+    const first = `${typoLines[0].before} → ${typoLines[0].after}`;
+    if (typoLines.length === 1) return `1 typo: ${first}`;
+    return `${typoLines.length} typos: ${first} +${typoLines.length - 1}`;
   }
-  const status = reportStatus(issues);
-  return `${status.emoji} ${status.label}`;
+  const tip = pickTopTip(issues);
+  if (!tip) return "No typos found";
+  const short = tip.replace(/\.$/, "");
+  return short.length > 64 ? `${short.slice(0, 61)}…` : short;
+}
+
+/**
+ * Human, concise WhatsApp reply after proofing, e.g.:
+ * - Found 3 typos, Mein → mien, mext → next, aye → gate. Rest looks clean.
+ * - No typos found. Consider slightly darkening the background overlay on the title.
+ */
+export function formatWhatsAppReply(issues: SummaryIssue[]): string {
+  const typoLines = getTypoCorrections(issues);
+  const tip = pickTopTip(issues);
+
+  if (typoLines.length === 0) {
+    if (!tip) return "No typos found. Rest looks clean.";
+    return `No typos found. ${tip}`;
+  }
+
+  const typoPart = formatTypoSummary(typoLines);
+  if (!tip) return `${typoPart} Rest looks clean.`;
+  return `${typoPart} ${tip}`;
+}
+
+function getTypoCorrections(issues: SummaryIssue[]) {
+  return buildCorrectionLines(issues).filter((line) => line.label === "Typo");
+}
+
+function formatTypoSummary(typoLines: CorrectionLine[]): string {
+  const maxShown = 5;
+  const shown = typoLines.slice(0, maxShown);
+  const pairs = shown.map((line) => `${line.before} → ${line.after}`).join(", ");
+  const extra = typoLines.length > maxShown ? ` +${typoLines.length - maxShown} more` : "";
+  const count = typoLines.length;
+  return `Found ${count} typo${count === 1 ? "" : "s"}, ${pairs}${extra}.`;
+}
+
+function pickTopTip(issues: SummaryIssue[]): string | null {
+  const candidates = issues
+    .filter((issue) => {
+      const label = issueLabel(issue);
+      if (label === "typos" || label === "nouns") return false;
+      if (/\bproper nouns?\b/i.test(issue.title ?? "")) return false;
+      return Boolean(humanizeTip(issue));
+    })
+    .sort(
+      (a, b) =>
+        severityRank(a.severity) - severityRank(b.severity) ||
+        (a.title ?? "").localeCompare(b.title ?? ""),
+    );
+
+  return candidates.length ? humanizeTip(candidates[0]) : null;
+}
+
+function severityRank(severity: string | null | undefined): number {
+  if (severity === "high") return 0;
+  if (severity === "medium") return 1;
+  return 2;
+}
+
+function humanizeTip(issue: SummaryIssue): string | null {
+  const suggestion = cleanTipText(issue.suggestion);
+  const title = cleanTipText(issue.title);
+  const description = cleanTipText(issue.description);
+  const hay = `${issue.title ?? ""} ${issue.suggestion ?? ""} ${issue.description ?? ""}`;
+  const pair = extractPair(hay);
+  const label = issueLabel(issue);
+
+  if (suggestion && !isBoilerplateTip(suggestion)) {
+    return sentenceTip(suggestion);
+  }
+
+  if (pair && label === "grammar") {
+    return `Fix grammar: ${pair.before} → ${pair.after}.`;
+  }
+
+  if (title && !isBoilerplateTip(title)) {
+    return sentenceTip(title);
+  }
+
+  if (description && !isBoilerplateTip(description)) {
+    return sentenceTip(description);
+  }
+
+  return null;
+}
+
+function cleanTipText(value?: string | null): string {
+  return (value ?? "")
+    .replace(/\s+/g, " ")
+    .replace(/^[-•]\s*/, "")
+    .trim();
+}
+
+function isBoilerplateTip(text: string): boolean {
+  return (
+    /^verify the intended spelling/i.test(text) ||
+    /^add names to brand profile/i.test(text) ||
+    /^not in the dictionary/i.test(text) ||
+    /^appears \d+×/i.test(text) ||
+    /^found in:/i.test(text) ||
+    /^did you mean:/i.test(text) ||
+    /misspelled/i.test(text) ||
+    /\bproper nouns?\b/i.test(text)
+  );
+}
+
+function sentenceTip(text: string): string {
+  const trimmed = text.replace(/\.$/, "").trim();
+  if (!trimmed) return "";
+  if (/^consider /i.test(trimmed)) return `${capitalize(trimmed)}.`;
+
+  const softened = trimmed.replace(
+    /^(slightly|lightly|a bit|a little)\s+(darken|lighten|brighten|increase|decrease|reduce)\b/i,
+    (_, adv: string, verb: string) => `${adv.toLowerCase()} ${verbToGerund(verb)}`,
+  );
+  if (softened !== trimmed) return `Consider ${decapitalize(softened)}.`;
+
+  if (
+    /^(increase|decrease|darken|lighten|brighten|fix|remove|add|use|avoid|try|check|ensure|move|align|shorten|lengthen)\b/i.test(
+      trimmed,
+    )
+  ) {
+    return `${capitalize(trimmed)}.`;
+  }
+
+  if (trimmed.split(/\s+/).length >= 4) {
+    return `Consider ${decapitalize(trimmed)}.`;
+  }
+
+  return `Consider ${decapitalize(trimmed)}.`;
+}
+
+function verbToGerund(verb: string): string {
+  const lower = verb.toLowerCase();
+  if (lower.endsWith("en")) return `${lower.slice(0, -2)}ening`;
+  if (lower.endsWith("e")) return `${lower.slice(0, -1)}ing`;
+  return `${lower}ing`;
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function decapitalize(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
 /** Prefer the Wallnut reply text for list labels when proof results exist. */

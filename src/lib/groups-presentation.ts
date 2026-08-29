@@ -123,6 +123,14 @@ export function whatsAppContactHint(digits: string): string {
   return `···${digits.slice(-4)}`;
 }
 
+/** Human-readable phone when we have no saved contact name. */
+export function formatWhatsAppPhone(digits: string): string {
+  if (!digits) return "WhatsApp contact";
+  if (digits.length >= 10) return `+${digits.slice(0, 2)} …${digits.slice(-4)}`;
+  if (digits.length >= 4) return `+${digits}`;
+  return "WhatsApp contact";
+}
+
 /** Human label for who sent a proof (never raw @lid JIDs or full phone strings). */
 export function displayWhatsAppSender(
   raw: string | null | undefined,
@@ -137,7 +145,7 @@ export function displayWhatsAppSender(
   if (saved && !looksLikePhoneLabel(saved) && !looksLikeMessageText(saved)) {
     return saved;
   }
-  return `WhatsApp ${whatsAppContactHint(digits)}`;
+  return formatWhatsAppPhone(digits);
 }
 
 /** Stable label for a 1:1 WhatsApp contact — never show a full message as the title. */

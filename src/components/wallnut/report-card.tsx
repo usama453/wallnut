@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { InitialAvatar } from "@/components/wallnut/avatar";
-import { timeAgo, type ReportRow } from "@/lib/groups-presentation";
+import { displayWhatsAppSender, timeAgo, type ReportRow } from "@/lib/groups-presentation";
 
 export function ReportCard({ report }: { report: ReportRow }) {
   const href = report.slug ? `/reports/${report.slug}` : `/reports/${report.assetId}`;
+  const uploader =
+    displayWhatsAppSender(report.uploader, undefined) ?? report.uploader ?? "Workspace";
   const scoreTone =
     report.score == null
       ? "text-[#6c6c6c]"
@@ -43,11 +45,11 @@ export function ReportCard({ report }: { report: ReportRow }) {
         </h2>
 
         <div className="mt-3 flex items-center gap-2">
-          <InitialAvatar label={report.uploader || "Wallnut"} size={20} />
+          <InitialAvatar label={uploader} size={20} />
           <div className="min-w-0">
             <p className="text-[9px] leading-none text-[#6c6c6c]">Uploaded by</p>
             <p className="mt-1 truncate text-[11px] leading-none text-[#bdbdbd]">
-              {report.uploader || "Workspace"}
+              {uploader}
             </p>
           </div>
         </div>

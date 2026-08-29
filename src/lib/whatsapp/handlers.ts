@@ -4,7 +4,7 @@ import { proofSemaphore } from "@/lib/proof/concurrency";
 import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
-import { formatCorrectionList, reportStatus, whatsappReplyPreview } from "@/lib/reportSummary";
+import { formatWhatsAppReply, whatsappReplyPreview } from "@/lib/reportSummary";
 import {
   extractMedia,
   extractWahaMessages,
@@ -318,12 +318,9 @@ async function handleMedia(
 
     const reportUrl = `${APP_URL}/r/${created.slug}`;
 
-    const corrections = formatCorrectionList(result.report.issues);
-    const status = reportStatus(result.report.issues);
+    const replyBody = formatWhatsAppReply(result.report.issues);
 
-    const detailBody = corrections || `${status.emoji} ${status.label}`;
-
-    await sendInteractiveWaha(from, detailBody, {
+    await sendInteractiveWaha(from, replyBody, {
       reply: [
         { id: `approve:${created.assetId}:${created.version}`, title: "Approve" },
         { id: `changes:${created.assetId}:${created.version}`, title: "Request changes" },

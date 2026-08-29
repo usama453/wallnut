@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Spinner } from "@/components/wallnut/icons";
+import {
+  WALLNUT_BUTTON,
+  WALLNUT_FIELD,
+  WALLNUT_PANEL,
+} from "@/components/wallnut/panel";
 
 interface AllowedRow {
   id: string;
@@ -67,112 +73,154 @@ export function WhatsAppAccess() {
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">WhatsApp access</h2>
-        <div className="flex rounded-lg border border-slate-700 text-xs overflow-hidden">
+    <article className={WALLNUT_PANEL}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#222] px-4 py-3">
+        <h2 className="text-[12px] font-bold text-[#fbfbfb]">WhatsApp access</h2>
+        <div className="flex overflow-hidden rounded-[6px] border border-[#2e2e2e] text-[11px]">
           <button
+            type="button"
             disabled={busy}
             onClick={() => post({ action: "mode", mode: "all" })}
-            className={`px-3 py-1.5 ${mode === "all" ? "bg-indigo-500/30 text-indigo-200" : "text-slate-400 hover:bg-slate-800"}`}
+            className={`px-3 py-1.5 transition ${
+              mode === "all"
+                ? "bg-[#202020] font-bold text-white"
+                : "text-[#919191] hover:bg-[#181818] hover:text-white"
+            }`}
           >
             Everyone
           </button>
           <button
+            type="button"
             disabled={busy}
             onClick={() => post({ action: "mode", mode: "allowlist" })}
-            className={`px-3 py-1.5 ${mode === "allowlist" ? "bg-indigo-500/30 text-indigo-200" : "text-slate-400 hover:bg-slate-800"}`}
+            className={`border-l border-[#2e2e2e] px-3 py-1.5 transition ${
+              mode === "allowlist"
+                ? "bg-[#202020] font-bold text-white"
+                : "text-[#919191] hover:bg-[#181818] hover:text-white"
+            }`}
           >
             Allowed only
           </button>
         </div>
       </div>
-      <p className="mt-1 text-sm text-slate-400">
-        {mode === "all"
-          ? "The bot replies to every chat that messages it."
-          : "The bot only replies to the chats listed below; everyone else is ignored."}
-      </p>
 
-      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
-      {loading ? (
-        <p className="mt-3 text-xs text-slate-500">Loading…</p>
-      ) : (
-        <>
-          {allowed.length > 0 && (
-            <ul className="mt-3 divide-y divide-slate-800 rounded-lg border border-slate-800">
-              {allowed.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                  <div className="min-w-0">
-                    <span className="text-slate-200">{a.label || prettyChat(a.chat_id)}</span>
-                    {!a.label && <span className="ml-1 text-xs text-slate-500">{prettyChat(a.chat_id)}</span>}
-                  </div>
-                  <button
-                    disabled={busy}
-                    onClick={() => post({ action: "remove", id: a.id })}
-                    className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-300"
+      <div className="px-4 py-4">
+        <p className="text-[12px] leading-relaxed text-[#919191]">
+          {mode === "all"
+            ? "The bot replies to every chat that messages it."
+            : "The bot only replies to the chats listed below; everyone else is ignored."}
+        </p>
+
+        {error ? (
+          <p role="alert" className="mt-3 text-[11px] text-[#e8b4b4]">
+            {error}
+          </p>
+        ) : null}
+
+        {loading ? (
+          <p className="mt-4 text-[11px] text-[#6c6c6c]">Loading…</p>
+        ) : (
+          <>
+            {allowed.length > 0 ? (
+              <ul className="mt-4 divide-y divide-[#1b1b1b] overflow-hidden rounded-[6px] border border-[#222]">
+                {allowed.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-center justify-between gap-2 px-3 py-2.5"
                   >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {mode === "allowlist" && recent.length > 0 && (
-            <>
-              <h3 className="mt-4 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Recent chats waiting for access
-              </h3>
-              <ul className="mt-2 divide-y divide-slate-800 rounded-lg border border-slate-800">
-                {recent.map((c) => (
-                  <li key={c.chat_id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
                     <div className="min-w-0">
-                      <span className="text-slate-200">{prettyChat(c.chat_id)}</span>
-                      {c.label && <span className="block truncate text-xs text-slate-500">“{c.label}”</span>}
-                      <span className="text-xs text-slate-600">
-                        {c.message_count} msg{c.message_count === 1 ? "" : "s"}
+                      <span className="text-[12px] text-[#bdbdbd]">
+                        {a.label || prettyChat(a.chat_id)}
                       </span>
+                      {a.label ? (
+                        <span className="mt-0.5 block truncate text-[10px] text-[#555]">
+                          {prettyChat(a.chat_id)}
+                        </span>
+                      ) : null}
                     </div>
                     <button
+                      type="button"
                       disabled={busy}
-                      onClick={() =>
-                        post({ action: "add", chatId: c.chat_id, label: c.label?.slice(0, 60) })
-                      }
-                      className="rounded-md bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-500/25"
+                      onClick={() => post({ action: "remove", id: a.id })}
+                      className="shrink-0 text-[11px] text-[#919191] transition hover:text-[#e8b4b4] disabled:opacity-60"
                     >
-                      Allow
+                      Remove
                     </button>
                   </li>
                 ))}
               </ul>
-            </>
-          )}
+            ) : null}
 
-          <form
-            className="mt-4 flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (manualId.trim()) {
-                void post({ action: "add", chatId: manualId.trim() }).then(() => setManualId(""));
-              }
-            }}
-          >
-            <input
-              value={manualId}
-              onChange={(e) => setManualId(e.target.value)}
-              placeholder="Add by phone number or group JID…"
-              className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={busy || !manualId.trim()}
-              className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-40"
+            {mode === "allowlist" && recent.length > 0 ? (
+              <>
+                <h3 className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#555]">
+                  Recent chats waiting for access
+                </h3>
+                <ul className="mt-2 divide-y divide-[#1b1b1b] overflow-hidden rounded-[6px] border border-[#222]">
+                  {recent.map((c) => (
+                    <li
+                      key={c.chat_id}
+                      className="flex items-center justify-between gap-2 px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[12px] text-[#bdbdbd]">
+                          {prettyChat(c.chat_id)}
+                        </span>
+                        {c.label ? (
+                          <span className="mt-0.5 block truncate text-[10px] text-[#555]">
+                            “{c.label}”
+                          </span>
+                        ) : null}
+                        <span className="mt-0.5 block text-[10px] text-[#555]">
+                          {c.message_count} msg{c.message_count === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          post({ action: "add", chatId: c.chat_id, label: c.label?.slice(0, 60) })
+                        }
+                        className="shrink-0 rounded-full border border-[#1f3d28] bg-[#101a14] px-2.5 py-1 text-[11px] font-medium text-[#4ade80] transition hover:border-[#2a5a3a] disabled:opacity-60"
+                      >
+                        Allow
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+
+            <form
+              className="mt-4 flex flex-wrap gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (manualId.trim()) {
+                  void post({ action: "add", chatId: manualId.trim() }).then(() =>
+                    setManualId(""),
+                  );
+                }
+              }}
             >
-              Add
-            </button>
-          </form>
-        </>
-      )}
-    </div>
+              <input
+                value={manualId}
+                onChange={(e) => setManualId(e.target.value)}
+                placeholder="Add by phone number or group JID…"
+                className={`min-w-0 flex-1 ${WALLNUT_FIELD}`}
+              />
+              <button
+                type="submit"
+                disabled={busy || !manualId.trim()}
+                aria-busy={busy}
+                className={WALLNUT_BUTTON}
+              >
+                {busy ? <Spinner /> : null}
+                Add
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </article>
   );
 }

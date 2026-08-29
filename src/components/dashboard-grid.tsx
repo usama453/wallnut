@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { PersonAvatar } from "@/components/wallnut/person-avatar";
 import { PlatformIcon, Spinner } from "@/components/wallnut/icons";
 import { PendingLink } from "@/components/wallnut/pending";
@@ -21,6 +22,7 @@ export function DashboardGrid({
   leaders,
   pendingInvites = [],
   canAddGroup = false,
+  isSuperAdmin = false,
 }: {
   orgName: string;
   orgSlug: string;
@@ -35,6 +37,7 @@ export function DashboardGrid({
   leaders: PersonStats[];
   pendingInvites?: PendingWhatsAppInvite[];
   canAddGroup?: boolean;
+  isSuperAdmin?: boolean;
 }) {
   const router = useRouter();
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
@@ -82,6 +85,8 @@ export function DashboardGrid({
     }
   }
 
+  const showOnboarding = stats.reports === 0;
+
   return (
     <section className="flex flex-col items-center py-4 sm:py-8">
       <Reveal dramatic>
@@ -128,7 +133,25 @@ export function DashboardGrid({
       )}
 
       <div className="mt-8 flex w-full max-w-[680px] flex-col gap-3">
-        {canAddGroup ? (
+        {showOnboarding ? (
+          <Reveal dramatic delayMs={480}>
+            <OnboardingChecklist
+              cards={cards}
+              hasInvite={invites.length > 0}
+              canAddGroup={canAddGroup}
+              isSuperAdmin={isSuperAdmin}
+              onAddGroup={() => void addWhatsAppGroup()}
+              addingGroup={addingGroup}
+            />
+            {createError ? (
+              <p role="alert" className="text-center text-[11px] text-[#e8b4b4]">
+                {createError}
+              </p>
+            ) : null}
+          </Reveal>
+        ) : null}
+
+        {canAddGroup && !showOnboarding ? (
           <div className="flex flex-col items-center gap-2">
             <button
               type="button"
@@ -138,7 +161,7 @@ export function DashboardGrid({
               className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70"
             >
               {addingGroup ? <Spinner /> : <span aria-hidden className="text-[14px] leading-none">+</span>}
-              {addingGroup ? "Creating code…" : "Add whatsapp group"}
+              {addingGroup ? "Creating code…" : "Add WhatsApp group"}
             </button>
             {createError ? (
               <p role="alert" className="text-center text-[11px] text-[#e8b4b4]">
@@ -169,7 +192,7 @@ export function DashboardGrid({
               />
             </Reveal>
           ))
-        ) : invites.length === 0 ? (
+        ) : invites.length === 0 && !showOnboarding ? (
           <div className="rounded-[8px] border border-dashed border-[#252525] px-6 py-14 text-center">
             <p className="text-[12px] font-bold text-[#bdbdbd]">No groups yet</p>
             <p className="mt-1 text-[11px] text-[#5f5f5f]">

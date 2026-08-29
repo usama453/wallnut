@@ -372,3 +372,16 @@ async function loadContactNamesForDashboard(
 
   return contactNames;
 }
+
+/** Load saved WhatsApp display names for a set of phone/JID strings. */
+export async function loadWhatsAppContactNamesForPhones(
+  orgId: string | undefined,
+  phones: Iterable<string>,
+): Promise<Map<string, string>> {
+  const phoneByAsset = new Map<string, string>();
+  for (const phone of phones) {
+    const trimmed = phone?.trim();
+    if (trimmed) phoneByAsset.set(trimmed, trimmed);
+  }
+  return loadContactNamesForDashboard(orgId, [], phoneByAsset);
+}

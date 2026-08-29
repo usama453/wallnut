@@ -1,6 +1,6 @@
 import type { AiProvider } from "./provider";
 import type { AnalyzeInput, AnalyzeOutput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
-import { buildSystemPrompt, buildTranscriptionPrompt } from "./prompt";
+import { buildSystemPrompt, buildStandaloneProofPrompt, buildTranscriptionPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -41,13 +41,15 @@ export class GeminiProvider implements AiProvider {
   }
 
   async analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput> {
-    const systemPrompt = buildSystemPrompt(
-      input.ocrText,
-      input.brand,
-      input.previous,
-      input.extractedText,
-      input.imageContext,
-    );
+    const systemPrompt = input.standalone
+      ? buildStandaloneProofPrompt(input.ocrText, input.brand, input.previous)
+      : buildSystemPrompt(
+          input.ocrText,
+          input.brand,
+          input.previous,
+          input.extractedText,
+          input.imageContext,
+        );
     const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     // The model occasionally returns truncated/invalid JSON; retry a few times.
