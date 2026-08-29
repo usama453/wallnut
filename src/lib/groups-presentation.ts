@@ -104,25 +104,6 @@ function looksLikeMessageText(name: string): boolean {
   return false;
 }
 
-/** Empty WhatsApp group rows with no proofs — stray metadata, safe to hide. */
-export function isStaleEmptyWhatsAppGroup(
-  group: Pick<Group, "name" | "platform" | "external_id">,
-  reportCount: number,
-  inviteCode?: string,
-  options?: { publicOrg?: boolean },
-): boolean {
-  if (group.platform !== "whatsapp" || reportCount > 0 || inviteCode) return false;
-  if (isDirectMessagesBucket(group) || isWhatsAppDirectChat(group.external_id)) {
-    return false;
-  }
-  const externalId = group.external_id ?? "";
-  if (externalId.startsWith("pending:")) return false;
-  if (externalId.endsWith("@g.us")) {
-    return options?.publicOrg === true || looksLikeMessageText(group.name);
-  }
-  return looksLikeMessageText(group.name);
-}
-
 /** Human label for dashboard / group headers. */
 export function displayGroupName(
   group: Pick<Group, "name" | "platform" | "external_id">,
@@ -155,40 +136,142 @@ export function isPublicDirectMessageCard(
   return isDirectMessagesBucket(group) || isWhatsAppDirectChat(group.external_id);
 }
 
+export interface PublicInboxSections {
+  /** 1:1 WhatsApp chats, each contact tracked separately. */
+  privateChats: GroupCard[];
+  /** Legacy General bucket from before per-contact threads. */
+  directArchive: GroupCard[];
+  /** Unlinked @g.us groups that have sent proofs. */
+  groupProofs: GroupCard[];
+  /** Unlinked groups detected but with no proofed media yet. */
+  idleGroups: GroupCard[];
+}
+
+function sortPublicCards(cards: GroupCard[]): GroupCard[] {
+  return [...cards].sort((a, b) => {
+    const ra = a.reports[0]?.createdAt ?? a.group.created_at ?? "";
+    const rb = b.reports[0]?.createdAt ?? b.group.created_at ?? "";
+    return rb.localeCompare(ra) || publicCardPresentation(a).title.localeCompare(publicCardPresentation(b).title);
+  });
+}
+
+/** Categorise every Public inbox row by where the traffic came from. */
+export function categorizePublicInbox(cards: GroupCard[]): PublicInboxSections {
+  const privateChats: GroupCard[] = [];
+  const directArchive: GroupCard[] = [];
+  const groupProofs: GroupCard[] = [];
+  const idleGroups: GroupCard[] = [];
+
+  for (const card of cards) {
+    const group = card.group;
+    if (isDirectMessagesBucket(group)) {
+      directArchive.push(card);
+      continue;
+    }
+    if (isWhatsAppDirectChat(group.external_id)) {
+      privateChats.push(card);
+      continue;
+    }
+    if (card.inviteCode || isPendingGroupExternalId(group.external_id)) {
+      idleGroups.push(card);
+      continue;
+    }
+    if (card.reports.length > 0) {
+      groupProofs.push(card);
+    } else {
+      idleGroups.push(card);
+    }
+  }
+
+  return {
+    privateChats: sortPublicCards(privateChats),
+    directArchive: sortPublicCards(directArchive),
+    groupProofs: sortPublicCards(groupProofs),
+    idleGroups: sortPublicCards(idleGroups),
+  };
+}
+
+export interface PublicCardPresentation {
+  title: string;
+  badge: string;
+  hint: string;
+  emptyMessage: string;
+}
+
+/** Source label shown on each Public dashboard card. */
+export function publicCardPresentation(card: GroupCard): PublicCardPresentation {
+  const group = card.group;
+  const count = card.reports.length;
+
+  if (isDirectMessagesBucket(group)) {
+    return {
+      title: "Direct messages archive",
+      badge: "Legacy inbox",
+      hint: `${count} proof${count === 1 ? "" : "s"} from older private chats`,
+      emptyMessage: "No archived direct-message proofs.",
+    };
+  }
+
+  if (isWhatsAppDirectChat(group.external_id)) {
+    const digits = phoneDigits(group.external_id);
+    const title =
+      !looksLikeMessageText(group.name)
+        ? group.name
+        : digits
+          ? `+${digits}`
+          : "Private chat";
+    return {
+      title,
+      badge: "Private chat",
+      hint:
+        count > 0
+          ? `${count} proof${count === 1 ? "" : "s"} sent directly to Wallnut`
+          : "Contact messaged Wallnut — no images or PDFs proofed yet",
+      emptyMessage: "This contact has not sent proofable images or PDFs yet.",
+    };
+  }
+
+  if (card.inviteCode || isPendingGroupExternalId(group.external_id)) {
+    return {
+      title: group.name?.trim() || "Pending WhatsApp group",
+      badge: "Awaiting link",
+      hint: "Stale link code on Public — assign groups from a team workspace instead",
+      emptyMessage: "Waiting for a group to paste the link code.",
+    };
+  }
+
+  const groupTitle = displayPublicUnlinkedGroupName(group);
+  if (isWhatsAppGroupChat(group.external_id) && count === 0) {
+    return {
+      title: groupTitle,
+      badge: "Group · idle",
+      hint: "Group was detected on WhatsApp — no proofed media yet",
+      emptyMessage: "This group messaged Wallnut but has not sent images or PDFs to proof.",
+    };
+  }
+
+  if (count > 0) {
+    return {
+      title: groupTitle,
+      badge: "Group proof",
+      hint: `${count} proof${count === 1 ? "" : "s"} from an unlinked WhatsApp group`,
+      emptyMessage: "No reports in this group.",
+    };
+  }
+
+  return {
+    title: groupTitle,
+    badge: "Unknown source",
+    hint: "Activity detected with no proofed media",
+    emptyMessage: "No proofed content from this source yet.",
+  };
+}
+
 export function isPublicUnlinkedGroupCard(
   group: Pick<Group, "name" | "platform" | "external_id">,
 ): boolean {
   if (group.platform !== "whatsapp") return true;
   return !isPublicDirectMessageCard(group);
-}
-
-/** Split Public org dashboard cards into inbox vs unlinked group buckets. */
-export function categorizePublicCards(cards: GroupCard[]): {
-  directMessages: GroupCard[];
-  unlinkedGroups: GroupCard[];
-} {
-  const directMessages: GroupCard[] = [];
-  const unlinkedGroups: GroupCard[] = [];
-  for (const card of cards) {
-    if (isPublicDirectMessageCard(card.group)) {
-      directMessages.push(card);
-    } else {
-      unlinkedGroups.push(card);
-    }
-  }
-  directMessages.sort((a, b) => {
-    if (isDirectMessagesBucket(a.group)) return -1;
-    if (isDirectMessagesBucket(b.group)) return 1;
-    const ra = a.reports[0]?.createdAt ?? "";
-    const rb = b.reports[0]?.createdAt ?? "";
-    return rb.localeCompare(ra) || displayGroupName(a.group).localeCompare(displayGroupName(b.group));
-  });
-  unlinkedGroups.sort((a, b) => {
-    const ra = a.reports[0]?.createdAt ?? "";
-    const rb = b.reports[0]?.createdAt ?? "";
-    return rb.localeCompare(ra) || displayGroupName(a.group).localeCompare(displayGroupName(b.group));
-  });
-  return { directMessages, unlinkedGroups };
 }
 
 /** Cleaner label for orphan WhatsApp groups on the Public workspace. */

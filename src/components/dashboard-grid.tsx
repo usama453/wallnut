@@ -321,11 +321,17 @@ function DashboardGroupCard({
   orgSlug,
   defaultOpen,
   groupLabel,
+  sourceBadge,
+  sourceHint,
+  emptyMessage,
 }: {
   card: GroupCard;
   orgSlug: string;
   defaultOpen: boolean;
   groupLabel?: string;
+  sourceBadge?: string;
+  sourceHint?: string;
+  emptyMessage?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -351,21 +357,37 @@ function DashboardGroupCard({
           type="button"
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          className="flex min-w-0 flex-1 items-start gap-2 text-left"
         >
-          <PlatformIcon platform={card.group.platform} />
-          <span className="truncate text-[12px] font-bold text-[#fbfbfb]">
-            {groupLabel ?? displayGroupName(card.group)}
+          <span className="mt-0.5 shrink-0">
+            <PlatformIcon platform={card.group.platform} />
           </span>
-          {awaitingSync ? (
-            <span className="font-mono text-[10px] tracking-wider text-[#25D366]">
-              {inviteCode}
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              {sourceBadge ? (
+                <span className="shrink-0 rounded-full border border-[#2a2a2a] bg-[#161616] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#7a7a7a]">
+                  {sourceBadge}
+                </span>
+              ) : null}
+              <span className="truncate text-[12px] font-bold text-[#fbfbfb]">
+                {groupLabel ?? displayGroupName(card.group)}
+              </span>
+              {awaitingSync ? (
+                <span className="font-mono text-[10px] tracking-wider text-[#25D366]">
+                  {inviteCode}
+                </span>
+              ) : (
+                <span className="text-[10px] text-[#555]">
+                  {card.reports.length}
+                </span>
+              )}
             </span>
-          ) : (
-            <span className="text-[10px] text-[#555]">
-              {card.reports.length}
-            </span>
-          )}
+            {sourceHint ? (
+              <span className="mt-1 block truncate text-[10px] text-[#6c6c6c]">
+                {sourceHint}
+              </span>
+            ) : null}
+          </span>
         </button>
         {awaitingSync ? (
           <button
@@ -411,7 +433,9 @@ function DashboardGroupCard({
                 </div>
               ) : (
                 <div className="py-7 text-center">
-                  <p className="text-[11px] text-[#6c6c6c]">No reports in this group yet.</p>
+                  <p className="text-[11px] text-[#6c6c6c]">
+                    {emptyMessage ?? "No reports in this group yet."}
+                  </p>
                 </div>
               )}
             </div>
