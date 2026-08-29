@@ -36,6 +36,11 @@ const ROLE_ORDER: Record<string, number> = {
   viewer: 4,
 };
 
+const PANEL =
+  "overflow-hidden rounded-[8px] border border-[#1b1b1b] bg-[#101010] shadow-[0_24px_36px_rgba(0,0,0,0.48)]";
+const FIELD =
+  "rounded-[6px] border border-[#2e2e2e] bg-[#161616] px-3 py-2 text-[12px] text-[#fbfbfb] outline-none placeholder:text-[#555] focus:border-[#3a3a3a]";
+
 export function TeamManager({ orgSlug }: { orgSlug?: string }) {
   const [myRole, setMyRole] = useState<Role>("member");
   const [members, setMembers] = useState<Member[]>([]);
@@ -105,88 +110,100 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      {notice && <p className="text-sm text-emerald-400">{notice}</p>}
-
-      {/* Invite by email */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
-        <h2 className="text-sm font-semibold">Invite by email</h2>
-        <p className="mt-1 text-xs text-slate-400">
-          {invites.length > 0
-            ? `${invites.length} pending invite${invites.length === 1 ? "" : "s"} — they join automatically when the email signs up.`
-            : "Invite a teammate by email. They join your workspace when they create an account."}
+    <div className="flex w-full flex-col gap-3">
+      {error ? (
+        <p role="alert" className="text-center text-[11px] text-[#e8b4b4]">
+          {error}
         </p>
+      ) : null}
+      {notice ? (
+        <p className="text-center text-[11px] text-[#9ed4a8]">{notice}</p>
+      ) : null}
 
-        {!canInvite ? (
-          <p className="mt-3 text-xs text-amber-400">
-            Only owners and admins can invite members.
+      <article className={PANEL}>
+        <div className="border-b border-[#222] px-4 py-3">
+          <h2 className="text-[12px] font-bold text-[#fbfbfb]">Invite by email</h2>
+          <p className="mt-1 text-[11px] text-[#6c6c6c]">
+            {invites.length > 0
+              ? `${invites.length} pending invite${invites.length === 1 ? "" : "s"} — they join automatically when the email signs up.`
+              : "Invite a teammate by email. They join your workspace when they create an account."}
           </p>
-        ) : (
-          <form
-            className="mt-4 flex flex-wrap items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              invite();
-            }}
-          >
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="teammate@company.com"
-              className="min-w-64 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
-              required
-            />
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as Role)}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none"
-            >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-              <option value="viewer">Viewer</option>
-            </select>
-            <button
-              type="submit"
-              disabled={Boolean(busy) || !email.trim()}
-              aria-busy={busy === "invite"}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:cursor-progress disabled:opacity-50"
-            >
-              {busy === "invite" ? <Spinner /> : null}
-              {busy === "invite" ? "Sending…" : "Send invite"}
-            </button>
-          </form>
-        )}
-      </div>
+        </div>
 
-      {/* Members */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/50">
-        <div className="border-b border-slate-800 px-5 py-3">
-          <h2 className="text-sm font-semibold">Members ({members.length})</h2>
+        <div className="px-4 py-4">
+          {!canInvite ? (
+            <p className="text-[11px] text-[#919191]">
+              Only owners and admins can invite members.
+            </p>
+          ) : (
+            <form
+              className="flex flex-wrap items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                invite();
+              }}
+            >
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="teammate@company.com"
+                className={`min-w-0 flex-1 ${FIELD}`}
+                required
+              />
+              <select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as Role)}
+                className={FIELD}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
+              </select>
+              <button
+                type="submit"
+                disabled={Boolean(busy) || !email.trim()}
+                aria-busy={busy === "invite"}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-2 text-[12px] text-[#fbfbfb] transition hover:border-[#3a3a3a] disabled:cursor-progress disabled:opacity-70"
+              >
+                {busy === "invite" ? <Spinner /> : null}
+                {busy === "invite" ? "Sending…" : "Send invite"}
+              </button>
+            </form>
+          )}
+        </div>
+      </article>
+
+      <article className={PANEL}>
+        <div className="border-b border-[#222] px-4 py-3">
+          <h2 className="text-[12px] font-bold text-[#fbfbfb]">
+            Members ({members.length})
+          </h2>
         </div>
         {loading ? (
-          <p className="px-5 py-8 text-sm text-slate-500">Loading…</p>
+          <p className="px-4 py-8 text-center text-[11px] text-[#6c6c6c]">Loading…</p>
         ) : members.length === 0 ? (
-          <p className="px-5 py-8 text-sm text-slate-500">No members yet.</p>
+          <p className="px-4 py-8 text-center text-[11px] text-[#6c6c6c]">No members yet.</p>
         ) : (
-          <ul className="divide-y divide-slate-800/70">
+          <ul className="divide-y divide-[#1b1b1b]">
             {members.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3">
+              <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{m.user_id === "you" ? "You" : (m.email ?? "Member")}</p>
-                  <p className="text-xs text-slate-500">{m.email}</p>
+                  <p className="truncate text-[12px] font-bold text-[#fbfbfb]">
+                    {m.user_id === "you" ? "You" : (m.email ?? "Member")}
+                  </p>
+                  <p className="mt-0.5 text-[11px] capitalize text-[#6c6c6c]">
+                    {ROLE_LABEL[m.role as Role] ?? m.role}
+                  </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  <span className="rounded-full border border-slate-700 px-2.5 py-0.5 text-xs text-slate-300">
-                    {ROLE_LABEL[m.role as Role] ?? m.role}
-                  </span>
                   {canRemove && m.role !== "owner" ? (
                     <button
+                      type="button"
                       onClick={() => void post({ action: "remove", id: m.id })}
                       disabled={Boolean(busy)}
                       aria-busy={busy === `remove:${m.id}`}
-                      className="inline-flex items-center gap-1 text-xs text-red-400 hover:text-red-300 disabled:cursor-progress disabled:opacity-50"
+                      className="inline-flex items-center gap-1 text-[12px] text-[#919191] transition hover:text-[#e8b4b4] disabled:cursor-progress disabled:opacity-70"
                     >
                       {busy === `remove:${m.id}` ? <Spinner /> : null}
                       {busy === `remove:${m.id}` ? "Removing…" : "Remove"}
@@ -197,29 +214,31 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
             ))}
           </ul>
         )}
-      </div>
+      </article>
 
-      {/* Pending invites */}
       {invites.length > 0 ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50">
-          <div className="border-b border-slate-800 px-5 py-3">
-            <h2 className="text-sm font-semibold">Pending invites ({invites.length})</h2>
+        <article className={PANEL}>
+          <div className="border-b border-[#222] px-4 py-3">
+            <h2 className="text-[12px] font-bold text-[#fbfbfb]">
+              Pending invites ({invites.length})
+            </h2>
           </div>
-          <ul className="divide-y divide-slate-800/70">
+          <ul className="divide-y divide-[#1b1b1b]">
             {invites.map((inv) => (
-              <li key={inv.id} className="flex items-center justify-between gap-3 px-5 py-3">
+              <li key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm">{inv.invited_email}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="truncate text-[12px] text-[#bdbdbd]">{inv.invited_email}</p>
+                  <p className="mt-0.5 text-[10px] text-[#555]">
                     {ROLE_LABEL[inv.role as Role] ?? inv.role} · awaiting signup
                   </p>
                 </div>
                 {canInvite ? (
                   <button
+                    type="button"
                     onClick={() => void post({ action: "remove", id: inv.id })}
                     disabled={Boolean(busy)}
                     aria-busy={busy === `remove:${inv.id}`}
-                    className="inline-flex shrink-0 items-center gap-1 text-xs text-red-400 hover:text-red-300 disabled:cursor-progress disabled:opacity-50"
+                    className="inline-flex shrink-0 items-center gap-1 text-[12px] text-[#919191] transition hover:text-[#e8b4b4] disabled:cursor-progress disabled:opacity-70"
                   >
                     {busy === `remove:${inv.id}` ? <Spinner /> : null}
                     {busy === `remove:${inv.id}` ? "Canceling…" : "Cancel"}
@@ -228,7 +247,7 @@ export function TeamManager({ orgSlug }: { orgSlug?: string }) {
               </li>
             ))}
           </ul>
-        </div>
+        </article>
       ) : null}
     </div>
   );

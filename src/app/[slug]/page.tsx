@@ -41,7 +41,7 @@ export default async function OrganizationHome({
         )}
       />
 
-      <div className="mx-auto mt-10 max-w-[720px]">
+      <div className="mx-auto mt-10 flex w-full max-w-[680px] flex-col">
         <TeamManager orgSlug={slug} />
       </div>
     </div>
