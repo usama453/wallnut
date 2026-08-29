@@ -128,3 +128,45 @@ export function normalizeProofAdminSettings(value: {
 export function hasEnabledProofChecks(checks: ProofChecksConfig): boolean {
   return PROOF_CHECK_TYPES.some((key) => checks[key]);
 }
+
+/** Map admin check toggles to the compact widget slider (0–2). */
+export function checksToDepth(checks: ProofChecksConfig): 0 | 1 | 2 {
+  const enabled = PROOF_CHECK_TYPES.filter((key) => checks[key]);
+  if (enabled.length >= 6) return 2;
+  if (
+    checks.typos &&
+    checks.grammar &&
+    checks.punctuation &&
+    checks.capitalization &&
+    !checks.consistency &&
+    !checks.readability &&
+    !checks.missing_content
+  ) {
+    return 1;
+  }
+  if (enabled.length <= 1 && checks.typos) return 0;
+  if (enabled.length >= 4) return 2;
+  if (enabled.length >= 2) return 1;
+  return checks.typos ? 0 : 1;
+}
+
+/** Map compact widget slider positions to check presets. */
+export function depthToChecks(depth: number): ProofChecksConfig {
+  const off = Object.fromEntries(
+    PROOF_CHECK_TYPES.map((key) => [key, false]),
+  ) as ProofChecksConfig;
+
+  if (depth <= 0) {
+    return { ...off, typos: true };
+  }
+  if (depth === 1) {
+    return {
+      ...off,
+      typos: true,
+      grammar: true,
+      punctuation: true,
+      capitalization: true,
+    };
+  }
+  return { ...DEFAULT_PROOF_CHECKS };
+}

@@ -19,7 +19,6 @@ export function PublicDashboard({
   canManageGroups = false,
   canManageProofConfig = false,
   proofAdminSettings,
-  showProofSettingsLink = false,
 }: {
   orgSlug: string;
   cards: GroupCard[];
@@ -34,7 +33,6 @@ export function PublicDashboard({
   canManageGroups?: boolean;
   canManageProofConfig?: boolean;
   proofAdminSettings?: ProofAdminSettings;
-  showProofSettingsLink?: boolean;
 }) {
   const inbox = categorizePublicInbox(cards);
 
@@ -127,17 +125,6 @@ export function PublicDashboard({
         </header>
       </Reveal>
 
-      {canManageProofConfig ? (
-        <Reveal dramatic delayMs={80}>
-          <div className="mt-6">
-            <ProofConfigWidget
-              initialSettings={proofAdminSettings}
-              showSettingsLink={showProofSettingsLink}
-            />
-          </div>
-        </Reveal>
-      ) : null}
-
       {allEmpty ? (
         <Reveal dramatic delayMs={120}>
           <div className="mt-10 rounded-[8px] border border-dashed border-[#252525] px-6 py-14 text-center">
@@ -184,6 +171,14 @@ export function PublicDashboard({
               ))}
             </div>
           </section>
+        </Reveal>
+      ) : null}
+
+      {canManageProofConfig ? (
+        <Reveal dramatic delayMs={420}>
+          <div className="mt-8">
+            <ProofConfigWidget initialSettings={proofAdminSettings} />
+          </div>
         </Reveal>
       ) : null}
     </section>

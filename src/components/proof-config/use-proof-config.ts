@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   DEFAULT_PROOF_ADMIN_SETTINGS,
+  depthToChecks,
   type ProofAdminSettings,
   type ProofCheckType,
   type ProofResponseStyle,
@@ -73,6 +74,13 @@ export function useProofConfig(initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS) {
     void save(next);
   }
 
+  function setCheckDepth(depth: number) {
+    const checks = depthToChecks(depth);
+    const next = { ...settings, checks };
+    setSettings(next);
+    void save(next);
+  }
+
   return {
     settings,
     busy,
@@ -80,5 +88,6 @@ export function useProofConfig(initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS) {
     loaded,
     toggleCheck,
     selectStyle,
+    setCheckDepth,
   };
 }

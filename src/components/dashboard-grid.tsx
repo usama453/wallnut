@@ -26,7 +26,6 @@ export function DashboardGrid({
   isSuperAdmin = false,
   canManageProofConfig = false,
   proofAdminSettings,
-  showProofSettingsLink = false,
 }: {
   orgName: string;
   orgSlug: string;
@@ -44,7 +43,6 @@ export function DashboardGrid({
   isSuperAdmin?: boolean;
   canManageProofConfig?: boolean;
   proofAdminSettings?: import("@/lib/proof/proof-settings").ProofAdminSettings;
-  showProofSettingsLink?: boolean;
 }) {
   const router = useRouter();
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
@@ -140,15 +138,6 @@ export function DashboardGrid({
       )}
 
       <div className="mt-8 flex w-full max-w-[680px] flex-col gap-3">
-        {canManageProofConfig ? (
-          <Reveal dramatic delayMs={460}>
-            <ProofConfigWidget
-              initialSettings={proofAdminSettings}
-              showSettingsLink={showProofSettingsLink}
-            />
-          </Reveal>
-        ) : null}
-
         {showOnboarding ? (
           <Reveal dramatic delayMs={480}>
             <OnboardingChecklist
@@ -217,6 +206,12 @@ export function DashboardGrid({
                 : "Linked WhatsApp groups will appear here."}
             </p>
           </div>
+        ) : null}
+
+        {canManageProofConfig ? (
+          <Reveal dramatic delayMs={760}>
+            <ProofConfigWidget initialSettings={proofAdminSettings} />
+          </Reveal>
         ) : null}
       </div>
     </section>

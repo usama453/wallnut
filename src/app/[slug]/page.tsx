@@ -45,7 +45,6 @@ export default async function OrganizationHome({
         canManageGroups={access.isSuperAdmin}
         canManageProofConfig={canManageProof}
         proofAdminSettings={proofAdminSettings}
-        showProofSettingsLink={access.isSuperAdmin}
       />
     );
   }
@@ -70,7 +69,6 @@ export default async function OrganizationHome({
         isSuperAdmin={access.isSuperAdmin}
         canManageProofConfig={canManageProof}
         proofAdminSettings={proofAdminSettings}
-        showProofSettingsLink={access.isSuperAdmin}
       />
 
     </div>
