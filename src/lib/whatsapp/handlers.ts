@@ -14,6 +14,7 @@ import {
 import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
 import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts } from "./contacts";
+import { clearDisconnectedWhatsAppGroup, isWhatsAppGroupDisconnected } from "./disconnected-groups";
 import { fallbackGroupName, getGroupName } from "./group-name";
 import { pendingGroupExternalId } from "./placeholder-groups";
 import { canonicalChatId, whatsappChatIdVariants } from "./jid";
@@ -83,7 +84,25 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
     // For group messages, resolve org from claimed groups first.
     let groupOrgId: string | null = null;
     if (groupId) {
-      groupOrgId = await resolveGroupOrg(admin, groupId);
+      const linkedOrgId = await resolveGroupOrg(admin, groupId);
+      if (linkedOrgId) {
+        groupOrgId = linkedOrgId;
+      } else if (await isWhatsAppGroupDisconnected(groupId)) {
+        console.log(`[whatsapp] ignored group ${groupId}: disconnected from workspace`);
+        logUsage({
+          direction: "inbound",
+          msg_type: message.type,
+          message_id: message.id,
+          from_phone: sender,
+          group_id: groupId,
+          status: "disconnected",
+        });
+        handled = true;
+        lastAction = "ignored";
+        continue;
+      } else {
+        groupOrgId = await getPublicOrgId(admin);
+      }
     }
 
     const orgId =
@@ -595,6 +614,7 @@ async function tryClaimGroupAuthCode(
   console.log(
     `[whatsapp] claimed group ${groupId} for org ${codeRow.org_id} via code ${codeRow.code}`,
   );
+  await clearDisconnectedWhatsAppGroup(groupId);
   void (async () => {
     try {
       const saved = await saveWhatsAppContacts(

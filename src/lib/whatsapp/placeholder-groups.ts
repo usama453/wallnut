@@ -1,5 +1,7 @@
 import { randomInt } from "crypto";
 import { createAdminClient } from "@/lib/supabase/server";
+import { clearDisconnectedWhatsAppGroup, markWhatsAppGroupDisconnected } from "./disconnected-groups";
+import { whatsappGroupIdVariants } from "./jid";
 
 export const PENDING_GROUP_PREFIX = "pending:";
 const PLACEHOLDER_NAME = /^New whatsapp group (\d+)$/i;
@@ -151,11 +153,19 @@ export async function removeWhatsAppGroupFromOrg(
   }
 
   if (groupJid) {
+    await markWhatsAppGroupDisconnected(orgId, groupJid);
     await admin
       .from("whatsapp_group_auth_codes")
       .delete()
       .eq("org_id", orgId)
       .eq("group_jid", groupJid);
+    for (const variant of whatsappGroupIdVariants(groupJid)) {
+      await admin
+        .from("whatsapp_group_auth_codes")
+        .delete()
+        .eq("org_id", orgId)
+        .eq("group_jid", variant);
+    }
   }
 
   if (!group && code) {
