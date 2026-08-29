@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { runProof } from "@/lib/proof/runProof";
 import { proofSemaphore } from "@/lib/proof/concurrency";
 import { createAssetVersionFromBytes } from "@/lib/assets";
-import { downloadMediaWaha, sendInteractiveWaha, sendTextWaha } from "./client";
+import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
 import { formatCorrectionList, reportStatus } from "@/lib/reportSummary";
 import {
@@ -13,8 +13,8 @@ import {
 } from "./webhook";
 import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
-import { rememberWhatsAppContact } from "./contacts";
-import { getGroupName } from "./group-name";
+import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts } from "./contacts";
+import { fallbackGroupName, getGroupName } from "./group-name";
 import { pendingGroupExternalId } from "./placeholder-groups";
 import { canonicalChatId, whatsappChatIdVariants } from "./jid";
 
@@ -508,8 +508,8 @@ async function tryClaimGroupAuthCode(
     return { ok: false, error: "code expired" };
   }
 
-  // Group name: fetch from WAHA groups API (falls back to truncated JID).
-  const groupName = await getGroupName(groupId);
+  const groupMeta = await fetchWahaGroup(groupId);
+  const groupName = groupMeta?.subject?.trim() || fallbackGroupName(groupId);
   const pendingKey = pendingGroupExternalId(codeRow.code);
 
   const [{ data: existingGroup }, { data: placeholder }] = await Promise.all([
@@ -595,6 +595,24 @@ async function tryClaimGroupAuthCode(
   console.log(
     `[whatsapp] claimed group ${groupId} for org ${codeRow.org_id} via code ${codeRow.code}`,
   );
+  void (async () => {
+    try {
+      const saved = await saveWhatsAppContacts(
+        codeRow.org_id,
+        (groupMeta?.participants ?? []).map((participant) => ({
+          phone: participant.id,
+          displayName: participant.name,
+        })),
+      );
+      if (saved === 0) {
+        await importWhatsAppGroupContacts(codeRow.org_id, groupId);
+      }
+    } catch (error) {
+      console.error(
+        `[whatsapp] contact import failed for ${groupId}: ${error instanceof Error ? error.message : error}`,
+      );
+    }
+  })();
   return { ok: true, orgId: codeRow.org_id, groupName };
 }
 

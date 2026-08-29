@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/lib/org-membership";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
-import { createPlaceholderWhatsAppGroup } from "@/lib/whatsapp/placeholder-groups";
+import { createPlaceholderWhatsAppGroup, removeWhatsAppGroupFromOrg } from "@/lib/whatsapp/placeholder-groups";
 
 export async function GET(req: NextRequest) {
   const ctx = await requireOrgContext(req.nextUrl.searchParams.get("org"));
@@ -58,25 +58,42 @@ export async function POST(req: NextRequest) {
 
   const action = body.action;
 
-  if (action !== "create") {
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  if (action === "create") {
+    try {
+      const created = await createPlaceholderWhatsAppGroup(ctx.orgId);
+      return NextResponse.json({
+        id: created.id,
+        code: created.code,
+        expiresAt: created.expiresAt,
+        groupId: created.groupId,
+        groupName: created.groupName,
+        hint:
+          "Paste this code inside the WhatsApp group. The bot will link the group to your workspace.",
+      });
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Failed to create code" },
+        { status: 500 },
+      );
+    }
   }
 
-  try {
-    const created = await createPlaceholderWhatsAppGroup(ctx.orgId);
-    return NextResponse.json({
-      id: created.id,
-      code: created.code,
-      expiresAt: created.expiresAt,
-      groupId: created.groupId,
-      groupName: created.groupName,
-      hint:
-        "Paste this code inside the WhatsApp group. The bot will link the group to your workspace.",
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create code" },
-      { status: 500 },
-    );
+  if (action === "remove") {
+    const groupId = typeof body.groupId === "string" ? body.groupId : undefined;
+    const code = typeof body.code === "string" ? body.code : undefined;
+    if (!groupId && !code) {
+      return NextResponse.json({ error: "groupId or code is required" }, { status: 400 });
+    }
+    try {
+      await removeWhatsAppGroupFromOrg(ctx.orgId, { groupId, code });
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Failed to remove group" },
+        { status: 500 },
+      );
+    }
   }
+
+  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }

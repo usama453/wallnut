@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { WAHA_API_KEY } from "@/lib/whatsapp/config";
 import { fetchWahaContactName } from "@/lib/whatsapp/client";
 import {
+  loadOrgWhatsAppContacts,
   loadWhatsAppContactNames,
   rememberWhatsAppContact,
+  syncOrgWhatsAppGroupContacts,
 } from "@/lib/whatsapp/contacts";
 import { phoneDigits } from "@/lib/whatsapp/jid";
 
@@ -100,7 +102,7 @@ export async function getStats(orgIdOverride?: string | null) {
     const versionId = versionByAsset.get(assetId);
     const proof = versionId ? proofByVersion.get(versionId) : undefined;
     const phone = (u.from_phone as string | null) ?? null;
-    const key = phone ?? "__dashboard__";
+    const key = personKey(phone);
 
     const entry =
       byPerson.get(key) ??
@@ -123,10 +125,41 @@ export async function getStats(orgIdOverride?: string | null) {
     byPerson.set(key, entry);
   }
 
-  const people = await enrichPeople([...byPerson.values()], orgId);
+  if (orgId) {
+    await syncOrgWhatsAppGroupContacts(orgId);
+    const contacts = await loadOrgWhatsAppContacts(orgId);
+    for (const contact of contacts) {
+      const key = personKey(contact.phone);
+      if (key === "__dashboard__") continue;
+      const existing = byPerson.get(key);
+      if (existing) {
+        if (contact.display_name && looksLikePhoneLabel(existing.display)) {
+          existing.display = contact.display_name;
+        }
+        continue;
+      }
+      byPerson.set(key, {
+        key,
+        phone: contact.phone,
+        display: contact.display_name?.trim() || formatPhone(contact.phone),
+        avatarUrl: null,
+        uploads: 0,
+        typos: 0,
+        avgScore: null,
+      });
+    }
+  }
 
-  const byUploads = [...people].sort((a, b) => b.uploads - a.uploads || b.typos - a.typos);
-  const byTypos = [...people].sort((a, b) => b.typos - a.typos || a.uploads - b.uploads);
+  const people = await enrichPeople([...byPerson.values()], orgId);
+  const visible = people.filter((person) => person.phone);
+  const byName = (a: PersonStats, b: PersonStats) => a.display.localeCompare(b.display);
+
+  const byUploads = [...visible].sort(
+    (a, b) => b.uploads - a.uploads || b.typos - a.typos || byName(a, b),
+  );
+  const byTypos = [...visible].sort(
+    (a, b) => b.typos - a.typos || b.uploads - a.uploads || byName(a, b),
+  );
 
   return {
     orgName: organization?.name ?? "My workspace",
@@ -136,7 +169,7 @@ export async function getStats(orgIdOverride?: string | null) {
     totals: {
       uploads: people.reduce((n, p) => n + p.uploads, 0),
       typos: people.reduce((n, p) => n + p.typos, 0),
-      people: people.filter((p) => p.phone).length,
+      people: visible.length,
       checked: proofs?.length ?? 0,
       avgScore:
         proofs?.length
@@ -183,6 +216,15 @@ async function enrichPeople(
           : null,
     };
   });
+}
+
+function personKey(phone: string | null | undefined) {
+  if (!phone) return "__dashboard__";
+  return phoneDigits(phone) || phone;
+}
+
+function looksLikePhoneLabel(label: string) {
+  return /^[+\d\s.-]+$/.test(label.trim());
 }
 
 function formatPhone(raw: string): string {

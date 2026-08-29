@@ -152,6 +152,65 @@ function assertConfigured() {
   }
 }
 
+export type WahaGroupParticipant = {
+  id: string;
+  name: string | null;
+  admin?: string | null;
+};
+
+export type WahaGroup = {
+  id: string;
+  subject: string | null;
+  participants: WahaGroupParticipant[];
+};
+
+export async function fetchWahaGroup(
+  groupId: string,
+  options?: { timeoutMs?: number },
+): Promise<WahaGroup | null> {
+  if (!WAHA_API_KEY || !groupId) return null;
+  try {
+    const response = await wahaFetch(
+      `/api/${encodeURIComponent(WAHA_SESSION)}/groups/${encodeURIComponent(groupId)}`,
+      { method: "GET", signal: AbortSignal.timeout(options?.timeoutMs ?? 5000) },
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as {
+      id?: string;
+      subject?: string;
+      name?: string;
+      participants?: Array<{
+        id?: string;
+        jid?: string;
+        phoneNumber?: string;
+        name?: string | null;
+        admin?: string | null;
+      }>;
+    };
+    const participants = Array.isArray(data.participants)
+      ? data.participants
+          .map((participant) => {
+            const id = String(
+              participant.id || participant.jid || participant.phoneNumber || "",
+            ).trim();
+            return {
+              id,
+              name: participant.name?.trim() || null,
+              admin: participant.admin ?? null,
+            };
+          })
+          .filter((participant) => participant.id)
+      : [];
+    return {
+      id: data.id || groupId,
+      subject: data.subject?.trim() || data.name?.trim() || null,
+      participants,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchWahaContactName(phone: string): Promise<string | null> {
   if (!WAHA_API_KEY || !phone) return null;
   const jid = phone.includes("@")

@@ -39,6 +39,7 @@ export function DashboardGrid({
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [removingKey, setRemovingKey] = useState<string | null>(null);
   const [refreshing, startRefresh] = useTransition();
   const addingGroup = creating || refreshing;
 
@@ -81,6 +82,32 @@ export function DashboardGrid({
     }
   }
 
+  async function removeWhatsAppGroup(input: { groupId?: string; code?: string; key: string }) {
+    if (!canAddGroup || removingKey) return;
+    const label = input.code ? `code ${input.code}` : "this WhatsApp group";
+    if (!window.confirm(`Remove ${label} from the dashboard? You can link it again with a new code.`)) {
+      return;
+    }
+    setRemovingKey(input.key);
+    setCreateError(null);
+    try {
+      const response = await fetch("/api/whatsapp/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove", org: orgSlug, groupId: input.groupId, code: input.code }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Failed to remove group");
+      startRefresh(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Failed to remove group");
+    } finally {
+      setRemovingKey(null);
+    }
+  }
+
   return (
     <section className="flex flex-col items-center py-4 sm:py-8">
       <Reveal dramatic>
@@ -94,7 +121,6 @@ export function DashboardGrid({
           <span>{stats.members} members</span>
           <span>{stats.groups} groups</span>
           <span>{stats.reports} reports</span>
-          <span>{stats.issues} issues found</span>
         </div>
       </Reveal>
 
@@ -121,7 +147,7 @@ export function DashboardGrid({
             href={orgRankingsPath(orgSlug)}
             className="mt-12 rounded-full border border-[#292929] px-3 py-1.5 text-[11px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white"
           >
-            Rankings will appear after the first upload
+            Rankings will appear after a WhatsApp group is linked
           </Link>
         </Reveal>
       )}
@@ -149,7 +175,18 @@ export function DashboardGrid({
 
         {invites.map((invite, index) => (
           <Reveal key={invite.id} dramatic delayMs={520 + index * 80}>
-            <PendingWhatsAppGroupCard invite={invite} defaultOpen />
+            <PendingWhatsAppGroupCard
+              invite={invite}
+              defaultOpen
+              canRemove={canAddGroup}
+              removing={removingKey === `invite:${invite.code}`}
+              onRemove={() =>
+                void removeWhatsAppGroup({
+                  code: invite.code,
+                  key: `invite:${invite.code}`,
+                })
+              }
+            />
           </Reveal>
         ))}
 
@@ -160,6 +197,15 @@ export function DashboardGrid({
                 card={card}
                 orgSlug={orgSlug}
                 defaultOpen={invites.length === 0 && index === 0}
+                canRemove={canAddGroup}
+                removing={removingKey === `group:${card.group.id}`}
+                onRemove={() =>
+                  void removeWhatsAppGroup({
+                    groupId: card.group.id,
+                    code: card.inviteCode,
+                    key: `group:${card.group.id}`,
+                  })
+                }
               />
             </Reveal>
           ))
@@ -210,9 +256,15 @@ function RankedAvatar({
 function PendingWhatsAppGroupCard({
   invite,
   defaultOpen,
+  canRemove = false,
+  removing = false,
+  onRemove,
 }: {
   invite: PendingWhatsAppInvite;
   defaultOpen: boolean;
+  canRemove?: boolean;
+  removing?: boolean;
+  onRemove?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -251,6 +303,9 @@ function PendingWhatsAppGroupCard({
         >
           {copied ? "Copied" : "Copy code"}
         </button>
+        {canRemove ? (
+          <RemoveGroupButton removing={removing} onRemove={onRemove} />
+        ) : null}
       </div>
 
       <div
@@ -266,6 +321,11 @@ function PendingWhatsAppGroupCard({
             <p className="mt-3 text-[12px] leading-relaxed text-[#919191]">
               Enter this code in your WhatsApp group chat to enable sync
             </p>
+            {canRemove ? (
+              <div className="mt-5 flex justify-center">
+                <RemoveGroupButton removing={removing} onRemove={onRemove} prominent />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -277,10 +337,16 @@ function DashboardGroupCard({
   card,
   orgSlug,
   defaultOpen,
+  canRemove = false,
+  removing = false,
+  onRemove,
 }: {
   card: GroupCard;
   orgSlug: string;
   defaultOpen: boolean;
+  canRemove?: boolean;
+  removing?: boolean;
+  onRemove?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -339,6 +405,9 @@ function DashboardGroupCard({
             View more
           </PendingLink>
         )}
+        {canRemove ? (
+          <RemoveGroupButton removing={removing} onRemove={onRemove} />
+        ) : null}
       </div>
 
       <div
@@ -355,6 +424,11 @@ function DashboardGroupCard({
               <p className="mt-3 text-[12px] leading-relaxed text-[#919191]">
                 Enter this code in your WhatsApp group chat to enable sync
               </p>
+              {canRemove ? (
+                <div className="mt-5 flex justify-center">
+                  <RemoveGroupButton removing={removing} onRemove={onRemove} prominent />
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="border-t border-[#222] px-4 py-3">
@@ -369,11 +443,42 @@ function DashboardGroupCard({
                   <p className="text-[11px] text-[#6c6c6c]">No reports in this group yet.</p>
                 </div>
               )}
+              {canRemove ? (
+                <div className="mt-3 flex justify-end border-t border-[#222] pt-3">
+                  <RemoveGroupButton removing={removing} onRemove={onRemove} prominent />
+                </div>
+              ) : null}
             </div>
           )}
         </div>
       </div>
     </article>
+  );
+}
+
+function RemoveGroupButton({
+  removing,
+  onRemove,
+  prominent = false,
+}: {
+  removing?: boolean;
+  onRemove?: () => void;
+  prominent?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      disabled={removing}
+      aria-busy={removing}
+      className={
+        prominent
+          ? "rounded-full border border-[#3a2020] px-3 py-1.5 text-[11px] text-[#d18f8f] transition hover:border-[#5a3030] hover:text-[#f0b0b0] disabled:cursor-progress disabled:opacity-70"
+          : "shrink-0 text-[12px] text-[#919191] transition hover:text-[#e8b4b4] disabled:cursor-progress disabled:opacity-70"
+      }
+    >
+      {removing ? "Removing…" : "Remove group"}
+    </button>
   );
 }
 

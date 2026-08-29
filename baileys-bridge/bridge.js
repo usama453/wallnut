@@ -116,6 +116,35 @@ function contactNameFor(jid, pushName) {
   );
 }
 
+function participantJid(participant) {
+  const candidates = [participant?.phoneNumber, participant?.jid, participant?.id]
+    .filter(Boolean)
+    .map(String);
+  return (
+    candidates.find((id) => id.endsWith("@s.whatsapp.net") || id.endsWith("@c.us")) ||
+    candidates[0] ||
+    ""
+  );
+}
+
+function groupParticipantsPayload(group) {
+  return (group.participants || [])
+    .map((participant) => {
+      const id = participantJid(participant);
+      if (!id) return null;
+      rememberContacts([
+        { id, notify: participant.notify, name: participant.name },
+      ]);
+      const remembered = lookupContact(id);
+      return {
+        id,
+        admin: participant.admin || null,
+        name: remembered.name || remembered.notify || participant.notify || participant.name || null,
+      };
+    })
+    .filter(Boolean);
+}
+
 function lookupContact(rawId) {
   const jid = normalizeJid(rawId);
   const digits = digitsOf(jid);
@@ -720,6 +749,7 @@ const server = http.createServer(async (req, res) => {
         id: group.id,
         subject: group.subject,
         description: group.desc,
+        participants: groupParticipantsPayload(group),
       });
     } catch (err) {
       return json(res, 404, { message: err?.message || "group not found" });

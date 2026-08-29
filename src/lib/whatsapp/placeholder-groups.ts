@@ -99,6 +99,75 @@ export async function createPlaceholderWhatsAppGroup(orgId: string) {
   };
 }
 
+/** Remove a WhatsApp group from the org so it can be linked again with a new code. */
+export async function removeWhatsAppGroupFromOrg(
+  orgId: string,
+  input: { groupId?: string; code?: string },
+) {
+  const admin = await createAdminClient();
+  const code = input.code?.trim().toUpperCase();
+  let group: { id: string; external_id: string | null } | null = null;
+
+  if (input.groupId) {
+    const { data } = await admin
+      .from("groups")
+      .select("id, external_id")
+      .eq("id", input.groupId)
+      .eq("org_id", orgId)
+      .eq("platform", "whatsapp")
+      .maybeSingle();
+    group = data;
+    if (!group) throw new Error("Group not found");
+  } else if (code) {
+    const { data } = await admin
+      .from("groups")
+      .select("id, external_id")
+      .eq("org_id", orgId)
+      .eq("platform", "whatsapp")
+      .eq("external_id", pendingGroupExternalId(code))
+      .maybeSingle();
+    group = data;
+  }
+
+  if (!group && !code) {
+    throw new Error("Group not found");
+  }
+
+  const pendingCode = code ?? codeFromPendingExternalId(group?.external_id ?? null);
+  const groupJid = group?.external_id?.endsWith("@g.us") ? group.external_id : null;
+
+  if (group) {
+    const { error } = await admin.from("groups").delete().eq("id", group.id);
+    if (error) throw new Error(error.message);
+  }
+
+  if (pendingCode) {
+    await admin
+      .from("whatsapp_group_auth_codes")
+      .update({ status: "expired" })
+      .eq("org_id", orgId)
+      .eq("code", pendingCode)
+      .in("status", ["pending", "used"]);
+  }
+
+  if (groupJid) {
+    await admin
+      .from("whatsapp_group_auth_codes")
+      .delete()
+      .eq("org_id", orgId)
+      .eq("group_jid", groupJid);
+  }
+
+  if (!group && code) {
+    const { count } = await admin
+      .from("whatsapp_group_auth_codes")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .eq("code", code);
+    if (!count) throw new Error("Group not found");
+  }
+}
+
 /** Turn empty unlinked General groups into numbered placeholders with a code. */
 export async function ensurePlaceholderWhatsAppGroups(orgId: string) {
   const admin = await createAdminClient();

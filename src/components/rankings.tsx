@@ -33,7 +33,11 @@ export function Rankings({
   const champion = byTypos[0] ?? byUploads[0] ?? null;
 
   useEffect(() => {
-    if (!champion || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (
+      !champion ||
+      champion.typos === 0 ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       setStage("rest");
       return;
     }
@@ -50,7 +54,7 @@ export function Rankings({
       <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center text-center">
         <h1 className="text-[27px] font-bold tracking-[-0.72px]">Rankings</h1>
         <p className="mt-3 text-[12px] text-[#919191]">
-          Rankings will appear after your team sends its first design.
+          Rankings will appear after a WhatsApp group is linked.
         </p>
         <Link href={orgSlug ? orgHomePath(orgSlug) : "/"} className="mt-6 text-[12px] text-[#919191] hover:text-white">
           Back to workspace
