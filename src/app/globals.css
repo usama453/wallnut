@@ -125,6 +125,46 @@ html.cursor-progress body {
   scrollbar-width: thin;
 }
 
+.proof-segment-slider {
+  height: 14px;
+  cursor: pointer;
+  appearance: none;
+  background: transparent;
+}
+
+.proof-segment-slider::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 999px;
+  background: #2a2a2a;
+}
+
+.proof-segment-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border: none;
+  border-radius: 999px;
+  background: #d4d4d4;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.proof-segment-slider::-moz-range-track {
+  height: 2px;
+  border: none;
+  border-radius: 999px;
+  background: #2a2a2a;
+}
+
+.proof-segment-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: #d4d4d4;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

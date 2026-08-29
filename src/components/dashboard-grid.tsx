@@ -157,23 +157,25 @@ export function DashboardGrid({
         ) : null}
 
         {canAddGroup && !showOnboarding ? (
-          <div className="flex flex-col items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void addWhatsAppGroup()}
-              disabled={addingGroup}
-              aria-busy={addingGroup}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70"
-            >
-              {addingGroup ? <Spinner /> : <span aria-hidden className="text-[14px] leading-none">+</span>}
-              {addingGroup ? "Creating code…" : "Add WhatsApp group"}
-            </button>
-            {createError ? (
-              <p role="alert" className="text-center text-[11px] text-[#e8b4b4]">
-                {createError}
-              </p>
-            ) : null}
-          </div>
+          <Reveal dramatic delayMs={480}>
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void addWhatsAppGroup()}
+                disabled={addingGroup}
+                aria-busy={addingGroup}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70"
+              >
+                {addingGroup ? <Spinner /> : <span aria-hidden className="text-[14px] leading-none">+</span>}
+                {addingGroup ? "Creating code…" : "Add WhatsApp group"}
+              </button>
+              {createError ? (
+                <p role="alert" className="text-center text-[11px] text-[#e8b4b4]">
+                  {createError}
+                </p>
+              ) : null}
+            </div>
+          </Reveal>
         ) : null}
 
         {invites.map((invite, index) => (
