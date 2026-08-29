@@ -28,3 +28,17 @@ all existing production data.
 
 Run it only after confirming the `dap` org exists and that losing every other
 workspace is intended.
+
+## 001_social_wall_posts.sql — DOES NOT PARSE
+
+A `posts` table for a social-wall feature that no code in `src/` references.
+It also has two syntax errors, so it could never have been applied:
+
+- `references auth.users(on delete cascade)` is missing the column name; it
+  should read `references auth.users(id) on delete cascade`.
+- `alter publication ... add table if not exists` is not valid syntax;
+  `ADD TABLE` has no `IF NOT EXISTS` form.
+
+Both were confirmed against Postgres as `42601 syntax error`. While this file
+sat in `supabase/migrations/` it broke `supabase db push` outright. Fix the two
+statements before considering it a migration again.

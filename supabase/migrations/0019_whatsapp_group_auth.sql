@@ -24,6 +24,7 @@ create table if not exists whatsapp_group_auth_codes (
 alter table whatsapp_group_auth_codes enable row level security;
 
 -- Org members can see their own org's codes. Owner/admin can manage them.
+drop policy if exists "wa.auth_codes select own org" on whatsapp_group_auth_codes;
 create policy "wa.auth_codes select own org"
   on whatsapp_group_auth_codes for select
   to authenticated
@@ -34,6 +35,7 @@ create policy "wa.auth_codes select own org"
       and organizations_users.status = 'active'
   ));
 
+drop policy if exists "wa.auth_codes insert own org" on whatsapp_group_auth_codes;
 create policy "wa.auth_codes insert own org"
   on whatsapp_group_auth_codes for insert
   to authenticated
@@ -45,6 +47,7 @@ create policy "wa.auth_codes insert own org"
       and organizations_users.role in ('owner', 'admin')
   ));
 
+drop policy if exists "wa.auth_codes update own org" on whatsapp_group_auth_codes;
 create policy "wa.auth_codes update own org"
   on whatsapp_group_auth_codes for update
   to authenticated
@@ -56,6 +59,7 @@ create policy "wa.auth_codes update own org"
       and organizations_users.role in ('owner', 'admin')
   ));
 
+drop policy if exists "wa.auth_codes delete own org" on whatsapp_group_auth_codes;
 create policy "wa.auth_codes delete own org"
   on whatsapp_group_auth_codes for delete
   to authenticated
@@ -70,7 +74,7 @@ create policy "wa.auth_codes delete own org"
 -- Mark expired codes automatically (run via Supabase cron or a daily job).
 -- For now the API filters expired codes on read; this function exists for
 -- a future scheduled edge function.
-create or replace function wa.mark_expired_auth_codes()
+create or replace function public.mark_expired_auth_codes()
 returns void
 language plpgsql
 security definer
