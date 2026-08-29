@@ -6,11 +6,11 @@ import Link from "next/link";
 import {
   ProofBadge,
   ScoreRing,
-  SeverityBadge,
   StatusBadge,
-  CategoryBadge,
   fmtDate,
 } from "@/components/ui";
+import { ReportFindings } from "@/components/report-findings";
+import { ReportPreview } from "@/components/report-preview";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Asset,
@@ -21,7 +21,6 @@ import type {
   Proof,
   ProofIssue,
 } from "@/types";
-import { highlightBox, markerPosition } from "@/lib/proof/issue-locations";
 
 export interface ViewerData {
   asset: Asset;
@@ -44,24 +43,12 @@ const NEXT_STATUSES: { status: AssetStatus; label: string; tone: string }[] = [
   { status: "published", label: "Mark published", tone: "bg-indigo-500 hover:bg-indigo-400" },
 ];
 
-const MARKER_COLORS = [
-  "#f43f5e",
-  "#f59e0b",
-  "#3b82f6",
-  "#10b981",
-  "#a855f7",
-  "#ec4899",
-  "#f97316",
-  "#06b6d4",
-];
-
 export function AssetViewer({ data }: { data: ViewerData }) {
   const router = useRouter();
   const { asset, versions, approvals, comments, brand } = data;
 
   const ordered = useMemo(() => [...versions].sort((a, b) => a.version - b.version), [versions]);
   const latestVersion = ordered[ordered.length - 1];
-  const latestProof = latestVersion?.proof;
 
   const [selectedVersion, setSelectedVersion] = useState(ordered[ordered.length - 1]?.id);
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
@@ -83,7 +70,9 @@ export function AssetViewer({ data }: { data: ViewerData }) {
     [issues],
   );
 
-  const activeIssue = issues.find((i) => i.id === activeIssueId) ?? null;
+  const activeIndex =
+    activeIssueId != null ? issues.findIndex((issue) => issue.id === activeIssueId) : null;
+  const resolvedActiveIndex = activeIndex != null && activeIndex >= 0 ? activeIndex : null;
   const shareUrl = `${location.origin}/reports/${asset.id}?v=${current?.version}`;
 
   async function setStatus(status: AssetStatus, comment?: string) {
@@ -176,140 +165,109 @@ export function AssetViewer({ data }: { data: ViewerData }) {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        {/* LEFT: artwork + annotations */}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#101010] shadow-[0_16px_30px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center justify-between border-b border-[#222] px-4 py-3">
-              <span className="text-[12px] font-bold">
-                Annotated preview{" "}
-                <span className="font-normal text-[#6c6c6c]">
-                  ({issues.length} issue{issues.length === 1 ? "" : "s"})
-                </span>
-              </span>
-              <div className="flex gap-1 text-[10px]">
-                {ordered.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => {
-                      setSelectedVersion(v.id);
-                      setActiveIssueId(null);
-                    }}
-                    className={`rounded px-2 py-1 ${
-                      v.id === current?.id
-                        ? "bg-[#292929] font-medium text-white"
-                        : "text-[#6c6c6c] hover:bg-[#202020] hover:text-[#bdbdbd]"
-                    }`}
-                  >
-                    v{v.version}
-                    {v.proof && (v.proof.score >= 90 ? " ✓" : v.proof.score >= 70 ? " ⚠" : " ✗")}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {current?.url ? (
-              <div className="w-full bg-[#080808]">
-                {current.preview_meta?.pages?.length ? (
-                  <div className="space-y-1">
-                    {current.preview_meta.pages.map((p, i) => {
-                      const isPage1 = i === 0;
-                      const boxStyle =
-                        p.width && p.height ? { aspectRatio: `${p.width}/${p.height}` } as const : undefined;
-                      return (
-                        <div key={p.url ?? i} className="relative mx-auto max-w-full" style={boxStyle}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={p.url}
-                            alt={`${asset.name} — page ${i + 1}`}
-                            className="absolute inset-0 block h-full w-full object-cover"
-                          />
-                          {isPage1 && (
-                            <>
-                              {sortedIssues.map((issue) => {
-                                const markerIndex = issues.indexOf(issue);
-                                const color = MARKER_COLORS[markerIndex % MARKER_COLORS.length];
-                                const position = markerPosition(issue);
-                                const active = issue.id === activeIssueId;
-                                if (!position) return null;
-
-                                return (
-                                  <button
-                                    key={issue.id}
-                                    onClick={() => setActiveIssueId(issue.id === activeIssueId ? null : issue.id)}
-                                    className="absolute -translate-x-1/2 -translate-y-1/2"
-                                    style={{
-                                      left: position.left,
-                                      top: position.top,
-                                      zIndex: active ? 20 : 10,
-                                    }}
-                                    aria-label={issue.title}
-                                  >
-                                    <span
-                                      className="block rounded-full text-white shadow-lg"
-                                      style={{
-                                        background: color,
-                                        width: 22,
-                                        height: 22,
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        display: "grid",
-                                        placeItems: "center",
-                                        transform: active ? "scale(1.25)" : "scale(1)",
-                                        transition: "transform .15s",
-                                        boxShadow: active ? `0 0 0 3px rgba(255,255,255,.5)` : undefined,
-                                      }}
-                                    >
-                                      {markerIndex + 1}
-                                    </span>
-                                    {active && (
-                                      <span className="pointer-events-none absolute left-0 top-6 z-30 mt-1 w-max max-w-56 rounded-md border border-[#2a2a2a] bg-[#101010]/95 px-2 py-1 text-[11px] text-white shadow-xl">
-                                        {issue.title}
-                                      </span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-
-                              {activeIssue ? (() => {
-                                const box = highlightBox(activeIssue);
-                                if (!box) return null;
-                                return (
-                                <span
-                                  className="pointer-events-none absolute border-2 border-white/70"
-                                  style={{
-                                    left: `${box.x * 100}%`,
-                                    top: `${box.y * 100}%`,
-                                    width: `${box.w * 100}%`,
-                                    height: `${box.h * 100}%`,
-                                    zIndex: 15,
-                                  }}
-                                />
-                                );
-                              })() : null}
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : asset.kind === "pdf" ? (
-                  <iframe
-                    src={`${current.url}#toolbar=0`}
-                    title={asset.name}
-                    className="block h-[600px] w-full"
-                  />
-                ) : (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={current.preview_url ?? current.url} alt={asset.name} className="block w-full" />
-                )}
+          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
+            {proof ? (
+              <div className="flex items-center gap-4">
+                <ScoreRing score={proof.score} />
+                <div className="min-w-0">
+                  <ProofBadge status={proof.status} />
+                  <p className="mt-2 text-[13px] leading-relaxed text-[#bdbdbd]">
+                    {proof.summary ?? "No summary."}
+                  </p>
+                  <p className="mt-2 text-[10px] text-[#555]">
+                    {proof.model ?? "AI"} · {fmtDate(proof.created_at)}
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="px-4 py-20 text-center text-[12px] text-[#6c6c6c]">No file for this version.</div>
+              <p className="text-[12px] text-[#6c6c6c]">
+                No proof yet for v{current?.version}. Click “Re-proof” to run the AI review.
+              </p>
             )}
           </div>
 
-          {/* Comments */}
+          <ReportFindings
+            issues={sortedIssues}
+            activeIndex={resolvedActiveIndex}
+            onSelectIssue={(index) =>
+              setActiveIssueId(index == null ? null : issues[index]?.id ?? null)
+            }
+          />
+
+          <div className="flex flex-wrap gap-2">
+            {NEXT_STATUSES.map(({ status, label, tone }) => (
+              <button
+                key={status}
+                onClick={() => setStatus(status)}
+                disabled={busy !== null}
+                className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold text-white disabled:opacity-50 ${tone}`}
+              >
+                {busy === status ? "Saving…" : label}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
+            <h3 className="mb-2 text-[12px] font-bold">Approval history</h3>
+            {approvals.length === 0 ? (
+              <p className="text-[12px] text-[#6c6c6c]">No approvals yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {approvals.slice(0, 6).map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-2 text-[11px]">
+                    <span>
+                      <StatusBadge status={a.status} />{" "}
+                      <span className="ml-1 text-[#6c6c6c]">v{a.version}</span>
+                    </span>
+                    <span className="text-[10px] text-[#555]">{fmtDate(a.created_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4 lg:sticky lg:top-6">
+          <div className="flex flex-wrap gap-1 text-[10px]">
+            {ordered.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => {
+                  setSelectedVersion(v.id);
+                  setActiveIssueId(null);
+                }}
+                className={`rounded px-2 py-1 ${
+                  v.id === current?.id
+                    ? "bg-[#292929] font-medium text-white"
+                    : "text-[#6c6c6c] hover:bg-[#202020] hover:text-[#bdbdbd]"
+                }`}
+              >
+                v{v.version}
+                {v.proof && (v.proof.score >= 90 ? " ✓" : v.proof.score >= 70 ? " ⚠" : " ✗")}
+              </button>
+            ))}
+          </div>
+
+          {current?.url ? (
+            <ReportPreview
+              title={asset.name}
+              kind={asset.kind}
+              url={current.url}
+              previewMeta={current.preview_meta}
+              issues={issues}
+              activeIndex={resolvedActiveIndex}
+              onSelectIssue={(index) =>
+                setActiveIssueId(index == null ? null : issues[index]?.id ?? null)
+              }
+            />
+          ) : (
+            <div className="rounded-[12px] border border-[#1b1b1b] bg-[#101010] px-4 py-20 text-center text-[12px] text-[#6c6c6c]">
+              No file for this version.
+            </div>
+          )}
+
           <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
             <h3 className="mb-3 text-[12px] font-bold">
               Comments <span className="font-normal text-[#6c6c6c]">({comments.length})</span>
@@ -340,114 +298,6 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 Add
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* RIGHT: score + issues + approval */}
-        <div className="space-y-4">
-          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
-            {proof ? (
-              <div className="flex items-center gap-4">
-                <ScoreRing score={proof.score} />
-                <div className="min-w-0">
-                  <ProofBadge status={proof.status} />
-                  <p className="mt-2 text-[12px] leading-relaxed text-[#bdbdbd]">{proof.summary ?? "No summary."}</p>
-                  <p className="mt-2 text-[10px] text-[#555]">
-                    {proof.model ?? "AI"} · {fmtDate(proof.created_at)}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-[12px] text-[#6c6c6c]">
-                No proof yet for v{current?.version}. Click “Re-proof” to run the AI review.
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {NEXT_STATUSES.map(({ status, label, tone }) => (
-              <button
-                key={status}
-                onClick={() => setStatus(status)}
-                disabled={busy !== null}
-                className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold text-white disabled:opacity-50 ${tone}`}
-              >
-                {busy === status ? "Saving…" : label}
-              </button>
-            ))}
-          </div>
-
-          {/* Issue list */}
-          <div className="overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#101010]">
-            <div className="border-b border-[#222] px-4 py-3 text-[12px] font-bold">
-              Issues <span className="font-normal text-[#6c6c6c]">({issues.length})</span>
-            </div>
-            {sortedIssues.length === 0 ? (
-              <p className="px-4 py-8 text-center text-[12px] text-emerald-300">
-                No issues found in this version.
-              </p>
-            ) : (
-              <ul className="thin-scroll max-h-80 divide-y divide-[#222] overflow-y-auto">
-                {sortedIssues.map((issue) => {
-                  const markerIndex = issues.indexOf(issue);
-                  return (
-                    <li key={issue.id}>
-                      <button
-                        onClick={() =>
-                          setActiveIssueId(issue.id === activeIssueId ? null : issue.id)
-                        }
-                        className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-[#171717] ${
-                          issue.id === activeIssueId ? "bg-[#1b1b1b]" : ""
-                        }`}
-                      >
-                        <span
-                          className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white"
-                          style={{ background: MARKER_COLORS[markerIndex % MARKER_COLORS.length] }}
-                        >
-                          {markerIndex + 1}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">{issue.title}</span>
-                            <SeverityBadge severity={issue.severity} />
-                            <CategoryBadge category={issue.category} />
-                          </span>
-                          {issue.description && (
-                            <span className="mt-1 block text-[11px] leading-relaxed text-[#919191]">
-                              {issue.description}
-                            </span>
-                          )}
-                          {issue.suggestion && (
-                            <span className="mt-1 block text-[11px] text-emerald-400/90">
-                              Suggested: {issue.suggestion}
-                            </span>
-                          )}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-
-          {/* Approval history */}
-          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
-            <h3 className="mb-2 text-[12px] font-bold">Approval history</h3>
-            {approvals.length === 0 ? (
-              <p className="text-[12px] text-[#6c6c6c]">No approvals yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {approvals.slice(0, 6).map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-2 text-[11px]">
-                    <span>
-                      <StatusBadge status={a.status} /> <span className="ml-1 text-[#6c6c6c]">v{a.version}</span>
-                    </span>
-                    <span className="text-[10px] text-[#555]">{fmtDate(a.created_at)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         </div>
       </div>

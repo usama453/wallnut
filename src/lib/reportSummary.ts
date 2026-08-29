@@ -138,6 +138,17 @@ export function formatCorrectionList(issues: SummaryIssue[]): string {
   return body ? `${body}${suffix}` : "";
 }
 
+/** Structured correction rows for report UI (typos, grammar fixes, etc.). */
+export function getCorrectionLines(
+  issues: SummaryIssue[],
+): Array<{ label: string; before: string; after: string }> {
+  return buildCorrectionLines(issues).map(({ label, before, after }) => ({
+    label,
+    before,
+    after,
+  }));
+}
+
 /** One-line preview of the WhatsApp reply Wallnut sends after proofing. */
 export function whatsappReplyPreview(issues: SummaryIssue[]): string {
   const corrections = formatCorrectionList(issues);

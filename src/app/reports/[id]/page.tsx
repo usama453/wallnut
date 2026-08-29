@@ -2,20 +2,17 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
-import { ScoreRing, ProofBadge, SeverityBadge, CategoryBadge, StatusBadge, fmtDate } from "@/components/ui";
+import { ProofBadge, ScoreRing, StatusBadge, fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { MetricChip } from "@/components/wallnut/metric-chip";
-import { markerPosition } from "@/lib/proof/issue-locations";
+import { ReportFindings } from "@/components/report-findings";
+import { ReportPreview } from "@/components/report-preview";
 import type { ProofIssue } from "@/types";
-
-const MARKER_COLORS = ["#f43f5e", "#f59e0b", "#3b82f6", "#10b981", "#a855f7", "#ec4899", "#f97316", "#06b6d4"];
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const admin = await createAdminClient();
 
-  // Resolve by short slug first, then by UUID — id.eq on the uuid column can't
-  // take a slug string, so the two lookups stay separate.
   const select = "id, name, kind, status, current_version, slug";
   const bySlug = await admin.from("assets").select(select).eq("slug", id).maybeSingle();
   const asset = bySlug.data ?? (await admin.from("assets").select(select).eq("id", id).maybeSingle()).data;
@@ -44,13 +41,13 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
       <AppHeader />
-      <main className="mx-auto max-w-4xl px-4 pb-12 pt-6 sm:px-6">
-        <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <main className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6">
+        <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#6c6c6c]">
               Public report
             </p>
-            <h1 className="mt-2 text-[clamp(24px,4vw,32px)] font-bold leading-tight tracking-[-0.72px]">
+            <h1 className="mt-2 text-[clamp(24px,4vw,34px)] font-bold leading-tight tracking-[-0.72px]">
               {asset.name}
             </h1>
             <p className="mt-2 text-[12px] text-[#919191]">
@@ -59,119 +56,45 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                 : `Version ${version?.version ?? asset.current_version}`}
             </p>
           </div>
-          {asset.status ? <StatusBadge status={asset.status} /> : null}
+          <div className="flex items-center gap-3">
+            {asset.status ? <StatusBadge status={asset.status} /> : null}
+            {proof ? (
+              <>
+                <ProofBadge status={proof.status} />
+                <ScoreRing score={proof.score} size={72} />
+              </>
+            ) : null}
+          </div>
         </header>
 
-        <section className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-5 shadow-[0_16px_30px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
-              <MetricChip value={`v${version?.version ?? asset.current_version}`} label="version" />
-              <MetricChip value={sortedIssues.length} label="issues" />
-            </div>
-          {proof ? (
-            <div className="flex items-center gap-3">
-              <ProofBadge status={proof.status} />
-              <ScoreRing score={proof.score} size={72} />
+        <section className="mb-6 flex flex-wrap gap-2">
+          <MetricChip value={`v${version?.version ?? asset.current_version}`} label="version" />
+          <MetricChip value={sortedIssues.length} label="issues" />
+        </section>
+
+        {proof?.summary ? (
+          <p className="mb-6 max-w-3xl text-[14px] leading-relaxed text-[#bdbdbd]">{proof.summary}</p>
+        ) : null}
+
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+          <div className="space-y-4">
+            <ReportFindings issues={sortedIssues} />
+          </div>
+
+          {version?.url ? (
+            <div className="lg:sticky lg:top-6">
+              <ReportPreview
+                title={asset.name}
+                kind={asset.kind as "image" | "pdf"}
+                url={version.url}
+                previewMeta={version.preview_meta as { pages: Array<{ url: string; width: number; height: number }> } | null}
+                issues={sortedIssues}
+              />
             </div>
           ) : null}
-          </div>
-          {proof?.summary ? (
-            <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-[#bdbdbd]">
-              {proof.summary}
-            </p>
-          ) : null}
-        </section>
+        </div>
 
-      {version?.url ? (
-        <section className="mt-4 overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#101010]">
-          <div className="border-b border-[#222] px-4 py-3 text-[12px] font-bold">
-            Annotated preview{" "}
-            <span className="font-normal text-[#6c6c6c]">
-              ({sortedIssues.length} issue{sortedIssues.length === 1 ? "" : "s"})
-            </span>
-          </div>
-          <div className="relative bg-[#080808]">
-            {version.preview_meta?.pages?.length ? (
-              <div className="space-y-1">
-                {(version.preview_meta.pages as Array<{ url: string; width: number; height: number }>).map((p, i) => {
-                  const isPage1 = i === 0;
-                  const boxStyle = p.width && p.height ? { aspectRatio: `${p.width}/${p.height}` } : undefined;
-                  return (
-                    <div key={p.url ?? i} className="relative mx-auto max-w-full" style={boxStyle}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.url} alt={`page ${i + 1}`} className="absolute inset-0 block h-full w-full object-cover" />
-                      {isPage1 &&
-                        sortedIssues.map((issue, i2) => {
-                          const position = markerPosition(issue);
-                          if (!position) return null;
-                          return (
-                          <span
-                            key={issue.id}
-                            className="absolute grid size-[22px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[11px] font-bold text-white shadow-lg"
-                            style={{
-                              left: position.left,
-                              top: position.top,
-                              background: MARKER_COLORS[i2 % MARKER_COLORS.length],
-                            }}
-                          >
-                            {i2 + 1}
-                          </span>
-                          );
-                        })}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : asset.kind === "pdf" ? (
-              <iframe src={`${version.url}#toolbar=0`} title={asset.name} className="block h-[600px] w-full" />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={version.url} alt={asset.name} className="block w-full" />
-            )}
-          </div>
-        </section>
-      ) : null}
-
-      {sortedIssues.length > 0 ? (
-        <section className="mt-4 overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#101010]">
-          <div className="border-b border-[#222] px-4 py-3 text-[12px] font-bold">Issues</div>
-          <ul className="divide-y divide-[#222]">
-            {sortedIssues.map((issue, i) => (
-              <li key={issue.id} className="flex items-start gap-3 px-4 py-4">
-                <span
-                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white"
-                  style={{ background: MARKER_COLORS[i % MARKER_COLORS.length] }}
-                >
-                  {i + 1}
-                </span>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{issue.title}</span>
-                    <SeverityBadge severity={issue.severity} />
-                    <CategoryBadge category={issue.category} />
-                  </div>
-                  {issue.description && (
-                    <p className="mt-1 text-[12px] leading-relaxed text-[#919191]">
-                      {issue.description}
-                    </p>
-                  )}
-                  {issue.suggestion && (
-                    <p className="mt-1.5 text-[12px] text-emerald-400/90">
-                      Suggested: {issue.suggestion}
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : (
-        <p className="mt-4 rounded-[10px] border border-emerald-950 bg-emerald-950/20 px-4 py-3 text-[12px] text-emerald-300">
-          No issues found in this report.
-        </p>
-      )}
-
-        <p className="mt-8 text-center text-[10px] text-[#555]">
+        <p className="mt-10 text-center text-[10px] text-[#555]">
           Generated by Wallnut · Reviews should be confirmed by a human before publishing.
         </p>
       </main>
