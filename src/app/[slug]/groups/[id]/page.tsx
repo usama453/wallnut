@@ -3,10 +3,12 @@ import { notFound, redirect } from "next/navigation";
 import { BackIcon, PlatformIcon } from "@/components/wallnut/icons";
 import { MetricChip } from "@/components/wallnut/metric-chip";
 import { ReportCard } from "@/components/wallnut/report-card";
+import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { ReportRow } from "@/lib/groups";
 import { resolveOrgAccess } from "@/lib/org-access";
 import { orgHomePath } from "@/lib/org-paths";
+import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Group, GroupPlatform } from "@/types";
 
@@ -144,17 +146,30 @@ export default async function OrgGroupReportsPage({
 
   const totalIssues = reports.reduce((total, report) => total + report.issueCount, 0);
   const checkedReports = reports.filter((report) => report.score != null).length;
+  const canRemoveGroup =
+    group.platform === "whatsapp" &&
+    canCreateWhatsAppGroup(access.profile.role, access.isSuperAdmin);
 
   return (
     <div className="mx-auto w-full max-w-[880px] pb-10 pt-2">
       <Reveal>
-        <Link
-          href={orgHomePath(slug)}
-          className="inline-flex items-center gap-1 text-[12px] text-[#919191] transition hover:text-white"
-        >
-          <BackIcon />
-          Back
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href={orgHomePath(slug)}
+            className="inline-flex items-center gap-1 text-[12px] text-[#919191] transition hover:text-white"
+          >
+            <BackIcon />
+            Back
+          </Link>
+          {canRemoveGroup ? (
+            <RemoveWhatsAppGroup
+              orgSlug={slug}
+              groupId={group.id}
+              groupName={group.name}
+              redirectHome
+            />
+          ) : null}
+        </div>
       </Reveal>
 
       <div className="mt-7 flex flex-col items-center text-center">

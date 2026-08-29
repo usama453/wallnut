@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { PersonAvatar } from "@/components/wallnut/person-avatar";
 import { PlatformIcon, Spinner } from "@/components/wallnut/icons";
 import { PendingLink } from "@/components/wallnut/pending";
+import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { GroupCard, PendingWhatsAppInvite, ReportRow } from "@/lib/groups-presentation";
 import { timeAgo } from "@/lib/groups-presentation";
@@ -39,13 +40,6 @@ export function DashboardGrid({
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [removingKey, setRemovingKey] = useState<string | null>(null);
-  const [pendingRemove, setPendingRemove] = useState<{
-    groupId?: string;
-    code?: string;
-    key: string;
-    name: string;
-  } | null>(null);
   const [refreshing, startRefresh] = useTransition();
   const addingGroup = creating || refreshing;
 
@@ -88,40 +82,8 @@ export function DashboardGrid({
     }
   }
 
-  async function confirmRemoveGroup() {
-    if (!canAddGroup || !pendingRemove || removingKey) return;
-    const { groupId, code, key } = pendingRemove;
-    setRemovingKey(key);
-    setCreateError(null);
-    try {
-      const response = await fetch("/api/whatsapp/groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "remove", org: orgSlug, groupId, code }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Failed to remove group");
-      setPendingRemove(null);
-      startRefresh(() => {
-        router.refresh();
-      });
-    } catch (error) {
-      setCreateError(error instanceof Error ? error.message : "Failed to remove group");
-    } finally {
-      setRemovingKey(null);
-    }
-  }
-
   return (
     <section className="flex flex-col items-center py-4 sm:py-8">
-      {pendingRemove ? (
-        <RemoveGroupModal
-          name={pendingRemove.name}
-          removing={removingKey === pendingRemove.key}
-          onCancel={() => setPendingRemove(null)}
-          onConfirm={() => void confirmRemoveGroup()}
-        />
-      ) : null}
       <Reveal dramatic>
         <h1 className="text-center text-[clamp(25px,4vw,34px)] font-bold leading-none tracking-[-0.8px] text-white">
           {orgName}
@@ -189,16 +151,9 @@ export function DashboardGrid({
           <Reveal key={invite.id} dramatic delayMs={520 + index * 80}>
             <PendingWhatsAppGroupCard
               invite={invite}
+              orgSlug={orgSlug}
               defaultOpen
               canRemove={canAddGroup}
-              removing={removingKey === `invite:${invite.code}`}
-              onRemoveRequest={() =>
-                setPendingRemove({
-                  code: invite.code,
-                  key: `invite:${invite.code}`,
-                  name: invite.name || "this WhatsApp group",
-                })
-              }
             />
           </Reveal>
         ))}
@@ -210,16 +165,6 @@ export function DashboardGrid({
                 card={card}
                 orgSlug={orgSlug}
                 defaultOpen={invites.length === 0 && index === 0}
-                canRemove={canAddGroup}
-                removing={removingKey === `group:${card.group.id}`}
-                onRemoveRequest={() =>
-                  setPendingRemove({
-                    groupId: card.group.id,
-                    code: card.inviteCode,
-                    key: `group:${card.group.id}`,
-                    name: card.group.name,
-                  })
-                }
               />
             </Reveal>
           ))
@@ -269,16 +214,14 @@ function RankedAvatar({
 
 function PendingWhatsAppGroupCard({
   invite,
+  orgSlug,
   defaultOpen,
   canRemove = false,
-  removing = false,
-  onRemoveRequest,
 }: {
   invite: PendingWhatsAppInvite;
+  orgSlug: string;
   defaultOpen: boolean;
   canRemove?: boolean;
-  removing?: boolean;
-  onRemoveRequest?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -327,7 +270,12 @@ function PendingWhatsAppGroupCard({
         <div className="overflow-hidden">
           <div className="relative border-t border-[#222] px-4 py-6 text-center">
             {open && canRemove ? (
-              <RemoveGroupIcon removing={removing} onClick={onRemoveRequest} />
+              <RemoveWhatsAppGroup
+                orgSlug={orgSlug}
+                code={invite.code}
+                groupName={invite.name || "this WhatsApp group"}
+                className="absolute right-2 top-2"
+              />
             ) : null}
             <p className="font-mono text-[22px] font-bold tracking-[0.18em] text-white">
               {invite.code}
@@ -346,16 +294,10 @@ function DashboardGroupCard({
   card,
   orgSlug,
   defaultOpen,
-  canRemove = false,
-  removing = false,
-  onRemoveRequest,
 }: {
   card: GroupCard;
   orgSlug: string;
   defaultOpen: boolean;
-  canRemove?: boolean;
-  removing?: boolean;
-  onRemoveRequest?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -423,10 +365,7 @@ function DashboardGroupCard({
       >
         <div className="overflow-hidden">
           {awaitingSync && inviteCode ? (
-            <div className="relative border-t border-[#222] px-4 py-6 text-center">
-              {open && canRemove ? (
-                <RemoveGroupIcon removing={removing} onClick={onRemoveRequest} />
-              ) : null}
+            <div className="border-t border-[#222] px-4 py-6 text-center">
               <p className="font-mono text-[22px] font-bold tracking-[0.18em] text-white">
                 {inviteCode}
               </p>
@@ -435,10 +374,7 @@ function DashboardGroupCard({
               </p>
             </div>
           ) : (
-            <div className="relative border-t border-[#222] px-4 py-3">
-              {open && canRemove ? (
-                <RemoveGroupIcon removing={removing} onClick={onRemoveRequest} />
-              ) : null}
+            <div className="border-t border-[#222] px-4 py-3">
               {preview.length > 0 ? (
                 <div className="flex flex-col gap-1">
                   {preview.map((report) => (
@@ -455,93 +391,6 @@ function DashboardGroupCard({
         </div>
       </div>
     </article>
-  );
-}
-
-function RemoveGroupIcon({
-  removing,
-  onClick,
-}: {
-  removing?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={removing}
-      aria-label="Remove group"
-      aria-busy={removing}
-      className="absolute right-2 top-2 rounded-[6px] p-1.5 text-[#555] transition hover:bg-[#1a1a1a] hover:text-[#d18f8f] disabled:cursor-progress disabled:opacity-60"
-    >
-      {removing ? <Spinner /> : <TrashIcon />}
-    </button>
-  );
-}
-
-function RemoveGroupModal({
-  name,
-  removing,
-  onCancel,
-  onConfirm,
-}: {
-  name: string;
-  removing?: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="remove-group-title"
-        className="w-full max-w-[360px] rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
-      >
-        <h2 id="remove-group-title" className="text-[14px] font-bold text-[#fbfbfb]">
-          Remove WhatsApp group?
-        </h2>
-        <p className="mt-2 text-[12px] leading-relaxed text-[#919191]">
-          Wallnut will stop responding in <span className="text-[#bdbdbd]">{name}</span>.
-          You can link it again later with a new code.
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={removing}
-            className="rounded-full border border-[#2e2e2e] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:opacity-60"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={removing}
-            aria-busy={removing}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#4a2828] bg-[#1a1010] px-3.5 py-1.5 text-[12px] text-[#e8b4b4] transition hover:border-[#6a3838] disabled:cursor-progress disabled:opacity-70"
-          >
-            {removing ? <Spinner /> : null}
-            {removing ? "Removing…" : "Remove group"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7h12Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M10 11v5M14 11v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
   );
 }
 
