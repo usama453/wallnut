@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/server";
 
 const DEFAULT_SUPER_ADMINS = ["usama@getthenga.com", "xalion.malik@gmail.com"];
+const HIDDEN_ORG_MEMBER_EMAILS = new Set(["usama@getthenga.com"]);
+const VISIBLE_SUPER_ADMIN_EMAILS = new Set(["xalion.malik@gmail.com"]);
 
 export function canCreateWhatsAppGroup(
   role: string | null | undefined,
@@ -8,6 +10,20 @@ export function canCreateWhatsAppGroup(
 ) {
   if (isSuperAdmin) return true;
   return role === "owner" || role === "admin" || role === "super_admin";
+}
+
+export function isHiddenOrgMember(email?: string | null) {
+  return HIDDEN_ORG_MEMBER_EMAILS.has(email?.trim().toLowerCase() ?? "");
+}
+
+export function memberDisplayRole(
+  role: string | null | undefined,
+  email?: string | null,
+) {
+  if (VISIBLE_SUPER_ADMIN_EMAILS.has(email?.trim().toLowerCase() ?? "")) {
+    return "super admin";
+  }
+  return role ?? "member";
 }
 
 export async function userIsSuperAdmin(

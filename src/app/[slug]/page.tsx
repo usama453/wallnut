@@ -5,7 +5,7 @@ import { InitialAvatar } from "@/components/wallnut/avatar";
 import { Reveal } from "@/components/wallnut/reveal";
 import { getDashboardData } from "@/lib/groups";
 import { resolveOrgAccess } from "@/lib/org-access";
-import { canCreateWhatsAppGroup } from "@/lib/roles";
+import { canCreateWhatsAppGroup, isHiddenOrgMember, memberDisplayRole } from "@/lib/roles";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getStats } from "@/lib/stats";
 
@@ -99,14 +99,28 @@ async function listOrgMembers(orgId: string) {
     .from("profiles")
     .select("id, full_name")
     .in("id", userIds);
-  const nameById = new Map((profiles ?? []).map((profile) => [profile.id, profile.full_name]));
+  const profileById = new Map(
+    (profiles ?? []).map((profile) => [profile.id, profile]),
+  );
   const roleById = new Map((memberships ?? []).map((row) => [row.user_id, row.role]));
 
+  const emails = await Promise.all(
+    userIds.map(async (id) => {
+      const { data } = await admin.auth.admin.getUserById(id);
+      return [id, data.user?.email ?? ""] as const;
+    }),
+  );
+  const emailById = new Map(emails);
+
   return userIds
-    .map((id) => ({
-      id,
-      full_name: nameById.get(id) ?? null,
-      role: roleById.get(id) ?? "member",
-    }))
+    .filter((id) => !isHiddenOrgMember(emailById.get(id)))
+    .map((id) => {
+      const profile = profileById.get(id);
+      return {
+        id,
+        full_name: profile?.full_name ?? null,
+        role: memberDisplayRole(roleById.get(id), emailById.get(id)),
+      };
+    })
     .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 }

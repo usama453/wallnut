@@ -17,14 +17,23 @@ interface Invite {
 }
 type Role = "owner" | "admin" | "member" | "viewer";
 
-const ROLE_LABEL: Record<Role, string> = {
+const ROLE_LABEL: Record<string, string> = {
   owner: "Owner",
   admin: "Admin",
   member: "Member",
   viewer: "Viewer",
+  "super admin": "Super admin",
+  super_admin: "Super admin",
 };
 
-const ROLE_ORDER: Record<Role, number> = { owner: 0, admin: 1, member: 2, viewer: 3 };
+const ROLE_ORDER: Record<string, number> = {
+  "super admin": 0,
+  super_admin: 0,
+  owner: 1,
+  admin: 2,
+  member: 3,
+  viewer: 4,
+};
 
 export function TeamManager({ orgSlug }: { orgSlug?: string }) {
   const [myRole, setMyRole] = useState<Role>("member");

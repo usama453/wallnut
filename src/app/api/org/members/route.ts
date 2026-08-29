@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/lib/org-membership";
+import { isHiddenOrgMember, memberDisplayRole } from "@/lib/roles";
 
 const ROLES = ["owner", "admin", "member", "viewer"] as const;
 
@@ -30,20 +31,24 @@ export async function GET(req: NextRequest) {
       .eq("status", "pending"),
   ]);
 
-  // Pull display names/emails for active members from auth.users.
-  const userIds = (members ?? []).map((m) => m.user_id).filter(Boolean);
-  const emailsByName = new Map<string, string>();
-  if (userIds.length) {
-    const { data: users } = await admin
-      .from("auth.users")
-      .select("id, email")
-      .in("id", userIds);
-    for (const u of users ?? []) emailsByName.set(u.id, u.email);
-  }
-  const resolvedMembers = (members ?? []).map((m) => ({
-    ...m,
-    email: emailsByName.get(m.user_id) ?? null,
-  }));
+  const userIds = (members ?? []).map((m) => m.user_id).filter(Boolean) as string[];
+  const emailById = new Map<string, string>();
+  await Promise.all(
+    userIds.map(async (id) => {
+      const { data } = await admin.auth.admin.getUserById(id);
+      if (data.user?.email) emailById.set(id, data.user.email);
+    }),
+  );
+  const resolvedMembers = (members ?? [])
+    .map((m) => ({
+      ...m,
+      email: m.user_id ? emailById.get(m.user_id) ?? null : null,
+      role: memberDisplayRole(
+        m.role,
+        m.user_id ? emailById.get(m.user_id) : null,
+      ),
+    }))
+    .filter((m) => !isHiddenOrgMember(m.email));
 
   return NextResponse.json({
     orgId: ctx.orgId,
