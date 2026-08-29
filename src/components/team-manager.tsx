@@ -276,7 +276,7 @@ export function TeamManager({
       ) : null}
 
       {removeTarget ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 px-4">
           <div
             role="dialog"
             aria-modal="true"

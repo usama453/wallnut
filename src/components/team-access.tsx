@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { InitialAvatar } from "@/components/wallnut/avatar";
 import { TeamManager } from "@/components/team-manager";
 
@@ -40,8 +41,13 @@ export function TeamAccess({ orgSlug }: { orgSlug: string }) {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, [open]);
 
   const stack = useMemo(() => {
@@ -69,43 +75,46 @@ export function TeamAccess({ orgSlug }: { orgSlug: string }) {
         />
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 px-4 py-8 sm:items-center">
-          <button
-            type="button"
-            aria-label="Close team dialog"
-            className="absolute inset-0"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="team-access-title"
-            className="relative z-10 w-full max-w-[680px]"
-          >
-            <div className="mb-3 flex items-center justify-between px-1">
-              <h2 id="team-access-title" className="text-[14px] font-bold text-[#fbfbfb]">
-                Team
-              </h2>
+      {open
+        ? createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4">
               <button
                 type="button"
+                aria-label="Close team dialog"
+                className="absolute inset-0"
                 onClick={() => setOpen(false)}
-                className="rounded-[6px] px-2 py-1 text-[12px] text-[#919191] transition hover:bg-[#161616] hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-            <div className="max-h-[min(80vh,720px)] overflow-y-auto rounded-[10px]">
-              <TeamManager
-                orgSlug={orgSlug}
-                onUpdated={() => {
-                  void loadPreview();
-                }}
               />
-            </div>
-          </div>
-        </div>
-      ) : null}
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="team-access-title"
+                className="relative z-10 flex max-h-[min(90vh,760px)] w-full max-w-[680px] flex-col overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#0a0a0a] shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+              >
+                <div className="flex shrink-0 items-center justify-between border-b border-[#222] px-4 py-3">
+                  <h2 id="team-access-title" className="text-[14px] font-bold text-[#fbfbfb]">
+                    Team
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="rounded-[6px] px-2 py-1 text-[12px] text-[#919191] transition hover:bg-[#161616] hover:text-white"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                  <TeamManager
+                    orgSlug={orgSlug}
+                    onUpdated={() => {
+                      void loadPreview();
+                    }}
+                  />
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
