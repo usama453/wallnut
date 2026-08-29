@@ -10,6 +10,8 @@ import { InitialAvatar } from "./avatar";
 import { Spinner } from "./icons";
 import { NavigationProgress } from "./pending";
 
+const SUPER_ADMIN_NAV = new Set(["Connect", "Upload", "Usage", "Settings"]);
+
 export function AppHeader({
   authenticated = false,
   orgName,
@@ -17,6 +19,7 @@ export function AppHeader({
   userName,
   userEmail,
   memberships = [],
+  isSuperAdmin = false,
 }: {
   authenticated?: boolean;
   orgName?: string | null;
@@ -24,6 +27,7 @@ export function AppHeader({
   userName?: string | null;
   userEmail?: string | null;
   memberships?: Array<{ name: string; slug: string; role?: string }>;
+  isSuperAdmin?: boolean;
 }) {
   const homeHref = orgSlug ? orgHomePath(orgSlug) : "/";
   const navItems = [
@@ -35,7 +39,7 @@ export function AppHeader({
     { href: "/usage", label: "Usage" },
     { href: "/brand", label: "Brand profile" },
     { href: "/settings", label: "Settings" },
-  ];
+  ].filter((item) => isSuperAdmin || !SUPER_ADMIN_NAV.has(item.label));
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);

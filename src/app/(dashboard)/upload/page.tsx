@@ -1,6 +1,8 @@
 import { UploadDropzone } from "@/components/upload-dropzone";
+import { requireSuperAdmin } from "@/lib/super-admin-access";
 
-export default function UploadPage() {
+export default async function UploadPage() {
+  await requireSuperAdmin();
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-bold">Upload an asset</h1>

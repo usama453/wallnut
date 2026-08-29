@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireSuperAdmin } from "@/lib/super-admin-access";
 import { fmtDate } from "@/components/ui";
 
 type UsageRow = {
@@ -18,6 +19,7 @@ type UsageRow = {
 };
 
 export default async function UsagePage() {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 

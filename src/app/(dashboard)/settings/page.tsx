@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { WhatsAppAccess } from "@/components/whatsapp-access";
+import { requireSuperAdmin } from "@/lib/super-admin-access";
 
 export const dynamic = "force-dynamic";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireSuperAdmin();
   const aiProvider = process.env.AI_PROVIDER ?? "gemini";
   const model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
   const wahaConfigured = Boolean(

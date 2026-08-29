@@ -31,6 +31,7 @@ export default async function OrgLayout({
         userName={access.profile.full_name}
         userEmail={access.user.email}
         memberships={access.memberships}
+        isSuperAdmin={access.isSuperAdmin}
       />
       <main className="min-h-[calc(100vh-3.5rem)] px-4 py-6 sm:px-6">{children}</main>
     </div>

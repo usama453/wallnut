@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { listUserMemberships } from "@/lib/org-membership";
+import { userIsSuperAdmin } from "@/lib/roles";
 
 export default async function DashboardLayout({
   children,
@@ -33,6 +34,7 @@ export default async function DashboardLayout({
     ?? null;
   const orgName = active?.name ?? organization?.name ?? "My workspace";
   const orgSlug = active?.slug ?? organization?.slug ?? null;
+  const isSuperAdmin = await userIsSuperAdmin(user.id, user.email);
 
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
@@ -47,6 +49,7 @@ export default async function DashboardLayout({
           slug: membership.slug,
           role: membership.role,
         }))}
+        isSuperAdmin={isSuperAdmin}
       />
       <main className="min-h-[calc(100vh-3.5rem)] px-4 py-6 sm:px-6">{children}</main>
     </div>
