@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/lib/org-membership";
+import { isPublicOrgSlug } from "@/lib/org-paths";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { createPlaceholderWhatsAppGroup, removeWhatsAppGroupFromOrg } from "@/lib/whatsapp/placeholder-groups";
 
@@ -59,6 +60,15 @@ export async function POST(req: NextRequest) {
   const action = body.action;
 
   if (action === "create") {
+    if (isPublicOrgSlug(ctx.org.slug)) {
+      return NextResponse.json(
+        {
+          error:
+            "Public is a catch-all inbox. Create link codes from the team workspace you want the group assigned to.",
+        },
+        { status: 400 },
+      );
+    }
     try {
       const created = await createPlaceholderWhatsAppGroup(ctx.orgId);
       return NextResponse.json({

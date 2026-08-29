@@ -104,6 +104,25 @@ function looksLikeMessageText(name: string): boolean {
   return false;
 }
 
+/** Empty WhatsApp group rows with no proofs — stray metadata, safe to hide. */
+export function isStaleEmptyWhatsAppGroup(
+  group: Pick<Group, "name" | "platform" | "external_id">,
+  reportCount: number,
+  inviteCode?: string,
+  options?: { publicOrg?: boolean },
+): boolean {
+  if (group.platform !== "whatsapp" || reportCount > 0 || inviteCode) return false;
+  if (isDirectMessagesBucket(group) || isWhatsAppDirectChat(group.external_id)) {
+    return false;
+  }
+  const externalId = group.external_id ?? "";
+  if (externalId.startsWith("pending:")) return false;
+  if (externalId.endsWith("@g.us")) {
+    return options?.publicOrg === true || looksLikeMessageText(group.name);
+  }
+  return looksLikeMessageText(group.name);
+}
+
 /** Human label for dashboard / group headers. */
 export function displayGroupName(
   group: Pick<Group, "name" | "platform" | "external_id">,
@@ -128,6 +147,68 @@ export function groupLinkLabel(
     return "View";
   }
   return "Open Group";
+}
+
+export function isPublicDirectMessageCard(
+  group: Pick<Group, "name" | "platform" | "external_id">,
+): boolean {
+  return isDirectMessagesBucket(group) || isWhatsAppDirectChat(group.external_id);
+}
+
+export function isPublicUnlinkedGroupCard(
+  group: Pick<Group, "name" | "platform" | "external_id">,
+): boolean {
+  if (group.platform !== "whatsapp") return true;
+  return !isPublicDirectMessageCard(group);
+}
+
+/** Split Public org dashboard cards into inbox vs unlinked group buckets. */
+export function categorizePublicCards(cards: GroupCard[]): {
+  directMessages: GroupCard[];
+  unlinkedGroups: GroupCard[];
+} {
+  const directMessages: GroupCard[] = [];
+  const unlinkedGroups: GroupCard[] = [];
+  for (const card of cards) {
+    if (isPublicDirectMessageCard(card.group)) {
+      directMessages.push(card);
+    } else {
+      unlinkedGroups.push(card);
+    }
+  }
+  directMessages.sort((a, b) => {
+    if (isDirectMessagesBucket(a.group)) return -1;
+    if (isDirectMessagesBucket(b.group)) return 1;
+    const ra = a.reports[0]?.createdAt ?? "";
+    const rb = b.reports[0]?.createdAt ?? "";
+    return rb.localeCompare(ra) || displayGroupName(a.group).localeCompare(displayGroupName(b.group));
+  });
+  unlinkedGroups.sort((a, b) => {
+    const ra = a.reports[0]?.createdAt ?? "";
+    const rb = b.reports[0]?.createdAt ?? "";
+    return rb.localeCompare(ra) || displayGroupName(a.group).localeCompare(displayGroupName(b.group));
+  });
+  return { directMessages, unlinkedGroups };
+}
+
+/** Cleaner label for orphan WhatsApp groups on the Public workspace. */
+export function displayPublicUnlinkedGroupName(
+  group: Pick<Group, "name" | "platform" | "external_id">,
+): string {
+  if (group.platform !== "whatsapp") return group.name;
+  if (isPendingGroupExternalId(group.external_id)) {
+    return group.name?.trim() || "Pending WhatsApp group";
+  }
+  if (looksLikeMessageText(group.name)) {
+    const jid = (group.external_id ?? "").replace(/@g\.us$/i, "");
+    const suffix = jid ? jid.slice(-8) : "unknown";
+    return `Unlinked group · …${suffix}`;
+  }
+  return group.name;
+}
+
+function isPendingGroupExternalId(externalId?: string | null): boolean {
+  return Boolean(externalId?.startsWith("pending:"));
 }
 
 /** Stable label when creating a WhatsApp 1:1 group row. */

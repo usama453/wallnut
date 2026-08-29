@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendOrgInviteEmail } from "@/lib/org-invites";
 import { requireOrgContext } from "@/lib/org-membership";
+import { isPublicOrgSlug } from "@/lib/org-paths";
 import { isHiddenOrgMember, memberDisplayRole } from "@/lib/roles";
 
 const ROLES = ["owner", "admin", "member", "viewer"] as const;
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     orgId: ctx.orgId,
     role: ctx.role,
+    isPublic: ctx.org.isPublic,
     members: resolvedMembers,
     invites: invites ?? [],
   });
@@ -65,6 +67,12 @@ export async function POST(req: NextRequest) {
     typeof body.org === "string" ? body.org : req.nextUrl.searchParams.get("org"),
   );
   if (ctx.error) return ctx.error;
+  if (isPublicOrgSlug(ctx.org.slug)) {
+    return NextResponse.json(
+      { error: "The Public workspace is open to all signed-in users and does not use invites" },
+      { status: 400 },
+    );
+  }
   const admin = await createAdminClient();
 
   switch (body.action) {

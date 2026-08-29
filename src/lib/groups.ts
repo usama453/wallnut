@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Group } from "@/types";
 import type { GroupCard, ReportRow } from "./groups-presentation";
-import { displayGroupName } from "./groups-presentation";
+import { displayGroupName, isStaleEmptyWhatsAppGroup } from "./groups-presentation";
+import { isPublicOrgSlug } from "@/lib/org-paths";
 import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
 import {
   codeFromPendingExternalId,
@@ -14,6 +15,7 @@ export {
   displayGroupName,
   groupLinkLabel,
   isDirectMessagesBucket,
+  isStaleEmptyWhatsAppGroup,
   isWhatsAppDirectChat,
   isWhatsAppGroupChat,
   platformColor,
@@ -218,6 +220,13 @@ export async function getDashboardData(orgIdOverride?: string) {
 
   const cards = [...groupMap.values()]
     .filter((card) => {
+      if (
+        isStaleEmptyWhatsAppGroup(card.group, card.reports.length, card.inviteCode, {
+          publicOrg: isPublicOrgSlug(orgSlug),
+        })
+      ) {
+        return false;
+      }
       const externalId = card.group.external_id ?? "";
       if (
         card.group.name === "General" ||

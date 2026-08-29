@@ -7,9 +7,13 @@ import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { ReportRow } from "@/lib/groups";
 import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
-import { displayGroupName } from "@/lib/groups-presentation";
+import {
+  displayGroupName,
+  displayPublicUnlinkedGroupName,
+  isPublicDirectMessageCard,
+} from "@/lib/groups-presentation";
 import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
-import { orgHomePath } from "@/lib/org-paths";
+import { isPublicOrgSlug, orgHomePath } from "@/lib/org-paths";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Group, GroupPlatform } from "@/types";
@@ -163,6 +167,11 @@ export default async function OrgGroupReportsPage({
   const canRemoveGroup =
     group.platform === "whatsapp" &&
     canCreateWhatsAppGroup(access.profile.role, access.isSuperAdmin);
+  const isPublic = isPublicOrgSlug(slug);
+  const groupTitle =
+    isPublic && !isPublicDirectMessageCard(group)
+      ? displayPublicUnlinkedGroupName(group)
+      : displayGroupName(group);
 
   return (
     <div className="mx-auto w-full max-w-[880px] pb-10 pt-2">
@@ -191,12 +200,18 @@ export default async function OrgGroupReportsPage({
           <div className="flex items-center justify-center gap-2.5">
             <PlatformIcon platform={group.platform as GroupPlatform} size={22} />
             <h1 className="text-[clamp(24px,4vw,30px)] font-bold leading-none tracking-[-0.72px] text-white">
-              {displayGroupName(group)}
+              {groupTitle}
             </h1>
           </div>
         </Reveal>
         <Reveal dramatic delayMs={240}>
-          <p className="mt-2.5 text-[12px] text-[#919191]">{access.org.name}</p>
+          <p className="mt-2.5 text-[12px] text-[#919191]">
+            {isPublic
+              ? isPublicDirectMessageCard(group)
+                ? "Public · direct message"
+                : "Public · unlinked group"
+              : access.org.name}
+          </p>
         </Reveal>
         <Reveal dramatic delayMs={380}>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">

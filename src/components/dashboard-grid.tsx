@@ -320,10 +320,12 @@ function DashboardGroupCard({
   card,
   orgSlug,
   defaultOpen,
+  groupLabel,
 }: {
   card: GroupCard;
   orgSlug: string;
   defaultOpen: boolean;
+  groupLabel?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -353,7 +355,7 @@ function DashboardGroupCard({
         >
           <PlatformIcon platform={card.group.platform} />
           <span className="truncate text-[12px] font-bold text-[#fbfbfb]">
-            {displayGroupName(card.group)}
+            {groupLabel ?? displayGroupName(card.group)}
           </span>
           {awaitingSync ? (
             <span className="font-mono text-[10px] tracking-wider text-[#25D366]">
@@ -483,6 +485,8 @@ function ReportMarker({ report }: { report: ReportRow }) {
     </span>
   );
 }
+
+export { DashboardGroupCard, PendingWhatsAppGroupCard };
 
 function ordinalSuffix(value: number) {
   if (value % 100 >= 11 && value % 100 <= 13) return "th";

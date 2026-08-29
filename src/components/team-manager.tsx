@@ -49,6 +49,7 @@ export function TeamManager({
   onUpdated?: () => void;
 }) {
   const [myRole, setMyRole] = useState<Role>("member");
+  const [isPublic, setIsPublic] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [email, setEmail] = useState("");
@@ -69,6 +70,7 @@ export function TeamManager({
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed to load");
       const data = await res.json();
       setMyRole(data.role);
+      setIsPublic(Boolean(data.isPublic));
       const sorted = [...(data.members ?? [])].sort(
         (a: Member, b: Member) => ROLE_ORDER[a.role as Role] - ROLE_ORDER[b.role as Role],
       );
@@ -138,6 +140,18 @@ export function TeamManager({
         <p className="text-center text-[11px] text-[#9ed4a8]">{notice}</p>
       ) : null}
 
+      {isPublic ? (
+        <article className={PANEL}>
+          <div className="px-4 py-5">
+            <h2 className="text-[12px] font-bold text-[#fbfbfb]">Open workspace</h2>
+            <p className="mt-2 text-[12px] leading-relaxed text-[#919191]">
+              Public is shared by every signed-in Wallnut user. There is no invite list —
+              anyone with an account can open it from the workspace switcher.
+            </p>
+          </div>
+        </article>
+      ) : (
+        <>
       <article className={PANEL}>
         <div className="border-b border-[#222] px-4 py-3">
           <h2 className="text-[12px] font-bold text-[#fbfbfb]">
@@ -274,6 +288,8 @@ export function TeamManager({
           </ul>
         </article>
       ) : null}
+        </>
+      )}
 
       {removeTarget ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 px-4">

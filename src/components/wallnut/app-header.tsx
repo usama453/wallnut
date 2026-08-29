@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { orgHomePath, orgRankingsPath } from "@/lib/org-paths";
+import { orgHomePath, orgRankingsPath, isPublicOrgSlug } from "@/lib/org-paths";
 import { TeamAccess } from "@/components/team-access";
 import { InitialAvatar } from "./avatar";
 import { Spinner } from "./icons";
@@ -85,7 +85,7 @@ export function AppHeader({
         <span className="text-[12px] text-[#6c6c6c]">Public</span>
       ) : (
         <div className="flex items-center gap-2.5">
-          {orgSlug ? <TeamAccess orgSlug={orgSlug} /> : null}
+          {orgSlug && !isPublicOrgSlug(orgSlug) ? <TeamAccess orgSlug={orgSlug} /> : null}
           <div ref={menuRef} className="relative">
           <button
             type="button"
