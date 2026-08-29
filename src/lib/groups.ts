@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Group } from "@/types";
 import type { GroupCard, ReportRow } from "./groups-presentation";
+import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
 import {
   codeFromPendingExternalId,
   ensurePlaceholderWhatsAppGroups,
@@ -91,13 +92,26 @@ export async function getDashboardData(orgIdOverride?: string) {
   for (const p of proofs ?? []) proofByVersion.set(p.asset_version_id, p);
 
   const proofIds = (proofs ?? []).map((p) => p.id);
-  const { data: issues } = proofIds.length
-    ? await supabase.from("proof_issues").select("proof_id").in("proof_id", proofIds)
+  const { data: issueRows } = proofIds.length
+    ? await supabase
+        .from("proof_issues")
+        .select("proof_id, category, severity, title, description, suggestion")
+        .in("proof_id", proofIds)
     : { data: null };
 
+  const issuesByProof = new Map<string, SummaryIssue[]>();
   const issueByProof = new Map<string, number>();
-  for (const i of issues ?? []) {
-    issueByProof.set(i.proof_id, (issueByProof.get(i.proof_id) ?? 0) + 1);
+  for (const row of issueRows ?? []) {
+    const list = issuesByProof.get(row.proof_id) ?? [];
+    list.push({
+      category: row.category,
+      severity: row.severity,
+      title: row.title,
+      description: row.description,
+      suggestion: row.suggestion,
+    });
+    issuesByProof.set(row.proof_id, list);
+    issueByProof.set(row.proof_id, (issueByProof.get(row.proof_id) ?? 0) + 1);
   }
 
   const visibleGroups = (groups ?? []).filter((group) => {
@@ -164,7 +178,9 @@ export async function getDashboardData(orgIdOverride?: string) {
     const proof = v ? proofByVersion.get(v.id) : undefined;
     const row: ReportRow = {
       assetId: a.id,
-      name: a.name,
+      name: proof
+        ? reportDisplayName(a.name, issuesByProof.get(proof.id) ?? [])
+        : a.name,
       kind: a.kind,
       thumbnail: a.kind === "pdf" ? v?.preview_url ?? null : v?.url ?? null,
       issueCount: proof ? issueByProof.get(proof.id) ?? 0 : 0,

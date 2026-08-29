@@ -138,6 +138,31 @@ export function formatCorrectionList(issues: SummaryIssue[]): string {
   return body ? `${body}${suffix}` : "";
 }
 
+/** One-line preview of the WhatsApp reply Wallnut sends after proofing. */
+export function whatsappReplyPreview(issues: SummaryIssue[]): string {
+  const corrections = formatCorrectionList(issues);
+  if (corrections) {
+    const lines = corrections.split("\n");
+    const more = lines.find((line) => line.startsWith("+"));
+    const body = lines.filter((line) => !line.startsWith("+"));
+    const headline = body[0] ?? corrections;
+    if (more) return `${headline} (${more})`;
+    if (body.length > 1) return `${headline} +${body.length - 1} more`;
+    return headline;
+  }
+  const status = reportStatus(issues);
+  return `${status.emoji} ${status.label}`;
+}
+
+/** Prefer the Wallnut reply text for list labels when proof results exist. */
+export function reportDisplayName(
+  assetName: string,
+  issues: SummaryIssue[] | null | undefined,
+): string {
+  if (issues != null) return whatsappReplyPreview(issues);
+  return assetName;
+}
+
 /** Sort corrections so the most concrete/actionable ones surface first. */
 function buildCorrectionLines(issues: SummaryIssue[]): CorrectionLine[] {
   const parsed: (CorrectionLine & { score: number })[] = [];

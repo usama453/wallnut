@@ -6,6 +6,7 @@ import { ReportCard } from "@/components/wallnut/report-card";
 import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { ReportRow } from "@/lib/groups";
+import { reportDisplayName, type SummaryIssue } from "@/lib/reportSummary";
 import { resolveOrgAccess } from "@/lib/org-access";
 import { orgHomePath } from "@/lib/org-paths";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
@@ -80,11 +81,24 @@ export default async function OrgGroupReportsPage({
   }
 
   const proofIds = (proofs ?? []).map((proof) => proof.id);
-  const { data: issues } = proofIds.length
-    ? await supabase.from("proof_issues").select("proof_id").in("proof_id", proofIds)
+  const { data: issueRows } = proofIds.length
+    ? await supabase
+        .from("proof_issues")
+        .select("proof_id, category, severity, title, description, suggestion")
+        .in("proof_id", proofIds)
     : { data: null };
+  const issuesByProof = new Map<string, SummaryIssue[]>();
   const issueCountByProof = new Map<string, number>();
-  for (const issue of issues ?? []) {
+  for (const issue of issueRows ?? []) {
+    const list = issuesByProof.get(issue.proof_id) ?? [];
+    list.push({
+      category: issue.category,
+      severity: issue.severity,
+      title: issue.title,
+      description: issue.description,
+      suggestion: issue.suggestion,
+    });
+    issuesByProof.set(issue.proof_id, list);
     issueCountByProof.set(
       issue.proof_id,
       (issueCountByProof.get(issue.proof_id) ?? 0) + 1,
@@ -127,7 +141,9 @@ export default async function OrgGroupReportsPage({
     const proof = version ? proofByVersion.get(version.id) : undefined;
     return {
       assetId: asset.id,
-      name: asset.name,
+      name: proof
+        ? reportDisplayName(asset.name, issuesByProof.get(proof.id) ?? [])
+        : asset.name,
       kind: asset.kind,
       thumbnail:
         asset.kind === "pdf" ? version?.preview_url ?? null : version?.url ?? null,

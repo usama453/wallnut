@@ -4,7 +4,7 @@ import { proofSemaphore } from "@/lib/proof/concurrency";
 import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
-import { formatCorrectionList, reportStatus } from "@/lib/reportSummary";
+import { formatCorrectionList, reportStatus, whatsappReplyPreview } from "@/lib/reportSummary";
 import {
   extractMedia,
   extractWahaMessages,
@@ -302,6 +302,10 @@ async function handleMedia(
 
     const result = await proofSemaphore.run(() => runProof(created.versionId));
     console.log(`[whatsapp] proof done for ${created.assetId} score=${result.report.score}`);
+
+    const replyTitle = whatsappReplyPreview(result.report.issues);
+    await admin.from("assets").update({ name: replyTitle }).eq("id", created.assetId);
+
     logUsage({
       direction: "inbound",
       msg_type: "proof",
