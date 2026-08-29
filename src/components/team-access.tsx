@@ -95,7 +95,7 @@ export function TeamAccess({ orgSlug }: { orgSlug: string }) {
               >
                 <div className="flex shrink-0 items-center justify-between border-b border-[#222] px-4 py-3">
                   <h2 id="team-access-title" className="text-[14px] font-bold text-[#fbfbfb]">
-                    Team
+                    Dashboard access
                   </h2>
                   <button
                     type="button"
