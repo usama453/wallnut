@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -36,7 +37,9 @@ export type OrgAccess =
       memberships: Array<{ name: string; slug: string; role: string }>;
     };
 
-export async function resolveOrgAccess(slug: string): Promise<OrgAccess> {
+export const resolveOrgAccess = cache(async function resolveOrgAccess(
+  slug: string,
+): Promise<OrgAccess> {
   if (isReservedOrgSlug(slug)) return { status: "reserved" };
 
   const supabase = await createClient();
@@ -109,7 +112,7 @@ export async function resolveOrgAccess(slug: string): Promise<OrgAccess> {
       role: membership.role,
     })),
   };
-}
+});
 
 export function requireOrgPageAccess(
   access: OrgAccess,

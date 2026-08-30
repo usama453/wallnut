@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
@@ -44,7 +45,9 @@ export async function getPublicOrgRecord(): Promise<OrgRecord | null> {
   };
 }
 
-export async function getOrgBySlug(slug: string): Promise<OrgRecord | null> {
+export const getOrgBySlug = cache(async function getOrgBySlug(
+  slug: string,
+): Promise<OrgRecord | null> {
   if (isPublicOrgSlug(slug)) return getPublicOrgRecord();
   const admin = await createAdminClient();
   const { data } = await admin
@@ -59,9 +62,11 @@ export async function getOrgBySlug(slug: string): Promise<OrgRecord | null> {
     slug: data.slug,
     isPublic: Boolean(data.is_public) || isPublicOrgSlug(data.slug),
   };
-}
+});
 
-export async function listUserMemberships(userId: string): Promise<OrgMembership[]> {
+export const listUserMemberships = cache(async function listUserMemberships(
+  userId: string,
+): Promise<OrgMembership[]> {
   const admin = await createAdminClient();
   const superAdmin = await userIsSuperAdmin(userId);
   const publicOrg = await getPublicOrgRecord();
@@ -113,7 +118,7 @@ export async function listUserMemberships(userId: string): Promise<OrgMembership
       (a, b) =>
         Number(b.isPublic) - Number(a.isPublic) || a.name.localeCompare(b.name),
     );
-}
+});
 
 export async function userCanAccessOrg(userId: string, slug: string) {
   if (isPublicOrgSlug(slug)) return true;
@@ -124,6 +129,12 @@ export async function userCanAccessOrg(userId: string, slug: string) {
 
 export async function activateOrgForUser(userId: string, orgId: string) {
   const admin = await createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("org_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.org_id === orgId) return;
   await admin.from("profiles").update({ org_id: orgId }).eq("id", userId);
 }
 

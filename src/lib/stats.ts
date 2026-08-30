@@ -112,7 +112,7 @@ export async function getStats(orgIdOverride?: string | null) {
   let contacts: Array<{ phone: string; display_name: string | null }> = [];
   let aliasMap = new Map<string, string>();
   if (orgId) {
-    await syncOrgWhatsAppGroupContacts(orgId);
+    void syncOrgWhatsAppGroupContacts(orgId).catch(() => {});
     contacts = await loadOrgWhatsAppContacts(orgId);
     aliasMap = buildContactAliasMap(contacts, getOrgIdentityPairs(orgId));
     void syncOrgWhatsAppAvatars(orgId).catch(() => {});

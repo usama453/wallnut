@@ -358,21 +358,22 @@ async function loadContactNamesForDashboard(
   });
   if (missing.length === 0) return contactNames;
 
-  const live = await Promise.all(
-    missing.slice(0, 8).map(async (digits) => {
-      const name = await fetchWahaContactName(digits);
-      return [digits, name] as const;
-    }),
-  );
-  for (const [digits, name] of live) {
-    if (!name || looksLikePhoneLabel(name)) continue;
-    contactNames.set(digits, name);
-    rememberWhatsAppContact({
-      orgId,
-      phone: digits,
-      displayName: name,
-    });
-  }
+  void (async () => {
+    const live = await Promise.all(
+      missing.slice(0, 8).map(async (digits) => {
+        const name = await fetchWahaContactName(digits);
+        return [digits, name] as const;
+      }),
+    );
+    for (const [digits, name] of live) {
+      if (!name || looksLikePhoneLabel(name)) continue;
+      rememberWhatsAppContact({
+        orgId,
+        phone: digits,
+        displayName: name,
+      });
+    }
+  })();
 
   return contactNames;
 }

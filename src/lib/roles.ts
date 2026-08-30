@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const DEFAULT_SUPER_ADMINS = ["usama@getthenga.com", "xalion.malik@gmail.com"];
@@ -26,7 +27,7 @@ export function memberDisplayRole(
   return role ?? "member";
 }
 
-export async function userIsSuperAdmin(
+export const userIsSuperAdmin = cache(async function userIsSuperAdmin(
   userId: string,
   email?: string | null,
 ): Promise<boolean> {
@@ -48,7 +49,7 @@ export async function userIsSuperAdmin(
   } catch {
     return superAdminEmails().includes(email?.trim().toLowerCase() ?? "");
   }
-}
+});
 
 function superAdminEmails() {
   const extra = (process.env.SUPER_ADMIN_EMAILS ?? "")
