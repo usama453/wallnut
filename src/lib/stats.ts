@@ -280,7 +280,36 @@ function dedupePeople(
     return { ...person, key: digits };
   });
 
-  return mergePeopleByAvatar(mergePeopleByDisplayName(normalized));
+  return mergePeopleByAvatar(
+    mergePeopleByResolvedName(mergePeopleByDisplayName(normalized), nameIndex),
+  );
+}
+
+function mergePeopleByResolvedName(
+  people: PersonStats[],
+  nameIndex: Map<string, string>,
+): PersonStats[] {
+  const groups = new Map<string, PersonStats[]>();
+  for (const person of people) {
+    const name = nameIndex.get(person.key)?.trim().toLowerCase();
+    if (!name || looksLikePhoneLabel(name)) continue;
+    const group = groups.get(name) ?? [];
+    group.push(person);
+    groups.set(name, group);
+  }
+
+  const absorbed = new Set<string>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const primary = pickPrimaryPerson(group);
+    for (const person of group) {
+      if (person.key === primary.key) continue;
+      absorbPerson(primary, person);
+      absorbed.add(person.key);
+    }
+  }
+
+  return people.filter((person) => !absorbed.has(person.key));
 }
 
 function mergePeopleByDisplayName(people: PersonStats[]): PersonStats[] {

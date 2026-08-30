@@ -63,7 +63,7 @@ export default async function OrganizationHome({
         orgSlug={slug}
         cards={data.cards}
         stats={{ ...data.stats, members: rankings.totals.people }}
-        leaders={rankings.byTypos}
+        leaders={rankings.byTypos.filter((person) => person.uploads > 0)}
         pendingInvites={data.pendingInvites}
         canAddGroup={canAddGroup}
         isSuperAdmin={access.isSuperAdmin}

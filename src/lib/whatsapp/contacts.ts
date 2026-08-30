@@ -227,6 +227,26 @@ export function buildContactAliasMap(
     }
   }
 
+  // Link bare phone contacts to a named canonical when they share the same saved name.
+  const canonicalByName = new Map<string, string>();
+  for (const group of byName.values()) {
+    const phoneEntry = group.find(
+      (entry) => entry.isPhone && looksLikeMobilePhoneDigits(entry.digits),
+    );
+    const canonical = phoneEntry?.digits ?? group.find((entry) => entry.isPhone)?.digits;
+    if (!canonical) continue;
+    canonicalByName.set(group[0]!.name, canonical);
+  }
+  for (const contact of contacts) {
+    const digits = phoneDigits(contact.phone);
+    const name = contact.display_name?.trim().toLowerCase();
+    if (!digits || !name || /^[+\d\s.-]+$/.test(name)) continue;
+    const canonical = canonicalByName.get(name);
+    if (canonical && digits !== canonical && !aliases.has(digits)) {
+      aliases.set(digits, canonical);
+    }
+  }
+
   return aliases;
 }
 
