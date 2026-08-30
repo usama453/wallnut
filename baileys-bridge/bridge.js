@@ -33,6 +33,8 @@ const WEBHOOK_URL =
   process.env.WEBHOOK_URL || "http://localhost:3000/api/whatsapp/webhook";
 // Base URL used in media links returned to the app (must be reachable FROM the app).
 const MEDIA_BASE_URL = process.env.MEDIA_BASE_URL || `http://localhost:${PORT}`;
+const WALLNUT_CONTACT_EMAIL = process.env.WALLNUT_CONTACT_EMAIL || "hey@usama.fun";
+const WALLNUT_SITE_URL = process.env.WALLNUT_SITE_URL || "https://usama.fun/wallnut/";
 const AUTH_DIR = path.join(__dirname, "session-data");
 const log = pino({ level: process.env.LOG_LEVEL || "warn" });
 
@@ -206,6 +208,39 @@ function profilePictureCandidates(rawId) {
   return out;
 }
 
+function wallnutBusinessDescription() {
+  return [
+    "Hi! I'm Wallnut 🐢",
+    "",
+    "Drop me whatever you need proofed, image or PDF. I'll take it from there.",
+    "",
+    "🚧 In demo mode currently.",
+    "",
+    "Want me in a group chat?",
+    WALLNUT_SITE_URL,
+    "",
+    "Get in touch",
+    WALLNUT_CONTACT_EMAIL,
+  ].join("\n");
+}
+
+async function syncWallnutBusinessProfile(socket) {
+  if (typeof socket.updateBussinesProfile !== "function") return;
+  try {
+    await socket.updateBussinesProfile({
+      description: wallnutBusinessDescription(),
+      email: WALLNUT_CONTACT_EMAIL,
+      websites: [WALLNUT_SITE_URL],
+    });
+    console.log(`[bridge] business profile synced (contact ${WALLNUT_CONTACT_EMAIL})`);
+  } catch (err) {
+    console.warn(
+      "[bridge] business profile sync failed:",
+      err?.message || err,
+    );
+  }
+}
+
 function digitsOf(jid) {
   return String(jid).split("@")[0].replace(/[^0-9]/g, "");
 }
@@ -268,6 +303,7 @@ async function createSocket() {
         pushName: nextSocket.user?.name || undefined,
       };
       console.log(`[bridge] connected as +${digitsOf(me.id)}`);
+      syncWallnutBusinessProfile(nextSocket).catch(() => {});
     }
     if (connection === "close") {
       me = null;

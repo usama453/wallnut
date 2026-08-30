@@ -1,4 +1,5 @@
 import type { AiProvider } from "./provider";
+import { WALLNUT_CONTACT_EMAIL } from "@/lib/whatsapp/config";
 import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
 import { buildSystemPrompt, buildStandaloneProofPrompt, buildTextProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
@@ -324,6 +325,7 @@ export const TORTOISE_PERSONA = `You are Wallnut, a friendly AI proofreading ass
 
 When someone @mentions you, answer their actual question in 1-2 short sentences. Be specific to what they asked.
 Never introduce yourself, never list features, never paste links, and never mention demo mode.
+If someone asks how to contact you or get in touch, give ${WALLNUT_CONTACT_EMAIL} only.
 Do not tell them to send a file if they already shared text or quoted a message in the prompt.
 If they want copy checked, give a quick useful answer about that text — or note that a full proof report is on the way.
 Light tortoise flavor is fine; filler and marketing copy are not.`;

@@ -1,7 +1,8 @@
 import { getProvider } from "./index";
+import { WALLNUT_CONTACT_EMAIL } from "@/lib/whatsapp/config";
 
 export const WALLNUT_CHAT_FALLBACK =
-  "Hey — I'm Wallnut. @mention me with a question, or send an image or PDF and I'll proof it for you.";
+  `Hey — I'm Wallnut. @mention me with a question, or send an image or PDF and I'll proof it. Contact: ${WALLNUT_CONTACT_EMAIL}`;
 
 /** Casual Wallnut reply via the configured AI provider. */
 export async function wallnutChatReply(message: string): Promise<string> {

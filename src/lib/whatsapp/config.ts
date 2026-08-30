@@ -16,3 +16,11 @@ export const WAHA_WEBHOOK_HMAC_KEY =
 /** The bot's own WhatsApp number (with country code, no +).
  * e.g. 923345818677 */
 export const BOT_PHONE_NUMBER = process.env.BOT_PHONE_NUMBER ?? "";
+
+/** Public contact email shown in bios, footers, and support replies. */
+export const WALLNUT_CONTACT_EMAIL =
+  process.env.WALLNUT_CONTACT_EMAIL ?? "hey@usama.fun";
+
+/** Marketing site for group setup / learn more links. */
+export const WALLNUT_SITE_URL =
+  process.env.WALLNUT_SITE_URL ?? "https://usama.fun/wallnut/";

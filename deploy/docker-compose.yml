@@ -29,6 +29,8 @@ services:
       WAHA_SESSION: default
       WEBHOOK_URL: http://app:3000/api/whatsapp/webhook
       MEDIA_BASE_URL: http://bridge:3001
+      WALLNUT_CONTACT_EMAIL: ${WALLNUT_CONTACT_EMAIL:-hey@usama.fun}
+      WALLNUT_SITE_URL: ${WALLNUT_SITE_URL:-https://usama.fun/wallnut/}
     volumes:
       - bridge-session:/bridge/session-data
     ports:
