@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { formatWhatsAppReply } from "../src/lib/reportSummary.ts";
+import { formatCustomCleanClosing, formatWhatsAppReply } from "../src/lib/reportSummary.ts";
 
 const issues = [
   { title: 'Compound spacing: "OneHomes"', severity: "low", category: "marketing" },
@@ -44,8 +44,13 @@ assert.match(
 
 assert.doesNotMatch(grouped, /Looks good otherwise/);
 
-const clean = formatWhatsAppReply([], "custom");
-assert.equal(clean, "Looks good 👌🏻");
+assert.equal(formatWhatsAppReply([], "custom"), "Looks good 👌🏻");
+
+const cleanWithAi = formatWhatsAppReply([], "custom", { humanReply: "All okay" });
+assert.equal(cleanWithAi, "All okay 👌🏻");
+
+assert.equal(formatCustomCleanClosing({ humanReply: "Clean copy." }), "Clean copy 👌🏻");
+assert.equal(formatCustomCleanClosing(), "Looks good 👌🏻");
 
 console.log("GROUPED DICTIONARY OK");
 console.log(grouped);

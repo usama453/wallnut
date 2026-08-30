@@ -190,7 +190,7 @@ export function whatsappReplyPreview(
   if (style === "custom") {
     const { errors, potentialErrors } = bucketCustomTerms(issues);
     const total = errors.length + potentialErrors.length;
-    if (!total) return "Looks good 👌🏻";
+    if (!total) return formatCustomCleanClosing(context);
     const parts: string[] = [];
     if (errors.length) parts.push(`${errors.length} Error${errors.length === 1 ? "" : "s"}`);
     if (potentialErrors.length) {
@@ -233,7 +233,7 @@ export function formatWhatsAppReply(
     case "mixed":
       return formatMixedWhatsAppReply(issues);
     case "custom":
-      return formatCustomWhatsAppReply(issues);
+      return formatCustomWhatsAppReply(issues, context);
     case "human":
     default:
       return formatHumanWhatsAppReply(issues, context);
@@ -410,14 +410,32 @@ function formatCustomSection(count: number, label: string, terms: string[]): str
   return `${count} ${label}\n${terms.join(" | ")}`;
 }
 
-function formatCustomWhatsAppReply(issues: SummaryIssue[]): string {
+const CUSTOM_CLEAN_FALLBACK = "Looks good 👌🏻";
+const CUSTOM_CLEAN_MAX_CHARS = 48;
+
+/** Closing line for a clean custom-style proof — uses Gemini humanReply when available. */
+export function formatCustomCleanClosing(context?: WhatsAppReplyContext): string {
+  const raw = context?.humanReply?.trim();
+  if (!raw) return CUSTOM_CLEAN_FALLBACK;
+
+  const line = raw.replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "");
+  if (!line || line.length > CUSTOM_CLEAN_MAX_CHARS) return CUSTOM_CLEAN_FALLBACK;
+  if (/\p{Extended_Pictographic}/u.test(line)) return line;
+
+  return `${line} 👌🏻`;
+}
+
+function formatCustomWhatsAppReply(
+  issues: SummaryIssue[],
+  context?: WhatsAppReplyContext,
+): string {
   const { errors, potentialErrors } = bucketCustomTerms(issues);
   const total = errors.length + potentialErrors.length;
 
   if (!total) {
-    if (!issues.length) return "Looks good 👌🏻";
+    if (!issues.length) return formatCustomCleanClosing(context);
     const fallback = issues.flatMap((issue) => customTermsFromIssue(issue));
-    if (!fallback.length) return "Looks good 👌🏻";
+    if (!fallback.length) return formatCustomCleanClosing(context);
     return formatCustomSection(
       fallback.length,
       `Potential Error${fallback.length === 1 ? "" : "s"}`,

@@ -86,7 +86,8 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
   },
   custom: {
     title: "Custom",
-    description: "Separate definite errors from potential issues, pipe-separated.",
+    description:
+      "Separate definite errors from potential issues, pipe-separated. Clean proofs get a short AI closing line.",
     example:
       "5 Potential Errors\nOneHomes | LiveBeyond | YearinRewind | OverseasPakistanis | CloserToHome",
   },

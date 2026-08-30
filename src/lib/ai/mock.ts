@@ -193,7 +193,10 @@ export class MockProvider implements AiProvider {
       }
       return `${typoIssues.length} typo${typoIssues.length === 1 ? "" : "s"} to fix.`;
     }
-    if (!report.issues.length) return "Looks clean.";
+    if (!report.issues.length) {
+      const closings = ["Looks good", "All okay", "Clean copy", "Good to go"];
+      return closings[report.score % closings.length];
+    }
     const top = report.issues[0];
     const detail = top.suggestion?.trim() || top.title?.trim();
     return (detail || "Needs a quick look.").slice(0, 100);

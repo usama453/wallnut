@@ -219,6 +219,11 @@ export function buildHumanReplyPrompt(report: RawReport): string {
     .slice(0, 6)
     .map((issue) => `- [${issue.severity}] ${issue.title}`)
     .join("\n");
+  const isClean = report.issues.length === 0;
+  const copyContext =
+    isClean && report.summary?.trim()
+      ? `\nCopy / design context: ${report.summary.trim().slice(0, 240)}`
+      : "";
 
   return `You are Wallnut replying on WhatsApp after proofing a marketing image.
 
@@ -228,12 +233,12 @@ Rules:
 - Exactly 1 short sentence, under 100 characters total
 - Casual and direct — no filler ("I noticed", "just wanted to", "overall")
 - Typos: count + one word→fix pair only (e.g. "2 typos — wna → wan")
-- Clean asset: one brief positive line (e.g. "Looks clean.")
+- Clean asset: one brief positive closing — vary the wording (e.g. "Looks good", "All okay", "Clean copy", "Good to go", "All clear"). Match the tone of the copy when you can.${isClean ? " Under 40 characters." : ""}
 - No bullet lists, markdown, emojis, greeting, or sign-off
 
 Score: ${report.score}/100
 Findings (${report.issues.length}):
-${issuesText || "(none)"}`;
+${issuesText || "(none)"}${copyContext}`;
 }
 
 function formatBrand(brand: BrandContext): string {
