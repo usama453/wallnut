@@ -113,6 +113,7 @@ COORDINATES: for every issue, return a tight bounding box (normalized 0–1 only
 
 RULES:
 - Be specific and actionable. Reference exact phrases from the canonical text when applicable.
+- Quote the flagged word or phrase in every issue title, e.g. Misspelled "recieve" or Compound spacing: "OneHomes".
 - ${spellingHandled ? "Never flag a word as misspelled. Never suggest a spelling correction." : "Check EVERY word for spelling. Do NOT flag proper nouns as spelling errors just because they are uncommon."}
 - Keep the report concise: list at most the 8 most important issues. Instead of many trivial cosmetic nits, group them into a single low-severity item. Do not pad the list.
 - Severity: high = blocks publishing (errors, wrong facts, broken layout), medium = should fix, low = nice to have.
@@ -202,6 +203,7 @@ ${checkSections}
 
 RULES:
 - Be specific and actionable — reference exact phrases from the text.
+- Quote the flagged word or phrase in every issue title, e.g. Misspelled "recieve" or Compound spacing: "OneHomes".
 - List at most 8 issues, highest severity first.
 - If the copy is clean, return a high score with an empty or near-empty issues list.
 - Score 0–100. status "passed" if score >= 90 and no high issues; "needs_review" if >= 70; else "errors".

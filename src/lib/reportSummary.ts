@@ -3,6 +3,7 @@
  */
 import type { ProofResponseStyle } from "@/lib/proof/proof-settings";
 import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
+import { extractQuotedWords } from "@/lib/proof/issue-locations";
 
 export interface SummaryIssue {
   category?: string | null;
@@ -283,17 +284,62 @@ interface CustomReplyBuckets {
 }
 
 function customTermFromIssue(issue: SummaryIssue): string | null {
-  const hay = `${issue.title ?? ""} ${issue.suggestion ?? ""} ${issue.description ?? ""}`;
+  const title = issue.title ?? "";
+  const suggestion = issue.suggestion ?? "";
+  const description = issue.description ?? "";
+  const hay = `${title} ${suggestion} ${description}`;
+
   const pair = extractPair(hay);
   if (pair?.before && pair.before !== "—") return pair.before.trim();
 
-  const misspelled = /Misspelled\s+"([^"]+)"/i.exec(issue.title ?? "");
+  const misspelled = /Misspelled\s+"([^"]+)"/i.exec(title);
   if (misspelled?.[1]) return misspelled[1].trim();
 
-  const quoted = /"([^"]+)"/.exec(issue.title ?? "");
-  if (quoted?.[1]) return quoted[1].trim();
+  for (const quoted of extractQuotedWords({
+    title: title,
+    description: issue.description,
+    suggestion: issue.suggestion,
+  })) {
+    const token = quoted.trim();
+    if (!token) continue;
+    if (!/\s/.test(token) && token.length <= 48) return token;
+    const word = token.match(/\b([A-Za-z][A-Za-z0-9']{2,})\b/)?.[1];
+    if (word && word.length <= 48) return word;
+    if (token.length <= 48) return token;
+  }
+
+  const foundIn = /found in:\s*"([^"]+)"/i.exec(hay);
+  if (foundIn?.[1]) {
+    const tokens = foundIn[1].match(/[A-Za-z][A-Za-z0-9']{2,}/g) ?? [];
+    const compound = tokens.find((token) => /[a-z][A-Z]/.test(token));
+    if (compound) return compound;
+    if (tokens[0]) return tokens[0];
+  }
+
+  const compounds = hay.match(/\b([A-Z][a-z]+(?:[A-Z][a-zA-Z0-9]+)+)\b/g);
+  if (compounds?.[0]) return compounds[0];
+
+  const afterColon = title.split(":").pop()?.trim().replace(/^["']|["']$/g, "");
+  if (afterColon && afterColon.length <= 48 && !/^(sense check|grammar|marketing)$/i.test(afterColon)) {
+    return afterColon;
+  }
 
   return null;
+}
+
+function fallbackCustomTerm(issue: SummaryIssue): string | null {
+  const title = issue.title?.trim();
+  if (!title) return null;
+  const stripped = title
+    .replace(/^(sense check|grammar|marketing|typography|brand|links?|text|visual):\s*/i, "")
+    .replace(/^verify\s+/i, "")
+    .trim();
+  if (stripped && stripped.length <= 48) return stripped;
+  return title.length <= 48 ? title : null;
+}
+
+function collectCustomTerm(issue: SummaryIssue): string | null {
+  return customTermFromIssue(issue) ?? fallbackCustomTerm(issue);
 }
 
 /** Definite errors: typos and high-severity findings with a concrete fix. */
@@ -314,21 +360,22 @@ function isDefiniteCustomError(issue: SummaryIssue): boolean {
 }
 
 function bucketCustomTerms(issues: SummaryIssue[]): CustomReplyBuckets {
-  const errors = new Set<string>();
-  const potential = new Set<string>();
+  const errors: string[] = [];
+  const potential: string[] = [];
 
   for (const issue of issues) {
-    const term = customTermFromIssue(issue);
+    const term = collectCustomTerm(issue)?.replace(/\s+/g, " ").trim();
     if (!term) continue;
-    if (isDefiniteCustomError(issue)) errors.add(term);
-    else potential.add(term);
+    if (isDefiniteCustomError(issue)) {
+      if (!errors.includes(term)) errors.push(term);
+    } else if (!errors.includes(term) && !potential.includes(term)) {
+      potential.push(term);
+    }
   }
 
-  for (const term of errors) potential.delete(term);
-
   return {
-    errors: [...errors],
-    potentialErrors: [...potential],
+    errors,
+    potentialErrors: potential.filter((term) => !errors.includes(term)),
   };
 }
 
@@ -342,9 +389,8 @@ function formatCustomWhatsAppReply(issues: SummaryIssue[]): string {
 
   if (!total) {
     if (!issues.length) return "Looks good 👌🏻";
-    // Issues exist but no extractable terms — treat all as potential.
     const fallback = issues
-      .map((issue) => customTermFromIssue(issue) ?? issue.title?.trim())
+      .map((issue) => collectCustomTerm(issue))
       .filter((term): term is string => Boolean(term))
       .slice(0, 8);
     if (!fallback.length) return "Please review 👌🏻";
