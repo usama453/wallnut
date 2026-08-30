@@ -50,10 +50,7 @@ export function ReportFindings({
                 key={`${correction.label}-${correction.before}-${index}`}
                 className="rounded-[6px] px-1 py-2"
               >
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#e8a0a0]">
-                  {correction.label}
-                </p>
-                <p className="mt-1.5 text-[14px] font-medium leading-normal tracking-[-0.01em]">
+                <p className="text-[14px] font-medium leading-normal tracking-[-0.01em]">
                   <span className="text-[#ffc4c4] line-through decoration-[#ff6b6b]/80">
                     {correction.before}
                   </span>
