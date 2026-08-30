@@ -163,6 +163,22 @@ test("passes ephemeralExpiration when sending in disappearing chats", () => {
   assert.deepEqual(opts, { ephemeralExpiration: 86400 });
 });
 
+test("maps group participant lid and resolved sender phone", () => {
+  const event = mapMessage({
+    key: {
+      id: "lid-msg",
+      remoteJid: "120363000000@g.us",
+      participant: "120364789012345678@lid",
+    },
+    pushName: "Usama",
+    messageTimestamp: 128,
+    message: { conversation: "proof this" },
+  });
+
+  assert.equal(event.payload.participant, "120364789012345678@lid");
+  assert.equal(event.payload.pushName, "Usama");
+});
+
 test("exposes the WAHA-compatible session contract", async () => {
   const unauthorized = await fetch(`${baseUrl}/api/sessions/default`);
   assert.equal(unauthorized.status, 401);

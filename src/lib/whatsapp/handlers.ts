@@ -22,7 +22,7 @@ import {
 } from "./webhook";
 import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
-import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts, contactsFromGroupParticipant } from "./contacts";
+import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts, contactsFromGroupParticipant, resolveWhatsAppSenderIdentity } from "./contacts";
 import { clearDisconnectedWhatsAppGroup, isWhatsAppGroupDisconnected } from "./disconnected-groups";
 import { directMessageGroupName, isWhatsAppDirectChat } from "@/lib/groups-presentation";
 import { fallbackGroupName, getGroupName } from "./group-name";
@@ -64,6 +64,12 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
     markSeen(message.id);
     const groupId = message?.context?.group_id ?? undefined;
     const sender = message.sender ?? message.from;
+    const identity = resolveWhatsAppSenderIdentity({
+      sender,
+      senderPhone: message.senderPhone,
+    });
+    const attributedSender = identity.primary;
+    message.attributedSender = attributedSender;
 
     // Auth codes are globally unique, so an unclaimed group can resolve its
     // organization from the code itself.
@@ -103,7 +109,7 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
           direction: "inbound",
           msg_type: message.type,
           message_id: message.id,
-          from_phone: sender,
+          from_phone: attributedSender,
           group_id: groupId,
           status: "disconnected",
         });
@@ -119,7 +125,8 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
       groupOrgId ?? (await resolveOrgId(sender, admin));
     rememberWhatsAppContact({
       orgId,
-      phone: sender,
+      phone: attributedSender,
+      linkedPhone: identity.linkedPhone,
       displayName: message.pushName,
     });
     const accessChatId = canonicalChatId(message.from);
@@ -138,7 +145,7 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
         direction: "inbound",
         msg_type: message.type,
         message_id: message.id,
-        from_phone: sender,
+        from_phone: attributedSender,
         group_id: groupId,
         status: "not_allowed",
       });
@@ -151,7 +158,7 @@ export async function handleWhatsAppMessageEvent(event: any): Promise<WhatsAppWe
       direction: "inbound",
       msg_type: message.type,
       message_id: message.id,
-      from_phone: sender,
+      from_phone: attributedSender,
       group_id: groupId,
     });
 
@@ -320,7 +327,7 @@ async function handleMedia(
   try {
     const bytes = await downloadMediaWaha(media.reference);
     const kind = media.mime === "application/pdf" ? "pdf" : "image";
-    const sender = message.sender ?? from;
+    const sender = message.attributedSender ?? message.sender ?? from;
     const admin = await createAdminClient();
     const resolvedOrg = orgId ?? (await resolveOrgId(sender, admin));
     if (!resolvedOrg) {
@@ -371,7 +378,7 @@ async function handleMedia(
     logUsage({
       direction: "inbound",
       msg_type: "proof",
-      from_phone: sender,
+      from_phone: attributedSender,
       group_id: groupId,
       status: String(result.report.score),
       asset_id: created.assetId,

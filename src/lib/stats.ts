@@ -8,6 +8,7 @@ import {
   syncOrgWhatsAppGroupContacts,
   buildContactAliasMap,
   buildCanonicalNameIndex,
+  getOrgIdentityPairs,
 } from "@/lib/whatsapp/contacts";
 import {
   avatarProxyUrl,
@@ -15,6 +16,7 @@ import {
   syncOrgWhatsAppAvatars,
 } from "@/lib/whatsapp/avatars";
 import {
+  canonicalPersonDigits,
   isLidJid,
   isUserPhoneJid,
   phoneDigits,
@@ -112,7 +114,7 @@ export async function getStats(orgIdOverride?: string | null) {
   if (orgId) {
     await syncOrgWhatsAppGroupContacts(orgId);
     contacts = await loadOrgWhatsAppContacts(orgId);
-    aliasMap = buildContactAliasMap(contacts);
+    aliasMap = buildContactAliasMap(contacts, getOrgIdentityPairs(orgId));
     void syncOrgWhatsAppAvatars(orgId).catch(() => {});
   }
 
@@ -150,24 +152,13 @@ export async function getStats(orgIdOverride?: string | null) {
     const key = personKey(contact.phone, aliasMap);
     if (key === "__dashboard__") continue;
     const existing = byPerson.get(key);
-    if (existing) {
-      if (contact.display_name && looksLikePhoneLabel(existing.display)) {
-        existing.display = contact.display_name;
-      }
-      if (isUserPhoneJid(contact.phone) && isLidJid(existing.phone)) {
-        existing.phone = contact.phone;
-      }
-      continue;
+    if (!existing) continue;
+    if (contact.display_name && looksLikePhoneLabel(existing.display)) {
+      existing.display = contact.display_name;
     }
-    byPerson.set(key, {
-      key,
-      phone: canonicalPersonPhone(contact.phone, aliasMap, contacts) ?? contact.phone,
-      display: contact.display_name?.trim() || formatPhone(contact.phone, aliasMap),
-      avatarUrl: null,
-      uploads: 0,
-      typos: 0,
-      avgScore: null,
-    });
+    if (isUserPhoneJid(contact.phone) && isLidJid(existing.phone)) {
+      existing.phone = contact.phone;
+    }
   }
 
   const people = dedupePeople(
@@ -175,7 +166,7 @@ export async function getStats(orgIdOverride?: string | null) {
     aliasMap,
     buildCanonicalNameIndex(contacts, aliasMap),
   );
-  const visible = people.filter((person) => person.phone);
+  const visible = people.filter((person) => person.phone && person.uploads > 0);
   const byName = (a: PersonStats, b: PersonStats) => a.display.localeCompare(b.display);
 
   const byUploads = [...visible].sort(
@@ -219,7 +210,10 @@ async function enrichPeople(
     Promise.resolve(resolveConnection()),
   ]);
   const avatarPaths = orgId
-    ? await loadCachedAvatarPaths(orgId, contacts)
+    ? expandAvatarPathsWithAliases(
+        await loadCachedAvatarPaths(orgId, contacts),
+        aliasMap,
+      )
     : new Map<string, string>();
   const nameIndex = buildCanonicalNameIndex(contacts, aliasMap);
 
@@ -247,7 +241,7 @@ async function enrichPeople(
   }
 
   return people.map((person) => {
-    const digits = personKey(person.phone, aliasMap);
+    const digits = canonicalPersonDigits(person.phone, aliasMap);
     const display =
       nameIndex.get(digits) || stored.get(digits) || person.display;
     const contactKey =
@@ -264,6 +258,18 @@ async function enrichPeople(
       avatarUrl: proxyUrl,
     };
   });
+}
+
+function expandAvatarPathsWithAliases(
+  paths: Map<string, string>,
+  aliasMap: Map<string, string>,
+): Map<string, string> {
+  const expanded = new Map(paths);
+  for (const [aliasDigits, canonicalDigits] of aliasMap) {
+    const path = expanded.get(canonicalDigits);
+    if (path) expanded.set(aliasDigits, path);
+  }
+  return expanded;
 }
 
 function dedupePeople(
@@ -406,9 +412,9 @@ function canonicalPersonPhone(
 
 function personKey(phone: string | null | undefined, aliases?: Map<string, string>) {
   if (!phone) return "__dashboard__";
-  const digits = phoneDigits(phone);
+  const digits = canonicalPersonDigits(phone, aliases);
   if (!digits) return phone;
-  return aliases?.get(digits) ?? digits;
+  return digits;
 }
 
 function looksLikePhoneLabel(label: string) {

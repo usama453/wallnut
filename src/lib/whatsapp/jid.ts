@@ -4,6 +4,36 @@ export function phoneDigits(raw: string | null | undefined) {
   return raw.split("@")[0].split(":")[0].replace(/\D/g, "");
 }
 
+/** True for WhatsApp user ids we attribute proofing activity to (phone or @lid). */
+export function isWhatsAppPersonJid(raw: string | null | undefined): boolean {
+  const value = raw?.trim() ?? "";
+  return (
+    value.endsWith("@lid") ||
+    value.endsWith("@c.us") ||
+    value.endsWith("@s.whatsapp.net")
+  );
+}
+
+/**
+ * Resolve any WhatsApp sender id (often @lid in groups) to a stable phone-digit key.
+ * Falls back to raw digits when no phone mapping exists yet.
+ */
+export function canonicalPersonDigits(
+  raw: string | null | undefined,
+  aliases?: Map<string, string>,
+): string {
+  if (!raw) return "";
+  const digits = phoneDigits(raw);
+  if (!digits) return raw.trim();
+  let current = digits;
+  const seen = new Set<string>();
+  while (aliases?.has(current) && !seen.has(current)) {
+    seen.add(current);
+    current = aliases.get(current)!;
+  }
+  return current;
+}
+
 export function isLidJid(raw: string | null | undefined): boolean {
   return Boolean(raw?.trim().endsWith("@lid"));
 }

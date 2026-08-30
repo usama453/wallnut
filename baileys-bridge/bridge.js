@@ -68,6 +68,8 @@ const PICTURE_TTL_MS = 6 * 60 * 60 * 1000;
 /** msgId -> original WAMessage, kept so outbound sends can quote-reply. */
 const msgCache = new Map();
 const MSG_CACHE_MAX = 300;
+/** Privacy @lid JID -> routable phone JID learned from group rosters. */
+const lidToPhone = new Map();
 /** chat jid -> disappearing duration in seconds (0 = off). */
 const ephemeralByChat = new Map();
 const EPHEMERAL_CACHE_MAX = 500;
@@ -135,17 +137,59 @@ function participantJid(participant) {
   );
 }
 
+function participantLid(participant) {
+  const candidates = [participant?.lid, participant?.id, participant?.jid, participant?.phoneNumber]
+    .filter(Boolean)
+    .map(String);
+  return candidates.find((id) => id.endsWith("@lid")) || null;
+}
+
+function rememberParticipantIdentity(participant) {
+  const phone = participantJid(participant);
+  const lid = participantLid(participant);
+  const name = participant.name || participant.notify || null;
+  if (phone) {
+    rememberContacts([{ id: phone, notify: participant.notify, name }]);
+  }
+  if (lid) {
+    rememberContacts([{ id: lid, notify: participant.notify, name }]);
+    if (phone && lid !== phone) {
+      lidToPhone.set(lid, phone);
+      const lidDigits = digitsOf(lid);
+      const phoneDigits = digitsOf(phone);
+      if (lidDigits && phoneDigits) lidToPhone.set(lidDigits, phone);
+    }
+  }
+}
+
+function resolveSenderPhone(participantJidValue) {
+  if (!participantJidValue) return null;
+  const direct = lidToPhone.get(participantJidValue);
+  if (direct) return direct;
+  const digits = digitsOf(participantJidValue);
+  if (digits && lidToPhone.has(digits)) return lidToPhone.get(digits);
+  if (
+    participantJidValue.endsWith("@s.whatsapp.net") ||
+    participantJidValue.endsWith("@c.us")
+  ) {
+    return participantJidValue;
+  }
+  return null;
+}
+
 function groupParticipantsPayload(group) {
   return (group.participants || [])
     .map((participant) => {
+      rememberParticipantIdentity(participant);
       const id = participantJid(participant);
+      const lid = participantLid(participant);
       if (!id) return null;
-      rememberContacts([
-        { id, notify: participant.notify, name: participant.name },
-      ]);
       const remembered = lookupContact(id);
       return {
         id,
+        lid: lid && lid !== id ? lid : null,
+        jid: participant.jid || null,
+        phoneNumber: participant.phoneNumber || null,
         admin: participant.admin || null,
         name: remembered.name || remembered.notify || participant.notify || participant.name || null,
       };
@@ -582,6 +626,7 @@ function mapMessage(m) {
   const personJid = m.key.participant || jid;
   const pushName = m.pushName || m.verifiedBizName || null;
   if (pushName) rememberContacts([{ id: personJid, notify: pushName }]);
+  const senderPhone = resolveSenderPhone(m.key.participant);
 
   const quotedMessage = resolveQuotedContext(inner);
 
@@ -606,6 +651,7 @@ function mapMessage(m) {
       notifyName: contactNameFor(personJid, pushName),
       pushName: contactNameFor(personJid, pushName),
       ...(m.key.participant ? { participant: m.key.participant } : {}),
+      ...(senderPhone ? { senderPhone } : {}),
       ...(selectedButtonId ? { selectedButtonId } : {}),
     },
   };

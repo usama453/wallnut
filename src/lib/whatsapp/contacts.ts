@@ -2,16 +2,51 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { fetchWahaGroup } from "@/lib/whatsapp/client";
 import { syncOrgWhatsAppAvatars } from "@/lib/whatsapp/avatars";
 import { BOT_PHONE_NUMBER } from "@/lib/whatsapp/config";
-import { canonicalChatId, isLidJid, isUserPhoneJid, looksLikeMobilePhoneDigits, participantLidJid, phoneDigits, preferParticipantPhone } from "@/lib/whatsapp/jid";
+import {
+  canonicalChatId,
+  isLidJid,
+  isUserPhoneJid,
+  looksLikeMobilePhoneDigits,
+  participantLidJid,
+  phoneDigits,
+  preferParticipantPhone,
+} from "@/lib/whatsapp/jid";
 import { isPendingGroupExternalId } from "@/lib/whatsapp/placeholder-groups";
 
 const syncedAt = new Map<string, number>();
 const SYNC_TTL_MS = 60_000;
+/** Latest LID ↔ phone pairs synced from WhatsApp group rosters, per org. */
+const identityPairsByOrg = new Map<string, Array<{ lid: string; phone: string }>>();
+
+export function getOrgIdentityPairs(orgId: string): Array<{ lid: string; phone: string }> {
+  return identityPairsByOrg.get(orgId) ?? [];
+}
+
+function rememberOrgIdentityPairs(
+  orgId: string,
+  pairs: Array<{ lid: string; phone: string }>,
+) {
+  if (!pairs.length) return;
+  const existing = identityPairsByOrg.get(orgId) ?? [];
+  const seen = new Set(
+    existing.map((pair) => `${phoneDigits(pair.lid)}:${phoneDigits(pair.phone)}`),
+  );
+  const merged = [...existing];
+  for (const pair of pairs) {
+    const key = `${phoneDigits(pair.lid)}:${phoneDigits(pair.phone)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(pair);
+    }
+  }
+  identityPairsByOrg.set(orgId, merged);
+}
 
 /** Remember a WhatsApp sender's display name for rankings and avatars. */
 export function rememberWhatsAppContact(input: {
   orgId: string | null;
   phone: string;
+  linkedPhone?: string | null;
   displayName?: string | null;
 }): void {
   void (async () => {
@@ -19,9 +54,12 @@ export function rememberWhatsAppContact(input: {
     const name = input.displayName?.trim();
     if (!name) return;
     try {
-      await saveWhatsAppContacts(input.orgId, [
-        { phone: input.phone, displayName: name },
-      ]);
+      const rows = [{ phone: input.phone, displayName: name }];
+      const linked = input.linkedPhone?.trim();
+      if (linked && linked !== input.phone) {
+        rows.push({ phone: linked, displayName: name });
+      }
+      await saveWhatsAppContacts(input.orgId, rows);
       void syncOrgWhatsAppAvatars(input.orgId).catch(() => {});
     } catch (error) {
       console.error(
@@ -29,6 +67,19 @@ export function rememberWhatsAppContact(input: {
       );
     }
   })();
+}
+
+/** Link a privacy @lid id to its routable phone JID for stats and avatars. */
+export function registerIdentityPair(
+  aliases: Map<string, string>,
+  lid: string | null | undefined,
+  phone: string | null | undefined,
+): void {
+  const lidDigits = phoneDigits(lid);
+  const phoneDigitsValue = phoneDigits(phone);
+  if (!lidDigits || !phoneDigitsValue || lidDigits === phoneDigitsValue) return;
+  if (!looksLikeMobilePhoneDigits(phoneDigitsValue)) return;
+  aliases.set(lidDigits, phoneDigitsValue);
 }
 
 export async function saveWhatsAppContacts(
@@ -77,6 +128,8 @@ export async function saveWhatsAppContacts(
 export async function importWhatsAppGroupContacts(orgId: string, groupJid: string) {
   const group = await fetchWahaGroup(groupJid, { timeoutMs: 5000 });
   if (!group) return 0;
+  const pairs = collectGroupIdentityPairs(group.participants);
+  rememberOrgIdentityPairs(orgId, pairs);
   const count = await saveWhatsAppContacts(
     orgId,
     group.participants.flatMap((participant) => contactsFromGroupParticipant(participant)),
@@ -116,14 +169,18 @@ export async function syncOrgWhatsAppGroupContacts(
       .slice(0, 8);
 
     const imported = await Promise.all(
-      claimed.map((groupJid) =>
-        importWhatsAppGroupContacts(orgId, groupJid).catch((error) => {
+      claimed.map(async (groupJid) => {
+        const group = await fetchWahaGroup(groupJid, { timeoutMs: 5000 }).catch(() => null);
+        if (group) {
+          rememberOrgIdentityPairs(orgId, collectGroupIdentityPairs(group.participants));
+        }
+        return importWhatsAppGroupContacts(orgId, groupJid).catch((error) => {
           console.error(
             `[contacts] group sync failed ${groupJid}: ${error instanceof Error ? error.message : error}`,
           );
           return 0;
-        }),
-      ),
+        });
+      }),
     );
     if (claimed.length > 0 && imported.reduce((sum, count) => sum + count, 0) === 0) {
       syncedAt.delete(orgId);
@@ -177,11 +234,16 @@ export async function loadWhatsAppContactNames(phones: string[]) {
   return names;
 }
 
-/** Map LID / alternate JIDs to a canonical phone-digit key when names match. */
+/** Map LID / alternate JIDs to a canonical phone-digit key. */
 export function buildContactAliasMap(
   contacts: Array<{ phone: string; display_name: string | null }>,
+  identityPairs: Array<{ lid: string; phone: string }> = [],
 ): Map<string, string> {
   const aliases = new Map<string, string>();
+
+  for (const pair of identityPairs) {
+    registerIdentityPair(aliases, pair.lid, pair.phone);
+  }
 
   type Entry = {
     digits: string;
@@ -247,7 +309,54 @@ export function buildContactAliasMap(
     }
   }
 
+  // Pair @lid rows with phone rows that share a human display name.
+  const phonesByName = new Map<string, string>();
+  const lidsByName = new Map<string, string[]>();
+  for (const contact of contacts) {
+    const name = contact.display_name?.trim().toLowerCase();
+    const digits = phoneDigits(contact.phone);
+    if (!name || /^[+\d\s.-]+$/.test(name) || !digits) continue;
+    if (isLidJid(contact.phone)) {
+      const group = lidsByName.get(name) ?? [];
+      group.push(digits);
+      lidsByName.set(name, group);
+    } else if (isUserPhoneJid(contact.phone) && looksLikeMobilePhoneDigits(digits)) {
+      phonesByName.set(name, digits);
+    }
+  }
+  for (const [name, lidDigitsList] of lidsByName) {
+    const phoneDigitsValue = phonesByName.get(name);
+    if (!phoneDigitsValue) continue;
+    for (const lidDigits of lidDigitsList) {
+      registerIdentityPair(aliases, lidDigits, phoneDigitsValue);
+    }
+  }
+
   return aliases;
+}
+
+/** Canonical sender id for usage rows and contact memory. */
+export function resolveWhatsAppSenderIdentity(input: {
+  sender?: string | null;
+  senderPhone?: string | null;
+}): { primary: string; linkedPhone?: string | null } {
+  const sender = input.sender?.trim() ?? "";
+  const senderPhone = input.senderPhone?.trim() ?? "";
+  const phoneJid =
+    senderPhone && (isUserPhoneJid(senderPhone) || looksLikeMobilePhoneDigits(phoneDigits(senderPhone)))
+      ? canonicalChatId(senderPhone)
+      : "";
+
+  if (phoneJid && sender && isLidJid(sender)) {
+    return { primary: phoneJid, linkedPhone: sender };
+  }
+  if (sender && isUserPhoneJid(sender)) {
+    return { primary: canonicalChatId(sender) };
+  }
+  if (sender) {
+    return { primary: sender };
+  }
+  return { primary: phoneJid };
 }
 
 /** Save both phone and @lid ids for a group participant when available. */
@@ -264,6 +373,21 @@ export function contactsFromGroupParticipant(participant: {
     rows.push({ phone: participant.lid, displayName: participant.name });
   }
   return rows;
+}
+
+/** LID ↔ phone pairs from a synced WhatsApp group roster. */
+export function collectGroupIdentityPairs(
+  participants: Array<{ id: string; lid?: string | null }>,
+): Array<{ lid: string; phone: string }> {
+  const pairs: Array<{ lid: string; phone: string }> = [];
+  for (const participant of participants) {
+    const phone = preferParticipantPhone(participant).trim();
+    const lid = participantLidJid(participant);
+    if (phone && lid && phone !== lid) {
+      pairs.push({ lid, phone });
+    }
+  }
+  return pairs;
 }
 
 /** Canonical phone-digit key -> saved contact name. */

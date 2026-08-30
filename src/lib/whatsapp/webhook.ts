@@ -44,6 +44,7 @@ export function extractWahaMessages(
       payload._data?.author,
       payload._data?.key?.participant,
     ) ?? from;
+  const senderPhone = firstString(payload.senderPhone, payload._data?.senderPhone);
   const pushName = firstString(
     payload.pushName,
     payload.notifyName,
@@ -63,6 +64,7 @@ export function extractWahaMessages(
     id,
     from,
     sender: participant,
+    senderPhone: senderPhone || undefined,
     botId: event.me?.id,
     mentions:
       payload.mentions ??
