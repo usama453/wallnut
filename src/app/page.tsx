@@ -91,6 +91,7 @@ function OrganizationCard({ org }: { org: PublicOrganization }) {
         <AnonymousFaceStack org={org} />
         <span className="shrink-0 text-right text-[12px] leading-[1.3] text-[#6c6c6c]">
           {org.members} member{org.members === 1 ? "" : "s"}
+          {` · ${org.groups} group${org.groups === 1 ? "" : "s"}`}
           {org.lastActive ? ` · ${formatLastActive(org.lastActive)}` : ""}
         </span>
       </span>
@@ -105,7 +106,11 @@ function OrganizationCard({ org }: { org: PublicOrganization }) {
 function AnonymousFaceStack({ org }: { org: PublicOrganization }) {
   const count = Math.min(Math.max(org.members, 1), 4);
   return (
-    <span className="flex items-center" aria-label={`${org.members} members`}>
+    <span
+      className="flex items-center"
+      aria-label={`${org.members} member${org.members === 1 ? "" : "s"}`}
+      title="Member preview"
+    >
       {Array.from({ length: count }, (_, index) => {
         const color = avatarPalette(`${org.slug}-${index}`);
         return (

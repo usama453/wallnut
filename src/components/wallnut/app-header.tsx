@@ -9,6 +9,7 @@ import { TeamAccess } from "@/components/team-access";
 import { InitialAvatar } from "./avatar";
 import { Spinner } from "./icons";
 import { NavigationProgress } from "./pending";
+import { WhatsAppStatusWidget } from "./whatsapp-status-widget";
 
 const SUPER_ADMIN_NAV = new Set(["Connect", "Upload", "Usage", "Settings"]);
 
@@ -85,6 +86,7 @@ export function AppHeader({
         <span className="text-[12px] text-[#6c6c6c]">Public</span>
       ) : (
         <div className="flex items-center gap-2.5">
+          <WhatsAppStatusWidget canManage={isSuperAdmin} />
           {orgSlug && !isPublicOrgSlug(orgSlug) ? <TeamAccess orgSlug={orgSlug} /> : null}
           <div ref={menuRef} className="relative">
           <button
