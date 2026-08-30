@@ -22,7 +22,8 @@ export async function wallnutChatReply(message: string): Promise<string> {
 export function stripWhatsAppMentions(body: string): string {
   return body
     .replace(/@\d{6,}/g, " ")
-    .replace(/@wallnut/gi, " ")
+    .replace(/@wallnut\s*bot\b/gi, " ")
+    .replace(/@wallnut\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }

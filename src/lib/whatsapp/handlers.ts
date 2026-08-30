@@ -170,17 +170,29 @@ let accessCache: {
 } | null = null;
 const ACCESS_TTL_MS = 30 * 1000;
 
-/** True when a group message @mentions the bot (phone JID or @wallnut). */
+/** True when a group message @mentions the bot (phone JID, LID, or @wallnut). */
 function wasMentioned(message: any): boolean {
   const body: string = message?.text?.body ?? "";
   if (/@wallnut\b/i.test(body)) return true;
+
   const tokens = body.match(/@([0-9]{6,})/g) ?? [];
   const mentions = Array.isArray(message?.mentions) ? message.mentions : [];
-  const bot = jidDigits(BOT_PHONE_NUMBER || message?.botId || "");
-  if (!bot || bot.length < 6) return false;
-  return [...tokens, ...mentions].some((mention) => {
-    const digits = jidDigits(String(mention));
-    return digits.includes(bot.slice(-10)) || bot.includes(digits.slice(-10));
+  const botIds = [BOT_PHONE_NUMBER, message?.botId]
+    .filter(Boolean)
+    .map((id) => jidDigits(String(id)));
+
+  if (!botIds.length) return tokens.length > 0 || mentions.length > 0;
+
+  const candidates = [...tokens, ...mentions.map(String)];
+  return candidates.some((mention) => {
+    const digits = jidDigits(mention);
+    if (!digits) return false;
+    return botIds.some(
+      (bot) =>
+        digits === bot ||
+        digits.endsWith(bot.slice(-10)) ||
+        bot.endsWith(digits.slice(-10)),
+    );
   });
 }
 
@@ -245,6 +257,20 @@ async function dispatchMessage(
         });
         return { handled: true, action: "text" };
       }
+
+      await sendTextWaha(
+        from,
+        "Reply to the message you want proofed, then @mention me with “proof read”. I read the quoted text — not messages above it in the chat.",
+        message.id,
+      );
+      logUsage({
+        direction: "outbound",
+        msg_type: "text",
+        to_phone: from,
+        group_id: groupId,
+        status: "text-proof-missing-quote",
+      });
+      return { handled: true, action: "text" };
     }
 
     const reply = await wallnutChatReply(buildMentionChatInput(mentionCtx, groupId));
