@@ -42,7 +42,17 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     <div className="flex min-h-screen flex-col bg-black text-[#fbfbfb]">
       <AppHeader />
       <main className="mx-auto flex w-full max-w-[680px] flex-1 flex-col px-4 pb-12 pt-6 sm:px-6">
-        <div className="flex items-start gap-3">
+        {version?.url ? (
+          <ReportPreview
+            title={asset.name}
+            kind={asset.kind as "image" | "pdf"}
+            url={version.url}
+            previewMeta={version.preview_meta as { pages: Array<{ url: string; width: number; height: number }> } | null}
+            issues={sortedIssues}
+          />
+        ) : null}
+
+        <div className={`flex items-start gap-3 ${version?.url ? "mt-3" : ""}`}>
           <div className="min-w-0 flex-1">
             {sortedIssues.length > 0 ? (
               <ReportFindings issues={sortedIssues} />
@@ -65,18 +75,6 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             </div>
           ) : null}
         </div>
-
-        {version?.url ? (
-          <div className="mt-3">
-            <ReportPreview
-              title={asset.name}
-              kind={asset.kind as "image" | "pdf"}
-              url={version.url}
-              previewMeta={version.preview_meta as { pages: Array<{ url: string; width: number; height: number }> } | null}
-              issues={sortedIssues}
-            />
-          </div>
-        ) : null}
 
         {proof?.summary || reportedAt ? (
           <div className="mt-8 space-y-2">
