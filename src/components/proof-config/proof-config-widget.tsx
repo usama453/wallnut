@@ -15,8 +15,6 @@ import { useProofConfig } from "./use-proof-config";
 
 const QUICK_CHECKS: ProofCheckType[] = ["typos", "grammar", "punctuation"];
 
-const REPLY_LABELS = ["Plain", "Mixed", "Human"] as const;
-
 const LIST_ROW =
   "flex w-full cursor-pointer items-start gap-2.5 rounded-[6px] px-1 py-1.5 text-left transition hover:bg-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -69,12 +67,12 @@ export function ProofConfigWidget({
                 aria-label="Wallnut's reply"
                 className="flex flex-col gap-0.5"
               >
-                {PROOF_RESPONSE_STYLES.map((style, index) => {
+                {PROOF_RESPONSE_STYLES.map((style) => {
                   const meta = PROOF_RESPONSE_STYLE_LABELS[style];
                   return (
                     <ReplyOption
                       key={style}
-                      label={REPLY_LABELS[index] ?? meta.title}
+                      label={meta.title}
                       description={meta.description}
                       checked={settings.responseStyle === style}
                       disabled={busy}

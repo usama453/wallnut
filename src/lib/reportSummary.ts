@@ -186,6 +186,13 @@ export function whatsappReplyPreview(
     if (!issues.length) return "No issues found";
     return summarizeIssues(issues);
   }
+  if (style === "custom") {
+    const terms = extractCustomTerms(issues);
+    if (!terms.length) return "Looks good 👌🏻";
+    const list = terms.slice(0, 3).join(" | ");
+    const extra = terms.length > 3 ? ` +${terms.length - 3}` : "";
+    return `${terms.length} Potential Errors: ${list}${extra}`;
+  }
   const typoLines = getTypoCorrections(issues);
   if (typoLines.length > 0) {
     const first = `${typoLines[0].before} → ${typoLines[0].after}`;
@@ -216,6 +223,8 @@ export function formatWhatsAppReply(
       return formatPlainWhatsAppReply(issues);
     case "mixed":
       return formatMixedWhatsAppReply(issues);
+    case "custom":
+      return formatCustomWhatsAppReply(issues);
     case "human":
     default:
       return formatHumanWhatsAppReply(issues, context);
@@ -257,6 +266,34 @@ function formatMixedWhatsAppReply(issues: SummaryIssue[]): string {
 
   if (!parts.length) return issues.length ? `${summarizeIssues(issues)}.` : "No issues found.";
   return parts.join(" ");
+}
+
+/** Terms for the custom reply format — misspelled words and other flagged copy. */
+function extractCustomTerms(issues: SummaryIssue[]): string[] {
+  const fromLines = buildCorrectionLines(issues)
+    .map((line) => line.before.trim())
+    .filter((term) => term && term !== "—");
+  if (fromLines.length) return [...new Set(fromLines)];
+
+  const typoWords = extractTypoWords(issues);
+  if (typoWords.length) return [...new Set(typoWords)];
+
+  const quoted = issues
+    .map((issue) => /"([^"]+)"/.exec(issue.title ?? "")?.[1]?.trim())
+    .filter((term): term is string => Boolean(term));
+  if (quoted.length) return [...new Set(quoted)];
+
+  return [];
+}
+
+function formatCustomWhatsAppReply(issues: SummaryIssue[]): string {
+  const terms = extractCustomTerms(issues);
+  if (!terms.length) return "Looks good 👌🏻";
+
+  const count = terms.length;
+  const header = `${count} Potential Error${count === 1 ? "" : "s"}`;
+  const list = terms.join(" | ");
+  return `${header}\n${list}\n\nLooks good otherwise 👌🏻`;
 }
 
 export function buildHumanReplyFallback(issues: SummaryIssue[]): string {

@@ -10,7 +10,7 @@ export const PROOF_CHECK_TYPES = [
 
 export type ProofCheckType = (typeof PROOF_CHECK_TYPES)[number];
 
-export const PROOF_RESPONSE_STYLES = ["plain", "mixed", "human"] as const;
+export const PROOF_RESPONSE_STYLES = ["plain", "mixed", "human", "custom"] as const;
 
 export type ProofResponseStyle = (typeof PROOF_RESPONSE_STYLES)[number];
 
@@ -84,6 +84,12 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
     description: "One short sentence — casual and to the point.",
     example: '2 typos — wna → wan. Otherwise looks good.',
   },
+  custom: {
+    title: "Custom",
+    description: "Error count, pipe-separated terms, then a short sign-off.",
+    example:
+      "5 Potential Errors\nOneHomes | LiveBeyond | YearinRewind\n\nLooks good otherwise 👌🏻",
+  },
 };
 
 export const DEFAULT_PROOF_ADMIN_SETTINGS: ProofAdminSettings = {
@@ -107,7 +113,8 @@ export function normalizeProofResponseStyle(value: unknown): ProofResponseStyle 
   if (
     value === "plain" ||
     value === "mixed" ||
-    value === "human"
+    value === "human" ||
+    value === "custom"
   ) {
     return value;
   }
