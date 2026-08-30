@@ -154,17 +154,15 @@ export class MockProvider implements AiProvider {
       const fix = /did you mean:\s*([^?.]+)/i.exec(typoIssues[0].suggestion ?? "")?.[1]?.trim();
       if (word && fix) {
         return typoIssues.length === 1
-          ? `Typo: ${word} → ${fix}.`
-          : `${typoIssues.length} typos — ${word} → ${fix}.`;
+          ? `1 typo: ${word} → ${fix}.`
+          : `${typoIssues.length} typos: ${word} → ${fix} +${typoIssues.length - 1}.`;
       }
       return `${typoIssues.length} typo${typoIssues.length === 1 ? "" : "s"} to fix.`;
     }
-    if (!report.issues.length) {
-      return report.summary?.slice(0, 140) || "Looks good.";
-    }
+    if (!report.issues.length) return "Looks clean.";
     const top = report.issues[0];
-    const detail = top.description?.trim() || top.title?.trim();
-    return (report.summary?.trim() || detail || "Needs a quick look.").slice(0, 140);
+    const detail = top.suggestion?.trim() || top.title?.trim();
+    return (detail || "Needs a quick look.").slice(0, 100);
   }
 }
 

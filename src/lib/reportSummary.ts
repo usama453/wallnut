@@ -17,6 +17,19 @@ export interface WhatsAppReplyContext {
   summary?: string | null;
 }
 
+/** Max length for conversational ("human") WhatsApp replies. */
+export const HUMAN_REPLY_MAX_CHARS = 100;
+
+function clampHumanReply(text: string): string {
+  const trimmed = text.replace(/\s+/g, " ").trim();
+  if (!trimmed) return "";
+  if (trimmed.length <= HUMAN_REPLY_MAX_CHARS) return trimmed;
+  const cut = trimmed.slice(0, HUMAN_REPLY_MAX_CHARS - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  const clipped = (lastSpace > 32 ? cut.slice(0, lastSpace) : cut).replace(/[.,;:!?]+$/, "");
+  return `${clipped}…`;
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   text: "grammar",
   typography: "typos",
@@ -246,39 +259,36 @@ function formatMixedWhatsAppReply(issues: SummaryIssue[]): string {
   return parts.join(" ");
 }
 
+export function buildHumanReplyFallback(issues: SummaryIssue[]): string {
+  return formatHumanWhatsAppReply(issues);
+}
+
 function formatHumanWhatsAppReply(
   issues: SummaryIssue[],
   context?: WhatsAppReplyContext,
 ): string {
   const generated = context?.humanReply?.trim() || context?.summary?.trim();
-  if (generated) return generated;
+  if (generated) return clampHumanReply(generated);
 
   const typoLines = getTypoCorrections(issues);
-  const tip = pickTopTip(issues);
-
-  if (typoLines.length === 0) {
-    if (tip) return tip;
-    if (!issues.length) return "No issues found.";
-    const summary = summarizeIssues(issues);
-    return summary ? `${summary}.` : "No issues found.";
+  if (typoLines.length) {
+    const first = `${typoLines[0].before} → ${typoLines[0].after}`;
+    const typo =
+      typoLines.length === 1
+        ? `1 typo: ${first}`
+        : `${typoLines.length} typos: ${first} +${typoLines.length - 1}`;
+    const tip = pickTopTip(issues);
+    return clampHumanReply(tip ? `${typo}. ${tip}` : typo);
   }
 
-  const typoPart = formatTypoSummary(typoLines);
-  if (!tip) return typoPart;
-  return `${typoPart} ${tip}`;
+  const tip = pickTopTip(issues);
+  if (tip) return clampHumanReply(tip);
+  if (!issues.length) return "Looks clean.";
+  return clampHumanReply(summarizeIssues(issues));
 }
 
 function getTypoCorrections(issues: SummaryIssue[]) {
   return buildCorrectionLines(issues).filter((line) => line.label === "Typo");
-}
-
-function formatTypoSummary(typoLines: CorrectionLine[]): string {
-  const maxShown = 5;
-  const shown = typoLines.slice(0, maxShown);
-  const pairs = shown.map((line) => `${line.before} → ${line.after}`).join(", ");
-  const extra = typoLines.length > maxShown ? ` +${typoLines.length - maxShown} more` : "";
-  const count = typoLines.length;
-  return `Found ${count} typo${count === 1 ? "" : "s"}, ${pairs}${extra}.`;
 }
 
 function pickTopTip(issues: SummaryIssue[]): string | null {
@@ -317,7 +327,7 @@ function humanizeTip(issue: SummaryIssue): string | null {
   }
 
   if (pair && label === "grammar") {
-    return `Fix grammar: ${pair.before} → ${pair.after}.`;
+    return `${pair.before} → ${pair.after}.`;
   }
 
   if (title && !isBoilerplateTip(title)) {
@@ -352,29 +362,21 @@ function isBoilerplateTip(text: string): boolean {
 }
 
 function sentenceTip(text: string): string {
-  const trimmed = text.replace(/\.$/, "").trim();
+  const trimmed = text
+    .replace(/\.$/, "")
+    .replace(/^consider\s+/i, "")
+    .replace(/^please\s+/i, "")
+    .trim();
   if (!trimmed) return "";
-  if (/^consider /i.test(trimmed)) return `${capitalize(trimmed)}.`;
 
   const softened = trimmed.replace(
     /^(slightly|lightly|a bit|a little)\s+(darken|lighten|brighten|increase|decrease|reduce)\b/i,
     (_, adv: string, verb: string) => `${adv.toLowerCase()} ${verbToGerund(verb)}`,
   );
-  if (softened !== trimmed) return `Consider ${decapitalize(softened)}.`;
 
-  if (
-    /^(increase|decrease|darken|lighten|brighten|fix|remove|add|use|avoid|try|check|ensure|move|align|shorten|lengthen)\b/i.test(
-      trimmed,
-    )
-  ) {
-    return `${capitalize(trimmed)}.`;
-  }
-
-  if (trimmed.split(/\s+/).length >= 4) {
-    return `Consider ${decapitalize(trimmed)}.`;
-  }
-
-  return `Consider ${decapitalize(trimmed)}.`;
+  const core = softened !== trimmed ? softened : trimmed;
+  const short = core.length > 72 ? `${core.slice(0, 69)}…` : core;
+  return short.endsWith("…") ? short : `${capitalize(short)}.`;
 }
 
 function verbToGerund(verb: string): string {
@@ -386,10 +388,6 @@ function verbToGerund(verb: string): string {
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function decapitalize(text: string): string {
-  return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
 /** Prefer the Wallnut reply text for list labels when proof results exist. */

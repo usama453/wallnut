@@ -507,16 +507,16 @@ function DashboardReportRow({ report }: { report: ReportRow }) {
           router.push(href);
         });
       }}
-      className="group flex items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#080808]"
+      className="group flex flex-nowrap items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#080808]"
     >
       <ReportMarker report={report} />
-      <span className="min-w-0 flex-1 truncate text-[12px] text-[#bdbdbd] transition group-hover:text-[#fbfbfb]">
+      <span className="min-w-0 flex-1 truncate text-[12px] leading-none text-[#bdbdbd] transition group-hover:text-[#fbfbfb]">
         {report.name}
       </span>
       {pending ? (
         <Spinner />
       ) : (
-        <span className="ml-3 flex shrink-0 items-center gap-2 text-[11px]">
+        <span className="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap text-[11px] leading-none">
           {report.uploader ? (
             <span className="max-w-[120px] truncate text-[#555] transition group-hover:text-[#8a8a8a]">
               By {report.uploader}

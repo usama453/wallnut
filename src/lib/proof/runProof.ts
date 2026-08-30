@@ -14,6 +14,7 @@ import {
   locateWord,
   type LocationContext,
 } from "./issue-locations";
+import { buildHumanReplyFallback } from "@/lib/reportSummary";
 import { sanitizeText } from "@/lib/text";
 import type { OcrResult } from "@/lib/ocr/tesseract";
 import type { BrandContext, PreviousProofContext, RawIssue, RawReport } from "@/lib/ai";
@@ -191,7 +192,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     console.error(
       `[proof] human reply generation failed: ${err instanceof Error ? err.message : err}`,
     );
-    report.humanReply = report.summary?.trim() || undefined;
+    report.humanReply = buildHumanReplyFallback(report.issues);
   }
 
   // 7. persist

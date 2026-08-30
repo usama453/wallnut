@@ -81,9 +81,8 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
   },
   human: {
     title: "Conversational",
-    description: "Natural sentences with a helpful tip when useful.",
-    example:
-      'There\'s a typo in the headline — "teh" should be "the". The background is a little light.',
+    description: "One short sentence — casual and to the point.",
+    example: '2 typos — wna → wan. Otherwise looks good.',
   },
 };
 

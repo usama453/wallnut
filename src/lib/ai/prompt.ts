@@ -180,32 +180,24 @@ ${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n
 /** Prompt for a natural WhatsApp reply after proofing is complete. */
 export function buildHumanReplyPrompt(report: RawReport): string {
   const issuesText = report.issues
-    .slice(0, 12)
-    .map((issue) => {
-      const parts = [`- [${issue.severity}/${issue.category}] ${issue.title}`];
-      if (issue.description) parts.push(`  ${issue.description}`);
-      if (issue.suggestion) parts.push(`  Fix: ${issue.suggestion}`);
-      return parts.join("\n");
-    })
+    .slice(0, 6)
+    .map((issue) => `- [${issue.severity}] ${issue.title}`)
     .join("\n");
 
-  return `You are Wallnut, a proofreading assistant replying on WhatsApp after checking a marketing image or PDF.
+  return `You are Wallnut replying on WhatsApp after proofing a marketing image.
 
-Write the reply message body ONLY. No quotes, labels, or greeting.
+Write the message body ONLY. No quotes, labels, or greeting.
 
-Requirements:
-- Exactly 1 short sentence — casual, direct, no filler
-- Base it on the findings below; be specific to this asset
-- If typos exist, mention count and at most 1–2 word → fix pairs inline
-- If clean, one brief positive line about this piece — no stock phrases
+Rules:
+- Exactly 1 short sentence, under 100 characters total
+- Casual and direct — no filler ("I noticed", "just wanted to", "overall")
+- Typos: count + one word→fix pair only (e.g. "2 typos — wna → wan")
+- Clean asset: one brief positive line (e.g. "Looks clean.")
 - No bullet lists, markdown, emojis, greeting, or sign-off
-- Hard limit: 140 characters
 
-Score: ${report.score}/100 (${report.status})
-Summary: ${report.summary?.trim() || "(none)"}
-
+Score: ${report.score}/100
 Findings (${report.issues.length}):
-${issuesText || "(none — artwork looks clean)"}`;
+${issuesText || "(none)"}`;
 }
 
 function formatBrand(brand: BrandContext): string {
