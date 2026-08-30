@@ -417,8 +417,12 @@ function formatCustomWhatsAppReply(issues: SummaryIssue[]): string {
   if (!total) {
     if (!issues.length) return "Looks good 👌🏻";
     const fallback = issues.flatMap((issue) => customTermsFromIssue(issue));
-    if (!fallback.length) return "Please review 👌🏻";
-    return `${formatCustomSection(fallback.length, `Potential Error${fallback.length === 1 ? "" : "s"}`, fallback)}\n\nLooks good otherwise 👌🏻`;
+    if (!fallback.length) return "Looks good 👌🏻";
+    return formatCustomSection(
+      fallback.length,
+      `Potential Error${fallback.length === 1 ? "" : "s"}`,
+      fallback,
+    );
   }
 
   const sections: string[] = [];
@@ -437,7 +441,7 @@ function formatCustomWhatsAppReply(issues: SummaryIssue[]): string {
     );
   }
 
-  return `${sections.join("\n\n")}\n\nLooks good otherwise 👌🏻`;
+  return sections.join("\n\n");
 }
 
 export function buildHumanReplyFallback(issues: SummaryIssue[]): string {

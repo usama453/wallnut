@@ -88,7 +88,7 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
     title: "Custom",
     description: "Separate definite errors from potential issues, pipe-separated.",
     example:
-      "5 Potential Errors\nOneHomes | LiveBeyond | YearinRewind | OverseasPakistanis | CloserToHome\n\nLooks good otherwise 👌🏻",
+      "5 Potential Errors\nOneHomes | LiveBeyond | YearinRewind | OverseasPakistanis | CloserToHome",
   },
 };
 

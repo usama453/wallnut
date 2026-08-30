@@ -12,7 +12,7 @@ const issues = [
 const reply = formatWhatsAppReply(issues, "custom");
 assert.match(reply, /^5 Potential Errors\n/);
 assert.match(reply, /OneHomes \| LiveBeyond \| YearinRewind \| OverseasPakistanis \| CloserToHome/);
-assert.match(reply, /Looks good otherwise 👌🏻$/);
+assert.doesNotMatch(reply, /Looks good otherwise/);
 
 const mixed = formatWhatsAppReply(
   [
@@ -41,6 +41,11 @@ assert.match(
   grouped,
   /OneHomes \| LiveBeyond \| YearinRewind \| OverseasPakistanis \| CloserToHome/,
 );
+
+assert.doesNotMatch(grouped, /Looks good otherwise/);
+
+const clean = formatWhatsAppReply([], "custom");
+assert.equal(clean, "Looks good 👌🏻");
 
 console.log("GROUPED DICTIONARY OK");
 console.log(grouped);
