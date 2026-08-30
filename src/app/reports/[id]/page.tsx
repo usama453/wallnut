@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
-import { ScoreRing, fmtDate } from "@/components/ui";
+import { ScoreRing } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
@@ -49,6 +49,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             url={version.url}
             previewMeta={version.preview_meta as { pages: Array<{ url: string; width: number; height: number }> } | null}
             issues={sortedIssues}
+            reportedAt={reportedAt}
           />
         ) : null}
 
@@ -71,19 +72,14 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           </div>
           {proof ? (
             <div className="shrink-0 pt-1">
-              <ScoreRing score={proof.score} size={56} />
+              <ScoreRing score={proof.score} size={48} />
             </div>
           ) : null}
         </div>
 
-        {proof?.summary || reportedAt ? (
-          <div className="mt-8 space-y-2">
-            {proof?.summary ? (
-              <p className="text-[12px] leading-relaxed text-[#919191]">{proof.summary}</p>
-            ) : null}
-            {reportedAt ? (
-              <p className="text-[11px] text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
-            ) : null}
+        {proof?.summary ? (
+          <div className="mt-8">
+            <p className="text-[12px] leading-relaxed text-[#919191]">{proof.summary}</p>
           </div>
         ) : null}
 

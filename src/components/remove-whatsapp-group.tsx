@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Spinner } from "@/components/wallnut/icons";
 import { orgHomePath } from "@/lib/org-paths";
 
@@ -67,50 +68,59 @@ export function RemoveWhatsAppGroup({
         {removing ? <Spinner /> : <TrashIcon />}
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="remove-group-title"
-            className="w-full max-w-[360px] rounded-[10px] border border-[#111111] bg-[#060606] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
-          >
-            <h2 id="remove-group-title" className="text-[14px] font-bold text-[#fbfbfb]">
-              Remove WhatsApp group?
-            </h2>
-            <p className="mt-2 text-[12px] leading-relaxed text-[#919191]">
-              Wallnut will stop responding in{" "}
-              <span className="text-[#bdbdbd]">{groupName}</span>. You can link it again
-              later with a new code.
-            </p>
-            {error ? (
-              <p role="alert" className="mt-3 text-[11px] text-[#e8b4b4]">
-                {error}
-              </p>
-            ) : null}
-            <div className="mt-5 flex justify-end gap-2">
+      {open
+        ? createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                disabled={removing}
-                className="rounded-full border border-[#111111] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#1a1a1a] hover:text-white disabled:opacity-60"
+                aria-label="Close remove group dialog"
+                className="absolute inset-0"
+                onClick={() => !removing && setOpen(false)}
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="remove-group-title"
+                className="relative z-10 w-full max-w-[360px] rounded-[10px] border border-[#111111] bg-[#060606] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void confirmRemove()}
-                disabled={removing}
-                aria-busy={removing}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#4a2828] bg-[#1a1010] px-3.5 py-1.5 text-[12px] text-[#e8b4b4] transition hover:border-[#6a3838] disabled:cursor-progress disabled:opacity-70"
-              >
-                {removing ? <Spinner /> : null}
-                {removing ? "Removing…" : "Remove group"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+                <h2 id="remove-group-title" className="text-[14px] font-bold text-[#fbfbfb]">
+                  Remove WhatsApp group?
+                </h2>
+                <p className="mt-2 text-[12px] leading-relaxed text-[#919191]">
+                  Wallnut will stop responding in{" "}
+                  <span className="text-[#bdbdbd]">{groupName}</span>. You can link it again
+                  later with a new code.
+                </p>
+                {error ? (
+                  <p role="alert" className="mt-3 text-[11px] text-[#e8b4b4]">
+                    {error}
+                  </p>
+                ) : null}
+                <div className="mt-5 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    disabled={removing}
+                    className="rounded-full border border-[#111111] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#1a1a1a] hover:text-white disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void confirmRemove()}
+                    disabled={removing}
+                    aria-busy={removing}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#4a2828] bg-[#1a1010] px-3.5 py-1.5 text-[12px] text-[#e8b4b4] transition hover:border-[#6a3838] disabled:cursor-progress disabled:opacity-70"
+                  >
+                    {removing ? <Spinner /> : null}
+                    {removing ? "Removing…" : "Remove group"}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

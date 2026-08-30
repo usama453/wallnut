@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackIcon, PlatformIcon } from "@/components/wallnut/icons";
-import { MetricChip } from "@/components/wallnut/metric-chip";
+import { MetricChip, MetricChipGroup } from "@/components/wallnut/metric-chip";
 import { ReportCard } from "@/components/wallnut/report-card";
 import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
@@ -238,11 +238,11 @@ export default async function OrgGroupReportsPage({
           </p>
         </Reveal>
         <Reveal dramatic delayMs={380}>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            <MetricChip value={reports.length} label="reports" />
-            <MetricChip value={checkedReports} label="checked" />
-            <MetricChip value={totalIssues} label="issues found" />
-          </div>
+          <MetricChipGroup className="mt-5">
+            <MetricChip grouped value={reports.length} label="reports" />
+            <MetricChip grouped value={checkedReports} label="checked" />
+            <MetricChip grouped value={totalIssues} label="issues found" />
+          </MetricChipGroup>
         </Reveal>
       </div>
 

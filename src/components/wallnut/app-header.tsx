@@ -76,7 +76,7 @@ export function AppHeader({
     <header className="relative z-40 flex h-14 shrink-0 items-center justify-between bg-black/90 px-[22px] backdrop-blur-md">
       <NavigationProgress />
       <Link
-        href={authenticated ? homeHref : "/"}
+        href="/"
         className="text-[12px] font-bold leading-none text-white transition-opacity hover:opacity-75"
       >
         Wallnut

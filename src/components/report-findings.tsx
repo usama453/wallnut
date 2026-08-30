@@ -53,14 +53,14 @@ export function ReportFindings({
                 <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#e8a0a0]">
                   {correction.label}
                 </p>
-                <p className="mt-1 text-[12px] leading-relaxed text-[#bdbdbd]">
-                  <span className="text-[#ffb4b4] line-through decoration-[#ff6b6b]/70">
+                <p className="mt-1.5 text-[14px] font-medium leading-normal tracking-[-0.01em]">
+                  <span className="text-[#ffc4c4] line-through decoration-[#ff6b6b]/80">
                     {correction.before}
                   </span>
-                  <span className="mx-2 text-[#555]" aria-hidden>
+                  <span className="mx-2.5 text-[13px] text-[#8a8a8a]" aria-hidden>
                     →
                   </span>
-                  <span className="text-[#7dffb2]">{correction.after}</span>
+                  <span className="font-semibold text-[#8effb8]">{correction.after}</span>
                 </p>
               </div>
             ))}
