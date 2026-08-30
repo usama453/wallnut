@@ -378,7 +378,7 @@ async function handleMedia(
     logUsage({
       direction: "inbound",
       msg_type: "proof",
-      from_phone: attributedSender,
+      from_phone: sender,
       group_id: groupId,
       status: String(result.report.score),
       asset_id: created.assetId,
