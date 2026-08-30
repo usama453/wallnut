@@ -1,4 +1,4 @@
-import type { BrandContext, PreviousProofContext } from "./types";
+import type { BrandContext, PreviousProofContext, RawReport } from "./types";
 import type { ProofChecksConfig } from "@/lib/proof/proof-settings";
 import { DEFAULT_PROOF_CHECKS } from "@/lib/proof/proof-settings";
 
@@ -175,6 +175,39 @@ ${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured
 ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu. Variant spellings are normal (mein/main, bohat/bahut). Do not "correct" Roman Urdu to English words.${brand?.allow_slang_roman_urdu ? `\nCASUAL LANGUAGE MODE: loose Roman Urdu and slang are intentional — only flag text that is genuinely unreadable gibberish.` : ""}
 
 ${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n${previous.issues.map((i) => `- [${i.category}] ${i.title}`).join("\n")}` : "No previous version."}`;
+}
+
+/** Prompt for a natural WhatsApp reply after proofing is complete. */
+export function buildHumanReplyPrompt(report: RawReport): string {
+  const issuesText = report.issues
+    .slice(0, 12)
+    .map((issue) => {
+      const parts = [`- [${issue.severity}/${issue.category}] ${issue.title}`];
+      if (issue.description) parts.push(`  ${issue.description}`);
+      if (issue.suggestion) parts.push(`  Fix: ${issue.suggestion}`);
+      return parts.join("\n");
+    })
+    .join("\n");
+
+  return `You are Wallnut, a proofreading assistant replying on WhatsApp after checking a marketing image or PDF.
+
+Write the reply message body ONLY. No quotes, labels, or greeting.
+
+Requirements:
+- 1–3 short sentences, direct and human — not robotic or templated
+- Base the reply on the actual findings below; reference specifics from this asset
+- If misspellings/typos exist, mention how many and show fixes as word → correction (up to 4)
+- If there are no typos, do not use stock phrases like "No typos found" or "Rest looks clean"
+- If everything looks fine, say what looks good about this specific piece
+- If non-typo issues exist, call out the most important one plainly
+- No bullet lists, markdown, emojis, or sign-off
+- Stay under 320 characters unless several typos need listing
+
+Score: ${report.score}/100 (${report.status})
+Summary: ${report.summary?.trim() || "(none)"}
+
+Findings (${report.issues.length}):
+${issuesText || "(none — artwork looks clean)"}`;
 }
 
 function formatBrand(brand: BrandContext): string {

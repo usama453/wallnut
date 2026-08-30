@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { fetchWahaGroup } from "@/lib/whatsapp/client";
 import { BOT_PHONE_NUMBER } from "@/lib/whatsapp/config";
-import { canonicalChatId, phoneDigits } from "@/lib/whatsapp/jid";
+import { canonicalChatId, isLidJid, isUserPhoneJid, looksLikeMobilePhoneDigits, participantLidJid, phoneDigits, preferParticipantPhone } from "@/lib/whatsapp/jid";
 import { isPendingGroupExternalId } from "@/lib/whatsapp/placeholder-groups";
 
 const syncedAt = new Map<string, number>();
@@ -77,10 +77,7 @@ export async function importWhatsAppGroupContacts(orgId: string, groupJid: strin
   if (!group) return 0;
   const count = await saveWhatsAppContacts(
     orgId,
-    group.participants.map((participant) => ({
-      phone: participant.id,
-      displayName: participant.name,
-    })),
+    group.participants.flatMap((participant) => contactsFromGroupParticipant(participant)),
   );
   console.log(
     `[contacts] imported ${count} participant(s) from ${groupJid} for org ${orgId}`,
@@ -173,6 +170,93 @@ export async function loadWhatsAppContactNames(phones: string[]) {
     const digits = phoneDigits(row.phone);
     if (!wanted.has(digits) || !row.display_name) continue;
     names.set(digits, row.display_name);
+  }
+  return names;
+}
+
+/** Map LID / alternate JIDs to a canonical phone-digit key when names match. */
+export function buildContactAliasMap(
+  contacts: Array<{ phone: string; display_name: string | null }>,
+): Map<string, string> {
+  const aliases = new Map<string, string>();
+
+  type Entry = {
+    digits: string;
+    name: string;
+    isLid: boolean;
+    isPhone: boolean;
+  };
+
+  const entries: Entry[] = [];
+  for (const contact of contacts) {
+    const digits = phoneDigits(contact.phone);
+    const name = contact.display_name?.trim();
+    if (!digits || !name || /^[+\d\s.-]+$/.test(name)) continue;
+    entries.push({
+      digits,
+      name: name.toLowerCase(),
+      isLid: contact.phone.trim().endsWith("@lid"),
+      isPhone:
+        (contact.phone.trim().endsWith("@c.us") ||
+          contact.phone.trim().endsWith("@s.whatsapp.net")) &&
+        digits.length >= 10 &&
+        digits.length <= 15,
+    });
+  }
+
+  const byName = new Map<string, Entry[]>();
+  for (const entry of entries) {
+    const group = byName.get(entry.name) ?? [];
+    group.push(entry);
+    byName.set(entry.name, group);
+  }
+
+  for (const group of byName.values()) {
+    const phoneEntry = group.find(
+      (entry) => entry.isPhone && looksLikeMobilePhoneDigits(entry.digits),
+    );
+    const canonical = phoneEntry?.digits ?? group.find((entry) => entry.isPhone)?.digits;
+    if (!canonical) continue;
+    for (const entry of group) {
+      if (entry.digits !== canonical) {
+        aliases.set(entry.digits, canonical);
+      }
+    }
+  }
+
+  return aliases;
+}
+
+/** Save both phone and @lid ids for a group participant when available. */
+export function contactsFromGroupParticipant(participant: {
+  id: string;
+  lid?: string | null;
+  name?: string | null;
+}): Array<{ phone: string; displayName?: string | null }> {
+  const rows: Array<{ phone: string; displayName?: string | null }> = [];
+  if (participant.id) {
+    rows.push({ phone: participant.id, displayName: participant.name });
+  }
+  if (participant.lid && participant.lid !== participant.id) {
+    rows.push({ phone: participant.lid, displayName: participant.name });
+  }
+  return rows;
+}
+
+/** Canonical phone-digit key -> saved contact name. */
+export function buildCanonicalNameIndex(
+  contacts: Array<{ phone: string; display_name: string | null }>,
+  aliasMap: Map<string, string>,
+): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const contact of contacts) {
+    const name = contact.display_name?.trim();
+    if (!name || /^[+\d\s.-]+$/.test(name)) continue;
+    const digits = phoneDigits(contact.phone);
+    if (!digits) continue;
+    const canonical = aliasMap.get(digits) ?? digits;
+    names.set(canonical, name);
+    names.set(digits, name);
   }
   return names;
 }

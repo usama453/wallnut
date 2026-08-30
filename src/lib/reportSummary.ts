@@ -12,6 +12,11 @@ export interface SummaryIssue {
   suggestion?: string;
 }
 
+export interface WhatsAppReplyContext {
+  humanReply?: string | null;
+  summary?: string | null;
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   text: "grammar",
   typography: "typos",
@@ -153,6 +158,7 @@ export function getCorrectionLines(
 export function whatsappReplyPreview(
   issues: SummaryIssue[],
   style: ProofResponseStyle = DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+  context?: WhatsAppReplyContext,
 ): string {
   if (style === "plain") {
     const lines = buildCorrectionLines(issues).slice(0, 1);
@@ -173,8 +179,13 @@ export function whatsappReplyPreview(
     if (typoLines.length === 1) return `1 typo: ${first}`;
     return `${typoLines.length} typos: ${first} +${typoLines.length - 1}`;
   }
+  const humanReply = context?.humanReply?.trim() || context?.summary?.trim();
+  if (humanReply) {
+    const short = humanReply.replace(/\.$/, "");
+    return short.length > 64 ? `${short.slice(0, 61)}…` : short;
+  }
   const tip = pickTopTip(issues);
-  if (!tip) return "No typos found";
+  if (!tip) return issues.length ? summarizeIssues(issues) : "No issues found";
   const short = tip.replace(/\.$/, "");
   return short.length > 64 ? `${short.slice(0, 61)}…` : short;
 }
@@ -185,6 +196,7 @@ export function whatsappReplyPreview(
 export function formatWhatsAppReply(
   issues: SummaryIssue[],
   style: ProofResponseStyle = DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+  context?: WhatsAppReplyContext,
 ): string {
   switch (style) {
     case "plain":
@@ -193,7 +205,7 @@ export function formatWhatsAppReply(
       return formatMixedWhatsAppReply(issues);
     case "human":
     default:
-      return formatHumanWhatsAppReply(issues);
+      return formatHumanWhatsAppReply(issues, context);
   }
 }
 
@@ -234,17 +246,25 @@ function formatMixedWhatsAppReply(issues: SummaryIssue[]): string {
   return parts.join(" ");
 }
 
-function formatHumanWhatsAppReply(issues: SummaryIssue[]): string {
+function formatHumanWhatsAppReply(
+  issues: SummaryIssue[],
+  context?: WhatsAppReplyContext,
+): string {
+  const generated = context?.humanReply?.trim() || context?.summary?.trim();
+  if (generated) return generated;
+
   const typoLines = getTypoCorrections(issues);
   const tip = pickTopTip(issues);
 
   if (typoLines.length === 0) {
-    if (!tip) return "No typos found. Rest looks clean.";
-    return `No typos found. ${tip}`;
+    if (tip) return tip;
+    if (!issues.length) return "No issues found.";
+    const summary = summarizeIssues(issues);
+    return summary ? `${summary}.` : "No issues found.";
   }
 
   const typoPart = formatTypoSummary(typoLines);
-  if (!tip) return `${typoPart} Rest looks clean.`;
+  if (!tip) return typoPart;
   return `${typoPart} ${tip}`;
 }
 

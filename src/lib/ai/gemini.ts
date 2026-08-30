@@ -1,6 +1,6 @@
 import type { AiProvider } from "./provider";
 import type { AnalyzeInput, AnalyzeOutput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
-import { buildSystemPrompt, buildStandaloneProofPrompt, buildTranscriptionPrompt } from "./prompt";
+import { buildSystemPrompt, buildStandaloneProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -214,6 +214,47 @@ export class GeminiProvider implements AiProvider {
         .join("\n") ?? "";
     if (!text) throw new Error("Gemini chat returned an empty response");
     return text.trim().slice(0, 600);
+  }
+
+  async generateHumanReply(report: RawReport): Promise<string> {
+    const prompt = buildHumanReplyPrompt(report);
+    const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.65,
+              maxOutputTokens: 180,
+            },
+          }),
+        });
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          throw new Error(`Gemini human reply error ${res.status}: ${body.slice(0, 300)}`);
+        }
+
+        const data = await res.json();
+        const text =
+          data?.candidates?.[0]?.content?.parts
+            ?.map((part: { text?: string }) => part.text ?? "")
+            .filter(Boolean)
+            .join("\n") ?? "";
+        const reply = sanitizeText(text.trim().replace(/^["']|["']$/g, ""));
+        if (!reply) throw new Error("Gemini human reply returned an empty response");
+        return reply.slice(0, 600);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 300 * attempt));
+      }
+    }
+    throw lastError;
   }
 }
 

@@ -1,6 +1,9 @@
-import { CategoryBadge, SeverityBadge } from "@/components/ui";
 import { getCorrectionLines, type SummaryIssue } from "@/lib/reportSummary";
 import type { ProofIssue } from "@/types";
+
+function issueSentence(issue: ProofIssue): string {
+  return issue.description?.trim() || issue.title?.trim() || "Issue found";
+}
 
 const MARKER_COLORS = [
   "#f43f5e",
@@ -70,46 +73,42 @@ export function ReportFindings({
       ) : null}
 
       {otherIssues.length > 0 ? (
-        <section className="overflow-hidden rounded-[12px] border border-[#111111] bg-[#060606]">
-          <div className="border-b border-[#131313] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
-            Other findings
-          </div>
-          <ul className="divide-y divide-[#222]">
-            {otherIssues.map((issue) => {
-              const markerIndex = issues.indexOf(issue);
-              const interactive = typeof onSelectIssue === "function";
-              const active = activeIndex === markerIndex;
+        <section className="space-y-3">
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#6c6c6c]">
+            {corrections.length > 0 ? "Other findings" : "Findings"}
+          </h2>
+          {otherIssues.map((issue) => {
+            const markerIndex = issues.indexOf(issue);
+            const interactive = typeof onSelectIssue === "function";
+            const active = activeIndex === markerIndex;
+            const cardClass = `rounded-[12px] border px-5 py-5 transition ${
+              active
+                ? "border-[#333] bg-[#0a0a0a]"
+                : "border-[#111111] bg-[#060606] hover:border-[#1a1a1a]"
+            }`;
 
-              return (
-                <li key={issue.id}>
-                  {interactive ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onSelectIssue(active ? null : markerIndex)
-                      }
-                      className={`flex w-full items-start gap-3 px-4 py-4 text-left transition hover:bg-[#080808] ${
-                        active ? "bg-[#0a0a0a]" : ""
-                      }`}
-                    >
-                      <IssueRowContent issue={issue} markerIndex={markerIndex} />
-                    </button>
-                  ) : (
-                    <div className="flex items-start gap-3 px-4 py-4">
-                      <IssueRowContent issue={issue} markerIndex={markerIndex} />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+            return interactive ? (
+              <button
+                key={issue.id}
+                type="button"
+                onClick={() => onSelectIssue(active ? null : markerIndex)}
+                className={`flex w-full items-start gap-4 text-left ${cardClass}`}
+              >
+                <IssueCardContent issue={issue} markerIndex={markerIndex} />
+              </button>
+            ) : (
+              <article key={issue.id} className={`flex items-start gap-4 ${cardClass}`}>
+                <IssueCardContent issue={issue} markerIndex={markerIndex} />
+              </article>
+            );
+          })}
         </section>
       ) : null}
     </div>
   );
 }
 
-function IssueRowContent({
+function IssueCardContent({
   issue,
   markerIndex,
 }: {
@@ -119,26 +118,14 @@ function IssueRowContent({
   return (
     <>
       <span
-        className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white"
+        className="mt-1 grid size-7 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
         style={{ background: MARKER_COLORS[markerIndex % MARKER_COLORS.length] }}
       >
         {markerIndex + 1}
       </span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[14px] font-semibold text-[#f0f0f0]">{issue.title}</span>
-          <SeverityBadge severity={issue.severity} />
-          <CategoryBadge category={issue.category} />
-        </div>
-        {issue.description ? (
-          <p className="mt-1.5 text-[13px] leading-relaxed text-[#919191]">{issue.description}</p>
-        ) : null}
-        {issue.suggestion ? (
-          <p className="mt-2 text-[13px] font-medium text-emerald-300/90">
-            {issue.suggestion}
-          </p>
-        ) : null}
-      </div>
+      <p className="min-w-0 text-[clamp(22px,4.5vw,32px)] font-bold leading-snug tracking-[-0.02em] text-[#f0f0f0]">
+        {issueSentence(issue)}
+      </p>
     </>
   );
 }

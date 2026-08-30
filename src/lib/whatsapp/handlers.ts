@@ -14,7 +14,7 @@ import {
 } from "./webhook";
 import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
 import { loadAccessState, trackSeenChat } from "./access";
-import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts } from "./contacts";
+import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts, contactsFromGroupParticipant } from "./contacts";
 import { clearDisconnectedWhatsAppGroup, isWhatsAppGroupDisconnected } from "./disconnected-groups";
 import { directMessageGroupName, isWhatsAppDirectChat } from "@/lib/groups-presentation";
 import { fallbackGroupName, getGroupName } from "./group-name";
@@ -306,7 +306,10 @@ async function handleMedia(
     console.log(`[whatsapp] proof done for ${created.assetId} score=${result.report.score}`);
 
     const responseStyle = await getProofResponseStyle();
-    const replyTitle = whatsappReplyPreview(result.report.issues, responseStyle);
+    const replyTitle = whatsappReplyPreview(result.report.issues, responseStyle, {
+      humanReply: result.report.humanReply,
+      summary: result.report.summary,
+    });
     await admin.from("assets").update({ name: replyTitle }).eq("id", created.assetId);
 
     logUsage({
@@ -320,7 +323,10 @@ async function handleMedia(
 
     const reportUrl = `${APP_URL}/r/${created.slug}`;
 
-    const replyBody = formatWhatsAppReply(result.report.issues, responseStyle);
+    const replyBody = formatWhatsAppReply(result.report.issues, responseStyle, {
+      humanReply: result.report.humanReply,
+      summary: result.report.summary,
+    });
 
     await sendInteractiveWaha(from, replyBody, {
       reply: [
@@ -621,10 +627,9 @@ async function tryClaimGroupAuthCode(
     try {
       const saved = await saveWhatsAppContacts(
         codeRow.org_id,
-        (groupMeta?.participants ?? []).map((participant) => ({
-          phone: participant.id,
-          displayName: participant.name,
-        })),
+        (groupMeta?.participants ?? []).flatMap((participant) =>
+          contactsFromGroupParticipant(participant),
+        ),
       );
       if (saved === 0) {
         await importWhatsAppGroupContacts(codeRow.org_id, groupId);

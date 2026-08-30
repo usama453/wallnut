@@ -4,6 +4,50 @@ export function phoneDigits(raw: string | null | undefined) {
   return raw.split("@")[0].split(":")[0].replace(/\D/g, "");
 }
 
+export function isLidJid(raw: string | null | undefined): boolean {
+  return Boolean(raw?.trim().endsWith("@lid"));
+}
+
+export function isUserPhoneJid(raw: string | null | undefined): boolean {
+  const value = raw?.trim() ?? "";
+  return value.endsWith("@c.us") || value.endsWith("@s.whatsapp.net");
+}
+
+export function looksLikeMobilePhoneDigits(digits: string): boolean {
+  return digits.length >= 10 && digits.length <= 15;
+}
+
+/** Prefer a routable phone JID over WhatsApp's privacy @lid ids. */
+export function preferParticipantPhone(participant: {
+  id?: string | null;
+  jid?: string | null;
+  phoneNumber?: string | null;
+}): string {
+  const candidates = [participant.phoneNumber, participant.jid, participant.id]
+    .filter(Boolean)
+    .map(String);
+  return (
+    candidates.find(
+      (id) => id.endsWith("@s.whatsapp.net") || id.endsWith("@c.us"),
+    ) ||
+    candidates[0] ||
+    ""
+  );
+}
+
+/** Privacy @lid JID when WAHA exposes it alongside a phone number. */
+export function participantLidJid(participant: {
+  id?: string | null;
+  jid?: string | null;
+  phoneNumber?: string | null;
+  lid?: string | null;
+}): string | null {
+  const candidates = [participant.lid, participant.id, participant.jid, participant.phoneNumber]
+    .filter(Boolean)
+    .map(String);
+  return candidates.find((id) => id.endsWith("@lid")) ?? null;
+}
+
 /** Contact id for the avatar proxy (full JID or bare phone digits). */
 export function whatsappAvatarContact(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;

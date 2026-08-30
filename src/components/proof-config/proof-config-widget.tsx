@@ -56,24 +56,12 @@ export function ProofConfigWidget({
   if (loaded && error === "Forbidden") return null;
 
   return (
-    <div ref={rootRef} className="flex flex-col-reverse items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        disabled={busy && !open}
-        className={`${PILL_BUTTON} ${open ? "border-[#3a3a3a] text-white" : ""}`}
-      >
-        {busy ? <Spinner /> : <SettingsIcon size={14} />}
-        Bot settings
-      </button>
-
+    <div ref={rootRef} className="relative">
       {open ? (
         <div
           role="dialog"
-          aria-label="Bot settings"
-          className="wallnut-reveal w-[min(calc(100vw-2rem),480px)] rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          aria-label="Wallnut's settings"
+          className="wallnut-reveal absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-[min(calc(100vw-2rem),480px)] -translate-x-1/2 rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
           <div className="grid grid-cols-2 divide-x divide-[#131313]">
             <section className="px-3 py-3">
@@ -126,6 +114,18 @@ export function ProofConfigWidget({
           ) : null}
         </div>
       ) : null}
+
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        disabled={busy && !open}
+        className={`${PILL_BUTTON} ${open ? "border-[#3a3a3a] text-white" : ""}`}
+      >
+        {busy ? <Spinner /> : <SettingsIcon size={14} />}
+        Wallnut&apos;s settings
+      </button>
     </div>
   );
 }

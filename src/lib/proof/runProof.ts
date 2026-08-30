@@ -185,6 +185,15 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
   }
   finalizeReport(report);
 
+  try {
+    report.humanReply = await provider.generateHumanReply(report);
+  } catch (err) {
+    console.error(
+      `[proof] human reply generation failed: ${err instanceof Error ? err.message : err}`,
+    );
+    report.humanReply = report.summary?.trim() || undefined;
+  }
+
   // 7. persist
   const proofId = await persistProof(admin, {
     assetVersionId,

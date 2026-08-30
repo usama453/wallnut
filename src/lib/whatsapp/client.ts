@@ -1,4 +1,5 @@
 import { WAHA_API_KEY, WAHA_BASE_URL, WAHA_SESSION } from "./config";
+import { preferParticipantPhone, participantLidJid } from "@/lib/whatsapp/jid";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json",
@@ -154,6 +155,7 @@ function assertConfigured() {
 
 export type WahaGroupParticipant = {
   id: string;
+  lid?: string | null;
   name: string | null;
   admin?: string | null;
 };
@@ -190,11 +192,11 @@ export async function fetchWahaGroup(
     const participants = Array.isArray(data.participants)
       ? data.participants
           .map((participant) => {
-            const id = String(
-              participant.id || participant.jid || participant.phoneNumber || "",
-            ).trim();
+            const id = preferParticipantPhone(participant).trim();
+            const lid = participantLidJid(participant);
             return {
               id,
+              lid: lid && lid !== id ? lid : null,
               name: participant.name?.trim() || null,
               admin: participant.admin ?? null,
             };

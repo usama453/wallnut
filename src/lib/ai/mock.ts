@@ -1,5 +1,5 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput, TranscribeInput, TranscriptionOutput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
 import { buildSystemPrompt, buildStandaloneProofPrompt } from "./prompt";
 
 /**
@@ -144,6 +144,28 @@ export class MockProvider implements AiProvider {
       return "You're most welcome. A little patience goes a long way, as we tortoises say.";
     }
     return "Hmm... let me think on that slowly. Meanwhile, if you send me an image or PDF, I can proof it and give you a score.";
+  }
+
+  async generateHumanReply(report: RawReport): Promise<string> {
+    await delay(200);
+    const typoIssues = report.issues.filter((issue) => /^Misspelled "/i.test(issue.title));
+    if (typoIssues.length) {
+      const pairs = typoIssues
+        .slice(0, 3)
+        .map((issue) => {
+          const word = /Misspelled "([^"]+)"/i.exec(issue.title)?.[1];
+          const fix = /did you mean:\s*([^?.]+)/i.exec(issue.suggestion ?? "")?.[1]?.trim();
+          return word && fix ? `${word} → ${fix}` : word ?? issue.title;
+        })
+        .join(", ");
+      return `Found ${typoIssues.length} typo${typoIssues.length === 1 ? "" : "s"}: ${pairs}.`;
+    }
+    if (!report.issues.length) {
+      return report.summary || "Copy and layout look solid on this one.";
+    }
+    const top = report.issues[0];
+    const detail = top.description?.trim() || top.title?.trim();
+    return report.summary?.trim() || `Mostly good — ${detail}.`;
   }
 }
 

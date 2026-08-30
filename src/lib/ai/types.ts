@@ -20,6 +20,8 @@ export interface RawReport {
   issues: RawIssue[];
   /** Verbatim transcription of every visible text element (used for the spellcheck pass). */
   extractedText?: string;
+  /** Natural WhatsApp reply generated from the finalized report. */
+  humanReply?: string;
 }
 
 export interface BrandContext {

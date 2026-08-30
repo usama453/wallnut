@@ -1,4 +1,10 @@
-import type { AnalyzeInput, AnalyzeOutput, TranscribeInput, TranscriptionOutput } from "./types";
+import type {
+  AnalyzeInput,
+  AnalyzeOutput,
+  RawReport,
+  TranscribeInput,
+  TranscriptionOutput,
+} from "./types";
 
 /**
  * Single interface for the proofing model.
@@ -13,6 +19,8 @@ export interface AiProvider {
   analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput>;
   /** Casual chat reply in the bot's persona (short, characterful). */
   chat(message: string): Promise<string>;
+  /** Short WhatsApp reply after proofing, based on the finalized report. */
+  generateHumanReply(report: RawReport): Promise<string>;
 }
 
 export type AiProviderId = "gemini" | "mock";

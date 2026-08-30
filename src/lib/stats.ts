@@ -6,8 +6,15 @@ import {
   loadWhatsAppContactNames,
   rememberWhatsAppContact,
   syncOrgWhatsAppGroupContacts,
+  buildContactAliasMap,
+  buildCanonicalNameIndex,
 } from "@/lib/whatsapp/contacts";
-import { phoneDigits, whatsappAvatarContact } from "@/lib/whatsapp/jid";
+import {
+  isLidJid,
+  isUserPhoneJid,
+  phoneDigits,
+  whatsappAvatarContact,
+} from "@/lib/whatsapp/jid";
 
 export interface PersonStats {
   key: string;
@@ -95,6 +102,14 @@ export async function getStats(orgIdOverride?: string | null) {
   const issueByProof = new Map<string, number>();
   for (const i of issues ?? []) issueByProof.set(i.proof_id, (issueByProof.get(i.proof_id) ?? 0) + 1);
 
+  let contacts: Array<{ phone: string; display_name: string | null }> = [];
+  let aliasMap = new Map<string, string>();
+  if (orgId) {
+    await syncOrgWhatsAppGroupContacts(orgId);
+    contacts = await loadOrgWhatsAppContacts(orgId);
+    aliasMap = buildContactAliasMap(contacts);
+  }
+
   const byPerson = new Map<string, PersonStats>();
 
   for (const u of usageRows) {
@@ -102,14 +117,14 @@ export async function getStats(orgIdOverride?: string | null) {
     const versionId = versionByAsset.get(assetId);
     const proof = versionId ? proofByVersion.get(versionId) : undefined;
     const phone = (u.from_phone as string | null) ?? null;
-    const key = personKey(phone);
+    const key = personKey(phone, aliasMap);
 
     const entry =
       byPerson.get(key) ??
       {
         key,
-        phone,
-        display: phone ? formatPhone(phone) : "Dashboard",
+        phone: canonicalPersonPhone(phone, aliasMap, contacts),
+        display: phone ? formatPhone(phone, aliasMap) : "Dashboard",
         avatarUrl: null,
         uploads: 0,
         typos: 0,
@@ -125,32 +140,35 @@ export async function getStats(orgIdOverride?: string | null) {
     byPerson.set(key, entry);
   }
 
-  if (orgId) {
-    await syncOrgWhatsAppGroupContacts(orgId);
-    const contacts = await loadOrgWhatsAppContacts(orgId);
-    for (const contact of contacts) {
-      const key = personKey(contact.phone);
-      if (key === "__dashboard__") continue;
-      const existing = byPerson.get(key);
-      if (existing) {
-        if (contact.display_name && looksLikePhoneLabel(existing.display)) {
-          existing.display = contact.display_name;
-        }
-        continue;
+  for (const contact of contacts) {
+    const key = personKey(contact.phone, aliasMap);
+    if (key === "__dashboard__") continue;
+    const existing = byPerson.get(key);
+    if (existing) {
+      if (contact.display_name && looksLikePhoneLabel(existing.display)) {
+        existing.display = contact.display_name;
       }
-      byPerson.set(key, {
-        key,
-        phone: contact.phone,
-        display: contact.display_name?.trim() || formatPhone(contact.phone),
-        avatarUrl: null,
-        uploads: 0,
-        typos: 0,
-        avgScore: null,
-      });
+      if (isUserPhoneJid(contact.phone) && isLidJid(existing.phone)) {
+        existing.phone = contact.phone;
+      }
+      continue;
     }
+    byPerson.set(key, {
+      key,
+      phone: canonicalPersonPhone(contact.phone, aliasMap, contacts) ?? contact.phone,
+      display: contact.display_name?.trim() || formatPhone(contact.phone, aliasMap),
+      avatarUrl: null,
+      uploads: 0,
+      typos: 0,
+      avgScore: null,
+    });
   }
 
-  const people = await enrichPeople([...byPerson.values()], orgId);
+  const people = dedupePeople(
+    await enrichPeople([...byPerson.values()], orgId, aliasMap, contacts),
+    aliasMap,
+    buildCanonicalNameIndex(contacts, aliasMap),
+  );
   const visible = people.filter((person) => person.phone);
   const byName = (a: PersonStats, b: PersonStats) => a.display.localeCompare(b.display);
 
@@ -167,8 +185,8 @@ export async function getStats(orgIdOverride?: string | null) {
     byUploads,
     byTypos,
     totals: {
-      uploads: people.reduce((n, p) => n + p.uploads, 0),
-      typos: people.reduce((n, p) => n + p.typos, 0),
+      uploads: visible.reduce((n, p) => n + p.uploads, 0),
+      typos: visible.reduce((n, p) => n + p.typos, 0),
       people: visible.length,
       checked: proofs?.length ?? 0,
       avgScore:
@@ -185,13 +203,16 @@ export async function getStats(orgIdOverride?: string | null) {
 async function enrichPeople(
   people: PersonStats[],
   orgId: string | null,
+  aliasMap: Map<string, string>,
+  seedContacts: Array<{ phone: string; display_name: string | null }>,
 ): Promise<PersonStats[]> {
   const phones = people.map((person) => person.phone).filter(Boolean) as string[];
   const [stored, contacts, connection] = await Promise.all([
     loadWhatsAppContactNames(phones).catch(() => new Map<string, string>()),
-    orgId ? loadOrgWhatsAppContacts(orgId) : Promise.resolve([]),
+    orgId ? loadOrgWhatsAppContacts(orgId) : Promise.resolve(seedContacts),
     Promise.resolve(resolveConnection()),
   ]);
+  const nameIndex = buildCanonicalNameIndex(contacts, aliasMap);
 
   const contactByDigits = new Map<string, string>();
   for (const row of contacts) {
@@ -217,13 +238,15 @@ async function enrichPeople(
   }
 
   return people.map((person) => {
-    const digits = phoneDigits(person.phone);
-    const display = (digits && stored.get(digits)) || person.display;
+    const digits = personKey(person.phone, aliasMap);
+    const display =
+      nameIndex.get(digits) || stored.get(digits) || person.display;
     const contactKey =
       whatsappAvatarContact(person.phone) ??
       (digits ? whatsappAvatarContact(contactByDigits.get(digits) ?? null) : null);
     return {
       ...person,
+      key: digits,
       display,
       avatarUrl:
         connection && contactKey
@@ -233,19 +256,131 @@ async function enrichPeople(
   });
 }
 
-function personKey(phone: string | null | undefined) {
+function dedupePeople(
+  people: PersonStats[],
+  aliasMap: Map<string, string>,
+  nameIndex: Map<string, string>,
+): PersonStats[] {
+  const normalized = people.map((person) => {
+    const digits = personKey(person.phone, aliasMap);
+    const savedName = nameIndex.get(digits);
+    if (savedName && looksLikePhoneLabel(person.display)) {
+      return { ...person, display: savedName, key: digits };
+    }
+    return { ...person, key: digits };
+  });
+
+  return mergePeopleByAvatar(mergePeopleByDisplayName(normalized));
+}
+
+function mergePeopleByDisplayName(people: PersonStats[]): PersonStats[] {
+  const groups = new Map<string, PersonStats[]>();
+  for (const person of people) {
+    const label = person.display.trim();
+    if (!label || looksLikePhoneLabel(label)) continue;
+    const key = label.toLowerCase();
+    const group = groups.get(key) ?? [];
+    group.push(person);
+    groups.set(key, group);
+  }
+
+  const absorbed = new Set<string>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const primary = pickPrimaryPerson(group);
+    for (const person of group) {
+      if (person.key === primary.key) continue;
+      absorbPerson(primary, person);
+      absorbed.add(person.key);
+    }
+  }
+
+  return people.filter((person) => !absorbed.has(person.key));
+}
+
+function mergePeopleByAvatar(people: PersonStats[]): PersonStats[] {
+  const groups = new Map<string, PersonStats[]>();
+  for (const person of people) {
+    if (!person.avatarUrl) continue;
+    const group = groups.get(person.avatarUrl) ?? [];
+    group.push(person);
+    groups.set(person.avatarUrl, group);
+  }
+
+  const absorbed = new Set<string>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const primary = pickPrimaryPerson(group);
+    for (const person of group) {
+      if (person.key === primary.key) continue;
+      absorbPerson(primary, person);
+      absorbed.add(person.key);
+    }
+  }
+
+  return people.filter((person) => !absorbed.has(person.key));
+}
+
+function absorbPerson(primary: PersonStats, person: PersonStats) {
+  const totalUploads = primary.uploads + person.uploads;
+  if (primary.avgScore != null && person.avgScore != null && totalUploads > 0) {
+    primary.avgScore = Math.round(
+      (primary.avgScore * primary.uploads + person.avgScore * person.uploads) /
+        totalUploads,
+    );
+  } else if (primary.avgScore == null) {
+    primary.avgScore = person.avgScore;
+  }
+  primary.uploads = totalUploads;
+  primary.typos += person.typos;
+  if (looksLikePhoneLabel(primary.display) && !looksLikePhoneLabel(person.display)) {
+    primary.display = person.display;
+  }
+  if (isUserPhoneJid(person.phone ?? "") && isLidJid(primary.phone)) {
+    primary.phone = person.phone;
+  }
+}
+
+function pickPrimaryPerson(group: PersonStats[]): PersonStats {
+  return [...group].sort((a, b) => {
+    const aPhone = isUserPhoneJid(a.phone ?? "") ? 1 : 0;
+    const bPhone = isUserPhoneJid(b.phone ?? "") ? 1 : 0;
+    if (aPhone !== bPhone) return bPhone - aPhone;
+    return b.uploads - a.uploads || b.typos - a.typos;
+  })[0]!;
+}
+
+function canonicalPersonPhone(
+  phone: string | null,
+  aliasMap: Map<string, string>,
+  contacts: Array<{ phone: string; display_name: string | null }>,
+): string | null {
+  if (!phone) return null;
+  const digits = phoneDigits(phone);
+  const canonicalDigits = aliasMap.get(digits) ?? digits;
+  const phoneContact = contacts.find(
+    (contact) =>
+      isUserPhoneJid(contact.phone) && phoneDigits(contact.phone) === canonicalDigits,
+  );
+  return phoneContact?.phone ?? phone;
+}
+
+function personKey(phone: string | null | undefined, aliases?: Map<string, string>) {
   if (!phone) return "__dashboard__";
-  return phoneDigits(phone) || phone;
+  const digits = phoneDigits(phone);
+  if (!digits) return phone;
+  return aliases?.get(digits) ?? digits;
 }
 
 function looksLikePhoneLabel(label: string) {
   return /^[+\d\s.-]+$/.test(label.trim());
 }
 
-function formatPhone(raw: string): string {
-  const s = raw.replace(/\D/g, "");
-  if (s.length === 12) return `+${s.slice(0, 2)} ${s.slice(2, 5)} ${s.slice(5, 8)} ${s.slice(8)}`;
-  if (s.length === 11) return `+${s[0]} ${s.slice(1, 4)} ${s.slice(4, 7)} ${s.slice(7)}`;
-  if (s.length === 10) return `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6)}`;
-  return raw;
+function formatPhone(raw: string, aliases?: Map<string, string>): string {
+  const digits = aliases?.get(phoneDigits(raw)) ?? phoneDigits(raw);
+  if (!digits) return raw;
+  if (digits.length === 12) return `+${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+  if (digits.length === 11) return `+${digits[0]} ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  if (digits.length === 10) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  return `+${digits}`;
 }
