@@ -45,6 +45,7 @@ const STATUS_STYLES: Record<AssetStatus, string> = {
 };
 
 export function StatusBadge({ status }: { status: AssetStatus }) {
+  if (status !== "changes_requested") return null;
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize ${STATUS_STYLES[status]}`}
@@ -61,11 +62,12 @@ const PROOF_STYLES: Record<ProofStatus, string> = {
 };
 
 export function ProofBadge({ status }: { status: ProofStatus }) {
+  if (status !== "errors") return null;
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-medium ${PROOF_STYLES[status]}`}
     >
-      {status === "passed" ? "Passed" : status === "needs_review" ? "Needs review" : "Errors"}
+      Errors
     </span>
   );
 }

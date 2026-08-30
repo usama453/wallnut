@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { InitialAvatar } from "@/components/wallnut/avatar";
-import { displayWhatsAppSender, timeAgo, type ReportRow } from "@/lib/groups-presentation";
+import { displayWhatsAppSender, reportAlertLabel, timeAgo, type ReportRow } from "@/lib/groups-presentation";
 
 export function ReportCard({ report }: { report: ReportRow }) {
   const href = report.slug ? `/reports/${report.slug}` : `/reports/${report.assetId}`;
@@ -15,6 +15,7 @@ export function ReportCard({ report }: { report: ReportRow }) {
         : report.score >= 70
           ? "text-amber-300"
           : "text-red-300";
+  const alertLabel = reportAlertLabel(report);
 
   return (
     <Link
@@ -35,9 +36,11 @@ export function ReportCard({ report }: { report: ReportRow }) {
         <span className="absolute right-2.5 top-2.5 rounded-[4px] bg-black/70 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-white/85">
           {report.kind}
         </span>
-        <span className="absolute left-2.5 top-2.5 rounded-[4px] bg-black/70 px-2 py-1 text-[9px] font-bold capitalize text-white/75">
-          {report.status.replaceAll("_", " ")}
-        </span>
+        {alertLabel ? (
+          <span className="absolute left-2.5 top-2.5 rounded-[4px] bg-red-950/80 px-2 py-1 text-[9px] font-bold text-red-200">
+            {alertLabel}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col px-3.5 py-3.5">

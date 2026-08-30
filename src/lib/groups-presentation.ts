@@ -16,6 +16,14 @@ export interface ReportRow {
   uploader: string | null;
 }
 
+export function reportAlertLabel(
+  report: Pick<ReportRow, "status" | "score">,
+): string | null {
+  if (report.status === "changes_requested") return "Changes requested";
+  if (report.score != null && report.score < 70) return "Errors";
+  return null;
+}
+
 export interface GroupCard {
   group: Group;
   reports: ReportRow[];
