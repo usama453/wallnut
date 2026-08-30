@@ -187,19 +187,27 @@ export class MockProvider implements AiProvider {
       const word = /Misspelled "([^"]+)"/i.exec(typoIssues[0].title)?.[1];
       const fix = /did you mean:\s*([^?.]+)/i.exec(typoIssues[0].suggestion ?? "")?.[1]?.trim();
       if (word && fix) {
-        return typoIssues.length === 1
-          ? `1 typo: ${word} → ${fix}.`
-          : `${typoIssues.length} typos: ${word} → ${fix} +${typoIssues.length - 1}.`;
+        const typoPart =
+          typoIssues.length === 1
+            ? `Found 1 typo: ${word} → ${fix}.`
+            : `Found ${typoIssues.length} typos — ${word} → ${fix} and a few more.`;
+        const tip = report.issues.find((issue) => !/^Misspelled "/i.test(issue.title));
+        const extra = tip?.suggestion?.trim() || tip?.title?.trim();
+        return extra ? `${typoPart} ${extra}`.slice(0, 160) : typoPart;
       }
-      return `${typoIssues.length} typo${typoIssues.length === 1 ? "" : "s"} to fix.`;
+      return `${typoIssues.length} typo${typoIssues.length === 1 ? "" : "s"} to fix.`.slice(0, 160);
     }
     if (!report.issues.length) {
-      const closings = ["Looks good", "All okay", "Clean copy", "Good to go"];
+      const closings = [
+        "Looks clean — copy reads well.",
+        "All good on this one.",
+        "Nothing major jumped out.",
+      ];
       return closings[report.score % closings.length];
     }
     const top = report.issues[0];
     const detail = top.suggestion?.trim() || top.title?.trim();
-    return (detail || "Needs a quick look.").slice(0, 100);
+    return (detail || "Worth a quick look before publish.").slice(0, 160);
   }
 }
 

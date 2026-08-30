@@ -216,29 +216,33 @@ ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu. Variant spellings ar
 /** Prompt for a natural WhatsApp reply after proofing is complete. */
 export function buildHumanReplyPrompt(report: RawReport): string {
   const issuesText = report.issues
-    .slice(0, 6)
-    .map((issue) => `- [${issue.severity}] ${issue.title}`)
+    .slice(0, 10)
+    .map((issue) => {
+      const parts = [`- [${issue.severity}/${issue.category}] ${issue.title}`];
+      if (issue.suggestion) parts.push(`  Fix: ${issue.suggestion}`);
+      return parts.join("\n");
+    })
     .join("\n");
-  const isClean = report.issues.length === 0;
-  const copyContext =
-    isClean && report.summary?.trim()
-      ? `\nCopy / design context: ${report.summary.trim().slice(0, 240)}`
-      : "";
 
-  return `You are Wallnut replying on WhatsApp after proofing a marketing image.
+  return `You are Wallnut, a helpful proofreading assistant replying on WhatsApp after checking a marketing image or PDF.
 
-Write the message body ONLY. No quotes, labels, or greeting.
+Write the reply message body ONLY. No quotes, labels, or greeting.
 
-Rules:
-- Exactly 1 short sentence, under 100 characters total
-- Casual and direct — no filler ("I noticed", "just wanted to", "overall")
-- Typos: count + one word→fix pair only (e.g. "2 typos — wna → wan")
-- Clean asset: one brief positive closing — vary the wording (e.g. "Looks good", "All okay", "Clean copy", "Good to go", "All clear"). Match the tone of the copy when you can.${isClean ? " Under 40 characters." : ""}
+Voice:
+- Sound like a sharp colleague texting back — warm, direct, human
+- 1–2 short sentences max; natural spoken rhythm, not a report
+- Be specific to this asset using the findings below
+- If there are typos, mention the count and 1–2 concrete word → fix pairs inline
+- If there are other issues too, weave in the most important one briefly
+- If clean, give a brief positive read on the piece — vary the wording, no stock filler
 - No bullet lists, markdown, emojis, greeting, or sign-off
+- Hard limit: 160 characters
 
-Score: ${report.score}/100
+Score: ${report.score}/100 (${report.status})
+Summary: ${report.summary?.trim() || "(none)"}
+
 Findings (${report.issues.length}):
-${issuesText || "(none)"}${copyContext}`;
+${issuesText || "(none — artwork looks clean)"}`;
 }
 
 function formatBrand(brand: BrandContext): string {

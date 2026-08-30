@@ -289,8 +289,8 @@ export class GeminiProvider implements AiProvider {
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: {
-              temperature: 0.5,
-              maxOutputTokens: 48,
+              temperature: 0.75,
+              maxOutputTokens: 96,
             },
           }),
         });
@@ -308,7 +308,7 @@ export class GeminiProvider implements AiProvider {
             .join("\n") ?? "";
         const reply = sanitizeText(text.trim().replace(/^["']|["']$/g, ""));
         if (!reply) throw new Error("Gemini human reply returned an empty response");
-        return reply.slice(0, 100);
+        return reply.slice(0, 160);
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < 2) await new Promise((r) => setTimeout(r, 300 * attempt));

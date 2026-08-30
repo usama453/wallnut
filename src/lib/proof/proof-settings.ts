@@ -81,8 +81,9 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
   },
   human: {
     title: "Conversational",
-    description: "One short sentence — casual and to the point.",
-    example: '2 typos — wna → wan. Otherwise looks good.',
+    description: "A short, human WhatsApp-style reply — specific to the asset.",
+    example:
+      'Found 2 typos: wna → wan, teh → the. Headline spacing feels tight otherwise.',
   },
   custom: {
     title: "Custom",

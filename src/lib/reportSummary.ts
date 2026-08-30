@@ -19,7 +19,7 @@ export interface WhatsAppReplyContext {
 }
 
 /** Max length for conversational ("human") WhatsApp replies. */
-export const HUMAN_REPLY_MAX_CHARS = 100;
+export const HUMAN_REPLY_MAX_CHARS = 160;
 
 function clampHumanReply(text: string): string {
   const trimmed = text.replace(/\s+/g, " ").trim();
@@ -474,20 +474,27 @@ function formatHumanWhatsAppReply(
   if (generated) return clampHumanReply(generated);
 
   const typoLines = getTypoCorrections(issues);
-  if (typoLines.length) {
-    const first = `${typoLines[0].before} → ${typoLines[0].after}`;
-    const typo =
-      typoLines.length === 1
-        ? `1 typo: ${first}`
-        : `${typoLines.length} typos: ${first} +${typoLines.length - 1}`;
-    const tip = pickTopTip(issues);
-    return clampHumanReply(tip ? `${typo}. ${tip}` : typo);
+  const tip = pickTopTip(issues);
+
+  if (!typoLines.length) {
+    if (tip) return clampHumanReply(tip);
+    if (!issues.length) return "Looks clean — nothing jumped out.";
+    const summary = summarizeIssues(issues);
+    return clampHumanReply(summary ? `${summary}.` : "Worth a quick look.");
   }
 
-  const tip = pickTopTip(issues);
-  if (tip) return clampHumanReply(tip);
-  if (!issues.length) return "Looks clean.";
-  return clampHumanReply(summarizeIssues(issues));
+  const typoPart = formatTypoSummary(typoLines);
+  if (!tip) return clampHumanReply(typoPart);
+  return clampHumanReply(`${typoPart} ${tip}`);
+}
+
+function formatTypoSummary(typoLines: CorrectionLine[]): string {
+  const maxShown = 3;
+  const shown = typoLines.slice(0, maxShown);
+  const pairs = shown.map((line) => `${line.before} → ${line.after}`).join(", ");
+  const extra = typoLines.length > maxShown ? ` +${typoLines.length - maxShown} more` : "";
+  const count = typoLines.length;
+  return `Found ${count} typo${count === 1 ? "" : "s"}: ${pairs}${extra}.`;
 }
 
 function getTypoCorrections(issues: SummaryIssue[]) {
