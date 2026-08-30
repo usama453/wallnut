@@ -74,7 +74,7 @@ export function WhatsAppAccess() {
 
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#222] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#131313] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">WhatsApp access</h2>
         <div className="flex overflow-hidden rounded-[6px] border border-[#2e2e2e] text-[11px]">
           <button
@@ -83,8 +83,8 @@ export function WhatsAppAccess() {
             onClick={() => post({ action: "mode", mode: "all" })}
             className={`px-3 py-1.5 transition ${
               mode === "all"
-                ? "bg-[#202020] font-bold text-white"
-                : "text-[#919191] hover:bg-[#181818] hover:text-white"
+                ? "bg-[#0d0d0d] font-bold text-white"
+                : "text-[#919191] hover:bg-[#0c0c0c] hover:text-white"
             }`}
           >
             Everyone
@@ -95,8 +95,8 @@ export function WhatsAppAccess() {
             onClick={() => post({ action: "mode", mode: "allowlist" })}
             className={`border-l border-[#2e2e2e] px-3 py-1.5 transition ${
               mode === "allowlist"
-                ? "bg-[#202020] font-bold text-white"
-                : "text-[#919191] hover:bg-[#181818] hover:text-white"
+                ? "bg-[#0d0d0d] font-bold text-white"
+                : "text-[#919191] hover:bg-[#0c0c0c] hover:text-white"
             }`}
           >
             Allowed only
@@ -122,7 +122,7 @@ export function WhatsAppAccess() {
         ) : (
           <>
             {allowed.length > 0 ? (
-              <ul className="mt-4 divide-y divide-[#1b1b1b] overflow-hidden rounded-[6px] border border-[#222]">
+              <ul className="mt-4 divide-y divide-[#111111] overflow-hidden rounded-[6px] border border-[#131313]">
                 {allowed.map((a) => (
                   <li
                     key={a.id}
@@ -156,7 +156,7 @@ export function WhatsAppAccess() {
                 <h3 className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#555]">
                   Recent chats waiting for access
                 </h3>
-                <ul className="mt-2 divide-y divide-[#1b1b1b] overflow-hidden rounded-[6px] border border-[#222]">
+                <ul className="mt-2 divide-y divide-[#111111] overflow-hidden rounded-[6px] border border-[#131313]">
                   {recent.map((c) => (
                     <li
                       key={c.chat_id}

@@ -164,7 +164,7 @@ export function DashboardGrid({
                 onClick={() => void addWhatsAppGroup()}
                 disabled={addingGroup}
                 aria-busy={addingGroup}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#0a0a0a] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70"
               >
                 {addingGroup ? <Spinner /> : <span aria-hidden className="text-[14px] leading-none">+</span>}
                 {addingGroup ? "Creating code…" : "Add WhatsApp group"}
@@ -200,7 +200,7 @@ export function DashboardGrid({
             </Reveal>
           ))
         ) : invites.length === 0 && !showOnboarding ? (
-          <div className="rounded-[8px] border border-dashed border-[#252525] px-6 py-14 text-center">
+          <div className="rounded-[8px] border border-dashed border-[#141414] px-6 py-14 text-center">
             <p className="text-[12px] font-bold text-[#bdbdbd]">No groups yet</p>
             <p className="mt-1 text-[11px] text-[#5f5f5f]">
               {canAddGroup
@@ -262,7 +262,7 @@ function RankedAvatar({
   return (
     <span className="group relative flex items-end">
       <PersonAvatar label={leader.display} src={leader.avatarUrl} size={size} />
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-[8px] border border-[#2a2a2a] bg-[#161616] px-2.5 py-2 text-center opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition group-hover:opacity-100 group-focus-within:opacity-100">
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-[8px] border border-[#2a2a2a] bg-[#0a0a0a] px-2.5 py-2 text-center opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition group-hover:opacity-100 group-focus-within:opacity-100">
         <span className="block text-[11px] font-bold text-white">
           {leader.display}
         </span>
@@ -301,7 +301,7 @@ function PendingWhatsAppGroupCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-[8px] border border-[#1b1b1b] bg-[#101010] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
+    <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <button
           type="button"
@@ -332,7 +332,7 @@ function PendingWhatsAppGroupCard({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="relative border-t border-[#222] px-4 py-6 text-center">
+          <div className="relative border-t border-[#131313] px-4 py-6 text-center">
             {open && canRemove ? (
               <RemoveWhatsAppGroup
                 orgSlug={orgSlug}
@@ -391,8 +391,8 @@ function DashboardGroupCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-[8px] border border-[#1b1b1b] bg-[#101010] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
-      <div className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[#161616]">
+    <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[#0a0a0a]">
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
@@ -405,7 +405,7 @@ function DashboardGroupCard({
           <span className="min-w-0 flex-1">
             <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               {sourceBadge ? (
-                <span className="shrink-0 rounded-full border border-[#2a2a2a] bg-[#161616] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#7a7a7a]">
+                <span className="shrink-0 rounded-full border border-[#2a2a2a] bg-[#0a0a0a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#7a7a7a]">
                   {sourceBadge}
                 </span>
               ) : null}
@@ -458,7 +458,7 @@ function DashboardGroupCard({
       >
         <div className="overflow-hidden">
           {awaitingSync && inviteCode ? (
-            <div className="border-t border-[#222] px-4 py-6 text-center">
+            <div className="border-t border-[#131313] px-4 py-6 text-center">
               <p className="font-mono text-[22px] font-bold tracking-[0.18em] text-white">
                 {inviteCode}
               </p>
@@ -467,7 +467,7 @@ function DashboardGroupCard({
               </p>
             </div>
           ) : (
-            <div className="border-t border-[#222] px-4 py-3">
+            <div className="border-t border-[#131313] px-4 py-3">
               {preview.length > 0 ? (
                 <div className="flex flex-col gap-1">
                   {preview.map((report) => (
@@ -506,7 +506,7 @@ function DashboardReportRow({ report }: { report: ReportRow }) {
           router.push(href);
         });
       }}
-      className="flex items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#171717]"
+      className="flex items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#080808]"
     >
       <ReportMarker report={report} />
       <span className="min-w-0 flex-1">
@@ -538,7 +538,7 @@ function ReportMarker({ report }: { report: ReportRow }) {
           : "#ef4444";
   return (
     <span
-      className="grid size-[22px] shrink-0 place-items-center overflow-hidden rounded-[4px] bg-[#252525]"
+      className="grid size-[22px] shrink-0 place-items-center overflow-hidden rounded-[4px] bg-[#111111]"
       style={!report.thumbnail ? { background: color } : undefined}
     >
       {report.thumbnail ? (

@@ -160,14 +160,14 @@ export function AssetViewer({ data }: { data: ViewerData }) {
       </div>
 
       {note && (
-        <div className="rounded-[8px] border border-[#2a2a2a] bg-[#101010] px-4 py-2.5 text-[12px] text-[#bdbdbd]">
+        <div className="rounded-[8px] border border-[#2a2a2a] bg-[#060606] px-4 py-2.5 text-[12px] text-[#bdbdbd]">
           {note}
         </div>
       )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="space-y-4">
-          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
+          <div className="rounded-[10px] border border-[#111111] bg-[#060606] p-4">
             {proof ? (
               <div className="flex items-center gap-4">
                 <ScoreRing score={proof.score} />
@@ -209,7 +209,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
             ))}
           </div>
 
-          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
+          <div className="rounded-[10px] border border-[#111111] bg-[#060606] p-4">
             <h3 className="mb-2 text-[12px] font-bold">Approval history</h3>
             {approvals.length === 0 ? (
               <p className="text-[12px] text-[#6c6c6c]">No approvals yet.</p>
@@ -241,7 +241,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 className={`rounded px-2 py-1 ${
                   v.id === current?.id
                     ? "bg-[#292929] font-medium text-white"
-                    : "text-[#6c6c6c] hover:bg-[#202020] hover:text-[#bdbdbd]"
+                    : "text-[#6c6c6c] hover:bg-[#0d0d0d] hover:text-[#bdbdbd]"
                 }`}
               >
                 v{v.version}
@@ -263,12 +263,12 @@ export function AssetViewer({ data }: { data: ViewerData }) {
               }
             />
           ) : (
-            <div className="rounded-[12px] border border-[#1b1b1b] bg-[#101010] px-4 py-20 text-center text-[12px] text-[#6c6c6c]">
+            <div className="rounded-[12px] border border-[#111111] bg-[#060606] px-4 py-20 text-center text-[12px] text-[#6c6c6c]">
               No file for this version.
             </div>
           )}
 
-          <div className="rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-4">
+          <div className="rounded-[10px] border border-[#111111] bg-[#060606] p-4">
             <h3 className="mb-3 text-[12px] font-bold">
               Comments <span className="font-normal text-[#6c6c6c]">({comments.length})</span>
             </h3>
@@ -277,7 +277,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 <p className="text-[12px] text-[#6c6c6c]">No comments yet.</p>
               )}
               {comments.map((c) => (
-                <div key={c.id} className="rounded-[7px] border border-[#202020] bg-[#151515] px-3 py-2.5 text-[12px]">
+                <div key={c.id} className="rounded-[7px] border border-[#202020] bg-[#080808] px-3 py-2.5 text-[12px]">
                   <p className="text-[#d0d0d0]">{c.body}</p>
                   <p className="mt-1 text-[10px] text-[#555]">{fmtDate(c.created_at)}</p>
                 </div>

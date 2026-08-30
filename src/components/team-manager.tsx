@@ -153,7 +153,7 @@ export function TeamManager({
       ) : (
         <>
       <article className={PANEL}>
-        <div className="border-b border-[#222] px-4 py-3">
+        <div className="border-b border-[#131313] px-4 py-3">
           <h2 className="text-[12px] font-bold text-[#fbfbfb]">
             Invite someone to this dashboard
           </h2>
@@ -198,7 +198,7 @@ export function TeamManager({
                 type="submit"
                 disabled={Boolean(busy) || !email.trim()}
                 aria-busy={busy === "invite"}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-2 text-[12px] text-[#fbfbfb] transition hover:border-[#3a3a3a] disabled:cursor-progress disabled:opacity-70"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#0a0a0a] px-3.5 py-2 text-[12px] text-[#fbfbfb] transition hover:border-[#3a3a3a] disabled:cursor-progress disabled:opacity-70"
               >
                 {busy === "invite" ? <Spinner /> : null}
                 {busy === "invite" ? "Sending…" : "Send invite"}
@@ -209,7 +209,7 @@ export function TeamManager({
       </article>
 
       <article className={PANEL}>
-        <div className="border-b border-[#222] px-4 py-3">
+        <div className="border-b border-[#131313] px-4 py-3">
           <h2 className="text-[12px] font-bold text-[#fbfbfb]">
             Members ({members.length})
           </h2>
@@ -219,7 +219,7 @@ export function TeamManager({
         ) : members.length === 0 ? (
           <p className="px-4 py-8 text-center text-[11px] text-[#6c6c6c]">No members yet.</p>
         ) : (
-          <ul className="divide-y divide-[#1b1b1b]">
+          <ul className="divide-y divide-[#111111]">
             {members.map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
@@ -257,12 +257,12 @@ export function TeamManager({
 
       {invites.length > 0 ? (
         <article className={PANEL}>
-          <div className="border-b border-[#222] px-4 py-3">
+          <div className="border-b border-[#131313] px-4 py-3">
             <h2 className="text-[12px] font-bold text-[#fbfbfb]">
               Pending invites ({invites.length})
             </h2>
           </div>
-          <ul className="divide-y divide-[#1b1b1b]">
+          <ul className="divide-y divide-[#111111]">
             {invites.map((inv) => (
               <li key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
@@ -297,7 +297,7 @@ export function TeamManager({
             role="dialog"
             aria-modal="true"
             aria-labelledby="remove-member-title"
-            className="w-full max-w-[360px] rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+            className="w-full max-w-[360px] rounded-[10px] border border-[#111111] bg-[#060606] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
           >
             <h2 id="remove-member-title" className="text-[14px] font-bold text-[#fbfbfb]">
               Remove member?

@@ -9,26 +9,18 @@ import {
   type ProofAdminSettings,
   type ProofCheckType,
 } from "@/lib/proof/proof-settings";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useProofConfig } from "./use-proof-config";
-
-const THUMB_SIZE = 14;
-const THUMB_RADIUS = THUMB_SIZE / 2;
-const LABEL_WIDTH = "3.75rem";
 
 const QUICK_CHECKS: ProofCheckType[] = ["typos", "grammar", "punctuation"];
 
-const REPLY_STOPS = PROOF_RESPONSE_STYLES.map((style, index) => {
-  const meta = PROOF_RESPONSE_STYLE_LABELS[style];
-  const labels = ["Plain", "Mixed", "Human"] as const;
-  return {
-    label: labels[index] ?? meta.title,
-    tooltip: meta.description,
-  };
-});
+const REPLY_LABELS = ["Plain", "Mixed", "Human"] as const;
 
 const PILL_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#161616] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70";
+  "inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#0a0a0a] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70";
+
+const LIST_ROW =
+  "flex w-full cursor-pointer items-start gap-2.5 rounded-[6px] px-1 py-1.5 text-left transition hover:bg-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-50";
 
 export function ProofConfigWidget({
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
@@ -63,11 +55,6 @@ export function ProofConfigWidget({
 
   if (loaded && error === "Forbidden") return null;
 
-  const styleIndex = Math.max(
-    0,
-    PROOF_RESPONSE_STYLES.indexOf(settings.responseStyle),
-  );
-
   return (
     <div ref={rootRef} className="flex flex-col-reverse items-center gap-2">
       <button
@@ -86,45 +73,54 @@ export function ProofConfigWidget({
         <div
           role="dialog"
           aria-label="Bot settings"
-          className="wallnut-reveal w-max max-w-[min(calc(100vw-2rem),540px)] rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="wallnut-reveal w-[min(calc(100vw-2rem),480px)] rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <div className="min-w-0 flex-1 sm:min-w-[220px]">
-              <SegmentSlider
-                label="Reply"
-                value={styleIndex}
-                max={REPLY_STOPS.length - 1}
-                stops={REPLY_STOPS}
-                disabled={busy}
-                onChange={(value) => selectStyle(PROOF_RESPONSE_STYLES[value]!)}
-              />
-            </div>
+          <div className="grid grid-cols-2 divide-x divide-[#131313]">
+            <section className="px-3 py-3">
+              <SectionTitle>Wallnut&apos;s reply</SectionTitle>
+              <div
+                role="radiogroup"
+                aria-label="Wallnut's reply"
+                className="flex flex-col gap-0.5"
+              >
+                {PROOF_RESPONSE_STYLES.map((style, index) => {
+                  const meta = PROOF_RESPONSE_STYLE_LABELS[style];
+                  return (
+                    <ReplyOption
+                      key={style}
+                      label={REPLY_LABELS[index] ?? meta.title}
+                      description={meta.description}
+                      checked={settings.responseStyle === style}
+                      disabled={busy}
+                      onSelect={() => selectStyle(style)}
+                    />
+                  );
+                })}
+              </div>
+            </section>
 
-            <div
-              className="h-px w-full shrink-0 bg-[#1f1f1f] sm:h-12 sm:w-px"
-              aria-hidden
-            />
-
-            <div className="shrink-0">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.04em] text-[#6c6c6c]">
-                Checks
-              </p>
-              <div className="flex flex-wrap gap-2">
+            <section className="px-3 py-3">
+              <SectionTitle>Checks</SectionTitle>
+              <div className="flex flex-col gap-0.5">
                 {QUICK_CHECKS.map((key) => (
-                  <CheckToggle
+                  <CheckOption
                     key={key}
                     label={PROOF_CHECK_LABELS[key].title}
+                    description={PROOF_CHECK_LABELS[key].description}
                     checked={settings.checks[key]}
                     disabled={busy}
                     onChange={() => toggleCheck(key)}
                   />
                 ))}
               </div>
-            </div>
+            </section>
           </div>
 
           {error && error !== "Forbidden" ? (
-            <p role="alert" className="mt-2 text-center text-[10px] text-[#e8b4b4]">
+            <p
+              role="alert"
+              className="border-t border-[#131313] px-3 py-2 text-center text-[10px] text-[#e8b4b4]"
+            >
               {error}
             </p>
           ) : null}
@@ -134,37 +130,89 @@ export function ProofConfigWidget({
   );
 }
 
-function CheckToggle({
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h3 className="mb-2 text-[10px] font-medium uppercase tracking-[0.04em] text-[#6c6c6c]">
+      {children}
+    </h3>
+  );
+}
+
+function ReplyOption({
   label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <label className={LIST_ROW}>
+      <input
+        type="radio"
+        name="wallnut-reply-style"
+        checked={checked}
+        disabled={disabled}
+        onChange={onSelect}
+        className="sr-only"
+      />
+      <span
+        aria-hidden
+        className={`mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border transition ${
+          checked ? "border-[#bdbdbd]" : "border-[#444] bg-[#060606]"
+        }`}
+      >
+        {checked ? <span className="size-1.5 rounded-full bg-[#d4d4d4]" /> : null}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={`block text-[12px] leading-none ${
+            checked ? "text-[#fbfbfb]" : "text-[#bdbdbd]"
+          }`}
+        >
+          {label}
+        </span>
+        <span className="mt-1 block text-[10px] leading-snug text-[#6c6c6c]">
+          {description}
+        </span>
+      </span>
+    </label>
+  );
+}
+
+function CheckOption({
+  label,
+  description,
   checked,
   disabled,
   onChange,
 }: {
   label: string;
+  description: string;
   checked: boolean;
   disabled?: boolean;
   onChange: () => void;
 }) {
   return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onChange}
-      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50 ${
-        checked
-          ? "border-[#3a3a3a] bg-[#1c1c1c] text-[#fbfbfb]"
-          : "border-[#2a2a2a] bg-[#141414] text-[#919191] hover:border-[#3a3a3a] hover:text-white"
-      }`}
-    >
+    <label className={LIST_ROW}>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+        className="sr-only"
+      />
       <span
         aria-hidden
-        className={`flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border transition ${
+        className={`mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border transition ${
           checked
-            ? "border-[#bdbdbd] bg-[#d4d4d4] text-[#101010]"
-            : "border-[#444] bg-[#101010]"
+            ? "border-[#bdbdbd] bg-[#d4d4d4] text-[#060606]"
+            : "border-[#444] bg-[#060606]"
         }`}
       >
         {checked ? (
@@ -179,115 +227,18 @@ function CheckToggle({
           </svg>
         ) : null}
       </span>
-      {label}
-    </button>
-  );
-}
-
-type Stop = { label: string; tooltip: string };
-
-function stopOffset(index: number, max: number) {
-  if (max <= 0) return `${THUMB_RADIUS}px`;
-  const ratio = index / max;
-  return `calc(${THUMB_RADIUS}px + (100% - ${THUMB_SIZE}px) * ${ratio})`;
-}
-
-function SegmentSlider({
-  label,
-  value,
-  max,
-  stops,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  stops: readonly Stop[];
-  disabled?: boolean;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <div className="rounded-full border border-[#2e2e2e] bg-[#161616] px-3 py-2">
-      <div className="flex items-start gap-2.5">
+      <span className="min-w-0 flex-1">
         <span
-          className="mt-[1px] shrink-0 text-[12px] font-bold leading-none text-[#fbfbfb]"
-          style={{ width: LABEL_WIDTH }}
+          className={`block text-[12px] leading-none ${
+            checked ? "text-[#fbfbfb]" : "text-[#bdbdbd]"
+          }`}
         >
           {label}
         </span>
-
-        <div className="min-w-0 flex-1">
-          <div className="relative h-[14px]">
-            <div
-              className="pointer-events-none absolute top-1/2 h-px -translate-y-1/2 bg-[#2a2a2a]"
-              style={{ left: THUMB_RADIUS, right: THUMB_RADIUS }}
-            />
-            <input
-              type="range"
-              min={0}
-              max={max}
-              step={1}
-              value={value}
-              disabled={disabled}
-              onChange={(event) => onChange(Number(event.target.value))}
-              className="proof-segment-slider absolute inset-0 z-10 m-0 w-full disabled:cursor-not-allowed disabled:opacity-50"
-              aria-valuetext={stops[value]?.label ?? String(value)}
-            />
-          </div>
-
-          <div className="relative mt-1 h-3">
-            {stops.map((stop, index) => (
-              <StopTick
-                key={stop.label}
-                stop={stop}
-                active={index === value}
-                disabled={disabled}
-                left={stopOffset(index, max)}
-                onSelect={() => onChange(index)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StopTick({
-  stop,
-  active,
-  disabled,
-  left,
-  onSelect,
-}: {
-  stop: Stop;
-  active: boolean;
-  disabled?: boolean;
-  left: string;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onSelect}
-      aria-label={stop.label}
-      className="group/stop absolute top-0 -translate-x-1/2 disabled:cursor-not-allowed"
-      style={{ left }}
-    >
-      <span
-        className={`block h-1.5 w-px transition ${
-          active ? "bg-[#bdbdbd]" : "bg-[#444] group-hover/stop:bg-[#666]"
-        }`}
-      />
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 w-max max-w-[11rem] -translate-x-1/2 rounded-[6px] border border-[#2a2a2a] bg-[#161616] px-2 py-1 text-center text-[10px] leading-snug text-[#fbfbfb] opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition group-hover/stop:opacity-100 group-focus-visible/stop:opacity-100"
-      >
-        <span className="block font-medium">{stop.label}</span>
-        <span className="mt-0.5 block text-[#919191]">{stop.tooltip}</span>
+        <span className="mt-1 block text-[10px] leading-snug text-[#6c6c6c]">
+          {description}
+        </span>
       </span>
-    </button>
+    </label>
   );
 }

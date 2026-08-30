@@ -34,8 +34,8 @@ export function ReportPreview({
   const interactive = typeof onSelectIssue === "function";
 
   return (
-    <section className="overflow-hidden rounded-[12px] border border-[#1b1b1b] bg-[#101010] shadow-[0_16px_30px_rgba(0,0,0,0.35)]">
-      <div className="border-b border-[#222] px-4 py-3 text-[12px] font-bold">
+    <section className="overflow-hidden rounded-[12px] border border-[#111111] bg-[#060606] shadow-[0_16px_30px_rgba(0,0,0,0.35)]">
+      <div className="border-b border-[#131313] px-4 py-3 text-[12px] font-bold">
         Preview
         <span className="ml-2 font-normal text-[#6c6c6c]">
           ({issues.length} issue{issues.length === 1 ? "" : "s"})

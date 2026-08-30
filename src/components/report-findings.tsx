@@ -70,8 +70,8 @@ export function ReportFindings({
       ) : null}
 
       {otherIssues.length > 0 ? (
-        <section className="overflow-hidden rounded-[12px] border border-[#1b1b1b] bg-[#101010]">
-          <div className="border-b border-[#222] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
+        <section className="overflow-hidden rounded-[12px] border border-[#111111] bg-[#060606]">
+          <div className="border-b border-[#131313] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
             Other findings
           </div>
           <ul className="divide-y divide-[#222]">
@@ -88,8 +88,8 @@ export function ReportFindings({
                       onClick={() =>
                         onSelectIssue(active ? null : markerIndex)
                       }
-                      className={`flex w-full items-start gap-3 px-4 py-4 text-left transition hover:bg-[#171717] ${
-                        active ? "bg-[#1b1b1b]" : ""
+                      className={`flex w-full items-start gap-3 px-4 py-4 text-left transition hover:bg-[#080808] ${
+                        active ? "bg-[#0a0a0a]" : ""
                       }`}
                     >
                       <IssueRowContent issue={issue} markerIndex={markerIndex} />

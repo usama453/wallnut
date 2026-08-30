@@ -19,9 +19,9 @@ export function ReportCard({ report }: { report: ReportRow }) {
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col overflow-hidden rounded-[10px] border border-[#1b1b1b] bg-[#101010] shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-[#303030]"
+      className="group flex h-full flex-col overflow-hidden rounded-[10px] border border-[#111111] bg-[#060606] shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-[#303030]"
     >
-      <div className="relative aspect-video overflow-hidden bg-[#171717]">
+      <div className="relative aspect-video overflow-hidden bg-[#080808]">
         {report.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -55,7 +55,7 @@ export function ReportCard({ report }: { report: ReportRow }) {
           </div>
         </div>
 
-        <div className="mt-auto flex items-center gap-1.5 border-t border-[#1b1b1b] pt-3 text-[10px]">
+        <div className="mt-auto flex items-center gap-1.5 border-t border-[#111111] pt-3 text-[10px]">
           <span className="font-bold text-[#fbfbfb]">{report.issueCount}</span>
           <span className="text-[#919191]">
             issue{report.issueCount === 1 ? "" : "s"}

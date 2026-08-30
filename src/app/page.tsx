@@ -71,7 +71,7 @@ function OrganizationCard({ org }: { org: PublicOrganization }) {
   return (
     <Link
       href={`/${encodeURIComponent(org.slug)}`}
-      className="group relative w-full overflow-hidden rounded-[12px] border border-[#1b1b1b] bg-[#101010] px-5 py-6 text-left shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition-colors hover:border-[#2a2a2a] sm:px-7 sm:py-7"
+      className="group relative w-full overflow-hidden rounded-[12px] border border-[#111111] bg-[#060606] px-5 py-6 text-left shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition-colors hover:border-[#2a2a2a] sm:px-7 sm:py-7"
     >
       <span
         aria-hidden
@@ -112,7 +112,7 @@ function AnonymousFaceStack({ org }: { org: PublicOrganization }) {
           <span
             key={index}
             aria-hidden
-            className="size-[22px] rounded-full ring-2 ring-[#101010]"
+            className="size-[22px] rounded-full ring-2 ring-[#060606]"
             style={{
               marginLeft: index === 0 ? 0 : -4,
               zIndex: count - index,

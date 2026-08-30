@@ -97,7 +97,7 @@ export function AppHeader({
           >
             <span className="group/pfp relative inline-flex">
               <InitialAvatar label={userName || userEmail} size={28} />
-              <span className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-[#2a2a2a] bg-[#161616] px-2 py-1 text-[10px] font-medium text-[#fbfbfb] opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition group-hover/pfp:opacity-100">
+              <span className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-[#2a2a2a] bg-[#0a0a0a] px-2 py-1 text-[10px] font-medium text-[#fbfbfb] opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition group-hover/pfp:opacity-100">
                 You
               </span>
             </span>
@@ -106,9 +106,9 @@ export function AppHeader({
           {open ? (
             <div
               role="menu"
-              className="absolute right-0 top-[38px] w-[248px] overflow-hidden rounded-[10px] border border-[#242424] bg-[#101010] shadow-[0_24px_60px_rgba(0,0,0,0.7)] wallnut-reveal"
+              className="absolute right-0 top-[38px] w-[248px] overflow-hidden rounded-[10px] border border-[#242424] bg-[#060606] shadow-[0_24px_60px_rgba(0,0,0,0.7)] wallnut-reveal"
             >
-              <div className="border-b border-[#222] px-4 py-3">
+              <div className="border-b border-[#131313] px-4 py-3">
                 <p className="truncate text-[12px] font-bold text-[#fbfbfb]">
                   {userName || userEmail || "Account"}
                 </p>
@@ -131,8 +131,8 @@ export function AppHeader({
                       href={item.href}
                       className={`rounded-[7px] px-3 py-2 text-[12px] transition ${
                         active
-                          ? "bg-[#202020] font-bold text-white"
-                          : "text-[#919191] hover:bg-[#181818] hover:text-white"
+                          ? "bg-[#0d0d0d] font-bold text-white"
+                          : "text-[#919191] hover:bg-[#0c0c0c] hover:text-white"
                       }`}
                     >
                       {item.label}
@@ -141,14 +141,14 @@ export function AppHeader({
                 })}
               </nav>
 
-              <div className="border-t border-[#222] p-2">
+              <div className="border-t border-[#131313] p-2">
                 <button
                   type="button"
                   role="menuitem"
                   disabled={loggingOut}
                   aria-busy={loggingOut}
                   onClick={logOut}
-                  className="flex w-full items-center gap-2 rounded-[7px] px-3 py-2 text-left text-[12px] text-[#919191] transition hover:bg-[#181818] hover:text-white disabled:cursor-progress disabled:opacity-50"
+                  className="flex w-full items-center gap-2 rounded-[7px] px-3 py-2 text-left text-[12px] text-[#919191] transition hover:bg-[#0c0c0c] hover:text-white disabled:cursor-progress disabled:opacity-50"
                 >
                   {loggingOut ? <Spinner /> : null}
                   {loggingOut ? "Logging out…" : "Log out"}

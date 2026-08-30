@@ -47,7 +47,7 @@ export default async function SettingsPage() {
 
       <Reveal dramatic delayMs={160}>
         <article className={WALLNUT_PANEL}>
-          <div className="border-b border-[#222] px-4 py-3">
+          <div className="border-b border-[#131313] px-4 py-3">
             <h2 className="text-[12px] font-bold text-[#fbfbfb]">AI pipeline</h2>
           </div>
           <div className="px-4 py-4">
@@ -68,7 +68,7 @@ export default async function SettingsPage() {
 
       <Reveal dramatic delayMs={200}>
         <article className={WALLNUT_PANEL}>
-          <div className="border-b border-[#222] px-4 py-3">
+          <div className="border-b border-[#131313] px-4 py-3">
             <h2 className="text-[12px] font-bold text-[#fbfbfb]">WhatsApp (WAHA)</h2>
           </div>
           <div className="px-4 py-4">
@@ -82,7 +82,7 @@ export default async function SettingsPage() {
                   ● Configured
                 </span>
               ) : (
-                <span className="rounded-full border border-[#2a2a2a] bg-[#161616] px-2.5 py-0.5 text-[11px] font-medium text-[#919191]">
+                <span className="rounded-full border border-[#2a2a2a] bg-[#0a0a0a] px-2.5 py-0.5 text-[11px] font-medium text-[#919191]">
                   ○ Not configured
                 </span>
               )}
@@ -101,7 +101,7 @@ export default async function SettingsPage() {
 
       <Reveal dramatic delayMs={320}>
         <article className={WALLNUT_PANEL}>
-          <div className="border-b border-[#222] px-4 py-3">
+          <div className="border-b border-[#131313] px-4 py-3">
             <h2 className="text-[12px] font-bold text-[#fbfbfb]">Billing</h2>
           </div>
           <div className="px-4 py-4">

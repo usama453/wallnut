@@ -173,7 +173,7 @@ export default function LoginForm({
                   setError(null);
                 }}
                 placeholder="you@company.com"
-                className="w-full rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-3 text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#3a3a3a] focus:outline-none"
+                className="w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#3a3a3a] focus:outline-none"
               />
               {error ? <AuthNotice tone="error">{error}</AuthNotice> : null}
               <button
@@ -199,13 +199,13 @@ export default function LoginForm({
                   setError(null);
                   setMessage(null);
                 }}
-                className="mb-4 flex w-full items-center justify-between rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-2.5 text-left"
+                className="mb-4 flex w-full items-center justify-between rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-2.5 text-left"
               >
                 <span className="truncate text-[12px] text-[#d0d0d0]">{email}</span>
                 <span className="ml-3 text-[11px] text-[#6c6c6c]">Change</span>
               </button>
 
-              <div className="mb-5 grid grid-cols-3 gap-1 rounded-[8px] bg-[#101010] p-1">
+              <div className="mb-5 grid grid-cols-3 gap-1 rounded-[8px] bg-[#060606] p-1">
                 {(
                   [
                     ["signin", "Sign in"],
@@ -248,11 +248,11 @@ export default function LoginForm({
                       setPassword(event.target.value);
                       setError(null);
                     }}
-                    className="mt-2 w-full rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-3 text-[13px] text-[#fbfbfb] focus:border-[#3a3a3a] focus:outline-none"
+                    className="mt-2 w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] focus:border-[#3a3a3a] focus:outline-none"
                   />
                 </label>
               ) : (
-                <p className="rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3.5 py-3 text-[12px] leading-relaxed text-[#919191]">
+                <p className="rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 text-[12px] leading-relaxed text-[#919191]">
                   We’ll email you a one-time sign-in link. No password required.
                 </p>
               )}
@@ -303,9 +303,9 @@ export default function LoginForm({
 function Divider() {
   return (
     <div className="my-4 flex items-center gap-2.5">
-      <span className="h-px flex-1 bg-[#1b1b1b]" />
+      <span className="h-px flex-1 bg-[#0a0a0a]" />
       <span className="text-[11px] text-[#6c6c6c]">or</span>
-      <span className="h-px flex-1 bg-[#1b1b1b]" />
+      <span className="h-px flex-1 bg-[#0a0a0a]" />
     </div>
   );
 }
@@ -323,7 +323,7 @@ function GoogleButton({
       onClick={onClick}
       disabled={loading}
       aria-busy={loading}
-      className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#1b1b1b] bg-[#101010] py-3 text-[13px] font-bold text-[#fbfbfb] transition hover:bg-[#161616] disabled:cursor-progress disabled:opacity-50"
+      className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#111111] bg-[#060606] py-3 text-[13px] font-bold text-[#fbfbfb] transition hover:bg-[#0a0a0a] disabled:cursor-progress disabled:opacity-50"
     >
       {loading ? <Spinner /> : <GoogleIcon />}
       {loading ? "Redirecting…" : "Continue with Google"}

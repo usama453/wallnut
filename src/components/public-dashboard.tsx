@@ -127,7 +127,7 @@ export function PublicDashboard({
 
       {allEmpty ? (
         <Reveal dramatic delayMs={120}>
-          <div className="mt-10 rounded-[8px] border border-dashed border-[#252525] px-6 py-14 text-center">
+          <div className="mt-10 rounded-[8px] border border-dashed border-[#141414] px-6 py-14 text-center">
             <p className="text-[12px] font-bold text-[#bdbdbd]">Nothing in Public yet</p>
             <p className="mt-1 text-[11px] text-[#5f5f5f]">
               When someone messages Wallnut on WhatsApp before a group is linked to a team,

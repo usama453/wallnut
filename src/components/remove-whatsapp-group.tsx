@@ -62,7 +62,7 @@ export function RemoveWhatsAppGroup({
         disabled={removing}
         aria-label="Remove group"
         aria-busy={removing}
-        className={`rounded-[6px] p-1.5 text-[#555] transition hover:bg-[#1a1a1a] hover:text-[#d18f8f] disabled:cursor-progress disabled:opacity-60 ${className}`}
+        className={`rounded-[6px] p-1.5 text-[#555] transition hover:bg-[#0a0a0a] hover:text-[#d18f8f] disabled:cursor-progress disabled:opacity-60 ${className}`}
       >
         {removing ? <Spinner /> : <TrashIcon />}
       </button>
@@ -73,7 +73,7 @@ export function RemoveWhatsAppGroup({
             role="dialog"
             aria-modal="true"
             aria-labelledby="remove-group-title"
-            className="w-full max-w-[360px] rounded-[10px] border border-[#1b1b1b] bg-[#101010] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+            className="w-full max-w-[360px] rounded-[10px] border border-[#111111] bg-[#060606] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
           >
             <h2 id="remove-group-title" className="text-[14px] font-bold text-[#fbfbfb]">
               Remove WhatsApp group?

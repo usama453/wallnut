@@ -203,8 +203,8 @@ function Leaderboard({
   startRank?: number;
 }) {
   return (
-    <section className="flex h-[326px] flex-col overflow-hidden rounded-[8px] border border-[#1b1b1b] bg-[#101010] shadow-[0_24px_36px_rgba(0,0,0,0.5)]">
-      <h2 className="border-b border-[#222] px-4 py-3 text-[12px] font-bold text-[#fbfbfb]">
+    <section className="flex h-[326px] flex-col overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.5)]">
+      <h2 className="border-b border-[#131313] px-4 py-3 text-[12px] font-bold text-[#fbfbfb]">
         {title}
       </h2>
       {rows.length > 0 ? (
