@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
-import { ProofBadge, ScoreRing, StatusBadge, fmtDate } from "@/components/ui";
+import { ScoreRing, fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
@@ -41,56 +41,34 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
       <AppHeader />
-      <main className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-[clamp(24px,4vw,34px)] font-bold leading-tight tracking-[-0.72px]">
+      <main className="mx-auto flex w-full max-w-[680px] flex-col px-4 pb-12 pt-6 sm:px-6">
+        <header className="mb-4">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="min-w-0 flex-1 text-[clamp(20px,3.5vw,28px)] font-bold leading-tight tracking-[-0.5px]">
               {asset.name}
             </h1>
+            {proof ? <ScoreRing score={proof.score} size={56} /> : null}
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-3">
-              {asset.status ? <StatusBadge status={asset.status} /> : null}
-              {proof ? (
-                <>
-                  <ProofBadge status={proof.status} />
-                  <ScoreRing score={proof.score} size={72} />
-                </>
-              ) : null}
-            </div>
-            {reportedAt ? (
-              <p className="text-[11px] text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
-            ) : null}
-          </div>
+          {reportedAt ? (
+            <p className="mt-2 text-[11px] text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
+          ) : null}
         </header>
 
         {proof?.summary ? (
-          <p className="mb-6 max-w-3xl text-[14px] leading-relaxed text-[#bdbdbd]">{proof.summary}</p>
+          <p className="mb-4 text-[12px] leading-relaxed text-[#919191]">{proof.summary}</p>
         ) : null}
 
-        <div
-          className={
-            sortedIssues.length > 0
-              ? "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]"
-              : "mx-auto max-w-3xl"
-          }
-        >
-          {sortedIssues.length > 0 ? (
-            <div className="space-y-4">
-              <ReportFindings issues={sortedIssues} />
-            </div>
-          ) : null}
+        <div className="flex flex-col gap-3">
+          {sortedIssues.length > 0 ? <ReportFindings issues={sortedIssues} /> : null}
 
           {version?.url ? (
-            <div className={sortedIssues.length > 0 ? "lg:sticky lg:top-6" : ""}>
-              <ReportPreview
-                title={asset.name}
-                kind={asset.kind as "image" | "pdf"}
-                url={version.url}
-                previewMeta={version.preview_meta as { pages: Array<{ url: string; width: number; height: number }> } | null}
-                issues={sortedIssues}
-              />
-            </div>
+            <ReportPreview
+              title={asset.name}
+              kind={asset.kind as "image" | "pdf"}
+              url={version.url}
+              previewMeta={version.preview_meta as { pages: Array<{ url: string; width: number; height: number }> } | null}
+              issues={sortedIssues}
+            />
           ) : null}
         </div>
 

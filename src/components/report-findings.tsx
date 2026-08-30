@@ -36,73 +36,77 @@ export function ReportFindings({
   }
 
   return (
-    <div className="space-y-4">
+    <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
       {corrections.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#6c6c6c]">
-            Corrections
-          </h2>
-          {corrections.map((correction, index) => (
-            <article
-              key={`${correction.label}-${correction.before}-${index}`}
-              className="rounded-[12px] border border-[#2a1515] bg-[#160d0d] px-5 py-5"
-            >
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#e8a0a0]">
-                {correction.label}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-                <span className="text-[clamp(22px,4vw,28px)] font-bold leading-snug tracking-[-0.03em] text-[#ffb4b4] line-through decoration-[#ff6b6b]/80">
-                  {correction.before}
-                </span>
-                <span className="text-[18px] text-[#555]" aria-hidden>
-                  →
-                </span>
-                <span className="text-[clamp(22px,4vw,28px)] font-bold leading-snug tracking-[-0.03em] text-[#7dffb2]">
-                  {correction.after}
-                </span>
+        <section>
+          <div className="border-b border-[#111111] px-4 py-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
+              Corrections
+            </h2>
+          </div>
+          <div className="flex flex-col gap-1 px-4 py-3">
+            {corrections.map((correction, index) => (
+              <div
+                key={`${correction.label}-${correction.before}-${index}`}
+                className="rounded-[6px] px-1 py-2"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#e8a0a0]">
+                  {correction.label}
+                </p>
+                <p className="mt-1 text-[12px] leading-relaxed text-[#bdbdbd]">
+                  <span className="text-[#ffb4b4] line-through decoration-[#ff6b6b]/70">
+                    {correction.before}
+                  </span>
+                  <span className="mx-2 text-[#555]" aria-hidden>
+                    →
+                  </span>
+                  <span className="text-[#7dffb2]">{correction.after}</span>
+                </p>
               </div>
-            </article>
-          ))}
+            ))}
+          </div>
         </section>
       ) : null}
 
       {otherIssues.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#6c6c6c]">
-            {corrections.length > 0 ? "Other findings" : "Findings"}
-          </h2>
-          {otherIssues.map((issue) => {
-            const markerIndex = issues.indexOf(issue);
-            const interactive = typeof onSelectIssue === "function";
-            const active = activeIndex === markerIndex;
-            const cardClass = `rounded-[12px] border px-5 py-5 transition ${
-              active
-                ? "border-[#1a1a1a] bg-[#0a0a0a]"
-                : "border-[#111111] bg-[#060606] hover:border-[#1a1a1a]"
-            }`;
+        <section className={corrections.length > 0 ? "border-t border-[#111111]" : ""}>
+          <div className="border-b border-[#111111] px-4 py-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
+              {corrections.length > 0 ? "Other findings" : "Findings"}
+            </h2>
+          </div>
+          <div className="flex flex-col gap-1 px-4 py-3">
+            {otherIssues.map((issue) => {
+              const markerIndex = issues.indexOf(issue);
+              const interactive = typeof onSelectIssue === "function";
+              const active = activeIndex === markerIndex;
+              const rowClass = `flex w-full items-start gap-2 rounded-[6px] px-1 py-2 text-left transition ${
+                active ? "bg-[#0a0a0a]" : "hover:bg-[#080808]"
+              }`;
 
-            return interactive ? (
-              <button
-                key={issue.id}
-                type="button"
-                onClick={() => onSelectIssue(active ? null : markerIndex)}
-                className={`flex w-full items-start gap-4 text-left ${cardClass}`}
-              >
-                <IssueCardContent issue={issue} markerIndex={markerIndex} />
-              </button>
-            ) : (
-              <article key={issue.id} className={`flex items-start gap-4 ${cardClass}`}>
-                <IssueCardContent issue={issue} markerIndex={markerIndex} />
-              </article>
-            );
-          })}
+              return interactive ? (
+                <button
+                  key={issue.id}
+                  type="button"
+                  onClick={() => onSelectIssue(active ? null : markerIndex)}
+                  className={rowClass}
+                >
+                  <IssueRowContent issue={issue} markerIndex={markerIndex} />
+                </button>
+              ) : (
+                <div key={issue.id} className={rowClass}>
+                  <IssueRowContent issue={issue} markerIndex={markerIndex} />
+                </div>
+              );
+            })}
+          </div>
         </section>
       ) : null}
-    </div>
+    </article>
   );
 }
 
-function IssueCardContent({
+function IssueRowContent({
   issue,
   markerIndex,
 }: {
@@ -112,12 +116,12 @@ function IssueCardContent({
   return (
     <>
       <span
-        className="mt-1 grid size-7 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
+        className="mt-0.5 grid size-[22px] shrink-0 place-items-center rounded-[4px] text-[10px] font-bold text-white"
         style={{ background: MARKER_COLORS[markerIndex % MARKER_COLORS.length] }}
       >
         {markerIndex + 1}
       </span>
-      <p className="min-w-0 text-[clamp(22px,4.5vw,32px)] font-bold leading-snug tracking-[-0.02em] text-[#f0f0f0]">
+      <p className="min-w-0 flex-1 text-[12px] leading-relaxed text-[#bdbdbd]">
         {issueSentence(issue)}
       </p>
     </>

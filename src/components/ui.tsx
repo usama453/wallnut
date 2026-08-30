@@ -29,7 +29,12 @@ export function ScoreRing({ score, size = 96 }: { score: number; size?: number }
         />
       </svg>
       <div className="absolute text-center">
-        <div className="text-2xl font-bold leading-none text-[#fbfbfb]">{score}</div>
+        <div
+          className="font-bold leading-none text-[#fbfbfb]"
+          style={{ fontSize: Math.max(14, Math.round(size * 0.28)) }}
+        >
+          {score}
+        </div>
       </div>
     </div>
   );
