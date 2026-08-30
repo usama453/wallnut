@@ -1,7 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { runProof } from "@/lib/proof/runProof";
 import { proofSemaphore } from "@/lib/proof/concurrency";
-import { getProvider } from "@/lib/ai";
 import { createAssetVersionFromBytes } from "@/lib/assets";
 import { logUsage } from "@/lib/whatsapp/usage";
 import {
@@ -15,10 +14,9 @@ import {
   botMentioned,
   isPersonal,
 } from "./activity";
+import { wallnutChatReply } from "@/lib/ai/chat";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-const TORTOISE_FALLBACK =
-  "Ah, hello there... I'm Wallnut the proofing tortoise. Send me an image or PDF and I'll proof it — slow and steady, I'll give you a score.";
 
 /** Best-effort dedupe so Bot Framework retries don't double-process an activity. */
 const seenActivities = new Map<string, number>();
@@ -183,13 +181,7 @@ async function handleApproval(activity: Activity, value: any) {
 
 /** Casual chat reply in the tortoise persona, with a reliable offline fallback. */
 async function chatReply(message: string): Promise<string> {
-  if (!message) return TORTOISE_FALLBACK;
-  try {
-    return await getProvider().chat(message);
-  } catch (err) {
-    console.error(`[teams] chat failed, using fallback: ${err instanceof Error ? err.message : err}`);
-    return TORTOISE_FALLBACK;
-  }
+  return wallnutChatReply(message);
 }
 
 function isSeen(id: string): boolean {

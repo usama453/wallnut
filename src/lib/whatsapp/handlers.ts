@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { runProof } from "@/lib/proof/runProof";
 import { proofSemaphore } from "@/lib/proof/concurrency";
+import { stripWhatsAppMentions, wallnutChatReply } from "@/lib/ai/chat";
 import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
@@ -162,9 +163,10 @@ let accessCache: {
 } | null = null;
 const ACCESS_TTL_MS = 30 * 1000;
 
-/** True when a group message @mentions the bot (matches BOT_PHONE_NUMBER). */
+/** True when a group message @mentions the bot (phone JID or @wallnut). */
 function wasMentioned(message: any): boolean {
   const body: string = message?.text?.body ?? "";
+  if (/@wallnut\b/i.test(body)) return true;
   const tokens = body.match(/@([0-9]{6,})/g) ?? [];
   const mentions = Array.isArray(message?.mentions) ? message.mentions : [];
   const bot = jidDigits(BOT_PHONE_NUMBER || message?.botId || "");
@@ -195,42 +197,33 @@ async function dispatchMessage(
   }
 
   if (message.type === "text") {
-    console.log(`[whatsapp] text from ${from}: ${(message.text?.body ?? "").slice(0, 120)}`);
+    const body = message.text?.body ?? "";
+    console.log(`[whatsapp] text from ${from}: ${body.slice(0, 120)}`);
     if (groupId && !wasMentioned(message)) {
       console.log(`[whatsapp] ignored group text ${message.id}: bot not mentioned`);
       return { handled: false, action: "ignored" };
     }
 
-    if (!introSentChats.has(from)) {
-      introSentChats.add(from);
-      if (introSentChats.size > 500) introSentChats.clear();
-      await sendTextWaha(from, INTRO_LINES, message.id);
-    } else {
-      const reminder = "Send me an image or a PDF and I'll proof it right here 🐢";
-      await sendTextWaha(from, reminder, message.id);
-    }
+    const prompt = stripWhatsAppMentions(body);
+    const chatInput =
+      prompt ||
+      (groupId
+        ? "Someone @mentioned you in a WhatsApp group. Reply briefly, explain what you can help with, and invite them to send an image or PDF to proof."
+        : "Someone messaged you on WhatsApp. Reply briefly as Wallnut and explain you can proof images and PDFs.");
+    const reply = await wallnutChatReply(chatInput);
+    await sendTextWaha(from, reply, message.id);
+    logUsage({
+      direction: "outbound",
+      msg_type: "text",
+      to_phone: from,
+      group_id: groupId,
+      status: "chat",
+    });
     return { handled: true, action: "text" };
   }
 
   return { handled: false, action: "ignored" };
 }
-
-/** Chats that already received the intro. */
-const introSentChats = new Set<string>();
-
-/** Best-effort intro for new conversations. */
-const INTRO_LINES = [
-  "Hey! I'm Wallnut — your AI proofing tortoise 🐢",
-  "I check marketing images and PDFs for spelling, grammar, brand issues, CTAs, contrast, safe margins and more — and give you a score in seconds.",
-  "Send me an image or a PDF and I'll run a full proof right here in WhatsApp.",
-  "━━━━━━━━━━━━",
-  "🚧 I'm currently running in demo mode. Some features may be limited.",
-  "👥 Want to use me in group chats? Request access here:",
-  "https://usama.fun/wallnut/",
-  "",
-  "Questions, feedback or partnership inquiries:",
-  "https://usama.fun/wallnut/",
-].join("\n");
 
 function isSeen(id?: string): boolean {
   if (!id) return false;
