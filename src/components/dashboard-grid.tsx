@@ -557,7 +557,7 @@ function ReportMarker({ report }: { report: ReportRow }) {
   );
 }
 
-export { DashboardGroupCard, PendingWhatsAppGroupCard };
+export { DashboardGroupCard, PendingWhatsAppGroupCard, DashboardReportRow };
 
 function ordinalSuffix(value: number) {
   if (value % 100 >= 11 && value % 100 <= 13) return "th";
