@@ -1,6 +1,6 @@
 "use client";
 
-import { Spinner } from "@/components/wallnut/icons";
+import { SettingsIcon, Spinner } from "@/components/wallnut/icons";
 import {
   DEFAULT_PROOF_ADMIN_SETTINGS,
   PROOF_CHECK_LABELS,
@@ -69,7 +69,7 @@ export function ProofConfigWidget({
   );
 
   return (
-    <div ref={rootRef} className="flex flex-col items-center gap-2">
+    <div ref={rootRef} className="flex flex-col-reverse items-center gap-2">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -78,7 +78,7 @@ export function ProofConfigWidget({
         disabled={busy && !open}
         className={`${PILL_BUTTON} ${open ? "border-[#3a3a3a] text-white" : ""}`}
       >
-        {busy ? <Spinner /> : null}
+        {busy ? <Spinner /> : <SettingsIcon size={14} />}
         Bot settings
       </button>
 
@@ -86,37 +86,40 @@ export function ProofConfigWidget({
         <div
           role="dialog"
           aria-label="Bot settings"
-          className="wallnut-reveal w-full max-w-[300px] rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="wallnut-reveal w-max max-w-[min(calc(100vw-2rem),540px)] rounded-[8px] border border-[#1b1b1b] bg-[#101010] px-3 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
-          <SegmentSlider
-            label="Reply"
-            value={styleIndex}
-            max={REPLY_STOPS.length - 1}
-            stops={REPLY_STOPS}
-            disabled={busy}
-            onChange={(value) => selectStyle(PROOF_RESPONSE_STYLES[value]!)}
-          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="min-w-0 flex-1 sm:min-w-[220px]">
+              <SegmentSlider
+                label="Reply"
+                value={styleIndex}
+                max={REPLY_STOPS.length - 1}
+                stops={REPLY_STOPS}
+                disabled={busy}
+                onChange={(value) => selectStyle(PROOF_RESPONSE_STYLES[value]!)}
+              />
+            </div>
 
-          <div className="mt-3 border-t border-[#1f1f1f] pt-3">
-            <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.04em] text-[#6c6c6c]">
-              Checks
-            </p>
-            <div className="space-y-1">
-              {QUICK_CHECKS.map((key) => (
-                <label
-                  key={key}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-[6px] px-1 py-1 text-[12px] text-[#bdbdbd] transition hover:text-white"
-                >
-                  <input
-                    type="checkbox"
-                    className="size-3.5 rounded border-[#3a3a3a] bg-[#161616] accent-[#d4d4d4]"
+            <div
+              className="h-px w-full shrink-0 bg-[#1f1f1f] sm:h-12 sm:w-px"
+              aria-hidden
+            />
+
+            <div className="shrink-0">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.04em] text-[#6c6c6c]">
+                Checks
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_CHECKS.map((key) => (
+                  <CheckToggle
+                    key={key}
+                    label={PROOF_CHECK_LABELS[key].title}
                     checked={settings.checks[key]}
                     disabled={busy}
                     onChange={() => toggleCheck(key)}
                   />
-                  <span>{PROOF_CHECK_LABELS[key].title}</span>
-                </label>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
@@ -128,6 +131,56 @@ export function ProofConfigWidget({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function CheckToggle({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onChange}
+      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50 ${
+        checked
+          ? "border-[#3a3a3a] bg-[#1c1c1c] text-[#fbfbfb]"
+          : "border-[#2a2a2a] bg-[#141414] text-[#919191] hover:border-[#3a3a3a] hover:text-white"
+      }`}
+    >
+      <span
+        aria-hidden
+        className={`flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border transition ${
+          checked
+            ? "border-[#bdbdbd] bg-[#d4d4d4] text-[#101010]"
+            : "border-[#444] bg-[#101010]"
+        }`}
+      >
+        {checked ? (
+          <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M2.5 6 5 8.5 9.5 3.5"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : null}
+      </span>
+      {label}
+    </button>
   );
 }
 
