@@ -109,6 +109,36 @@ test("maps button replies to their action id", () => {
   assert.equal(event.payload.selectedButtonId, "approve:asset-id:1");
 });
 
+test("maps quoted reply context for @mentions", () => {
+  const event = mapMessage({
+    key: {
+      id: "reply-1",
+      remoteJid: "120363000000@g.us",
+      participant: "15551234567@s.whatsapp.net",
+    },
+    messageTimestamp: 127,
+    message: {
+      extendedTextMessage: {
+        text: "@Wallnut Bot can you proof read this",
+        contextInfo: {
+          stanzaId: "quoted-1",
+          participant: "15559876543@s.whatsapp.net",
+          mentionedJid: ["15550000000@s.whatsapp.net"],
+          quotedMessage: {
+            conversation:
+              "This is the ideal list I can think of to add but not sure how much of this it could do: Sense check",
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(event.payload.body, "@Wallnut Bot can you proof read this");
+  assert.equal(event.payload.quotedMessage.body, "This is the ideal list I can think of to add but not sure how much of this it could do: Sense check");
+  assert.equal(event.payload.quotedMessage.stanzaId, "quoted-1");
+  assert.equal(event.payload.quotedMessage.hasMedia, false);
+});
+
 test("normalizes bare phone numbers for Baileys", () => {
   assert.equal(normalizeJid("+1 (555) 123-4567"), "15551234567@s.whatsapp.net");
   assert.equal(normalizeJid("120363000000@g.us"), "120363000000@g.us");

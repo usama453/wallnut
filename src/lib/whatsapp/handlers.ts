@@ -2,6 +2,13 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { runProof } from "@/lib/proof/runProof";
 import { proofSemaphore } from "@/lib/proof/concurrency";
 import { stripWhatsAppMentions, wallnutChatReply } from "@/lib/ai/chat";
+import { proofPlainText } from "@/lib/proof/text-proof";
+import {
+  buildMentionChatInput,
+  resolveTextToProof,
+  wantsTextProof,
+  type WhatsAppMentionContext,
+} from "./mention-context";
 import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
@@ -204,13 +211,43 @@ async function dispatchMessage(
       return { handled: false, action: "ignored" };
     }
 
-    const prompt = stripWhatsAppMentions(body);
-    const chatInput =
-      prompt ||
-      (groupId
-        ? "Someone @mentioned you in a WhatsApp group. Reply briefly, explain what you can help with, and invite them to send an image or PDF to proof."
-        : "Someone messaged you on WhatsApp. Reply briefly as Wallnut and explain you can proof images and PDFs.");
-    const reply = await wallnutChatReply(chatInput);
+    const mentionCtx: WhatsAppMentionContext = {
+      userMessage: stripWhatsAppMentions(body),
+      quotedMessage: message.quoted?.body,
+      quotedHasMedia: message.quoted?.hasMedia,
+    };
+
+    if (wantsTextProof(mentionCtx.userMessage) || wantsTextProof(body)) {
+      if (mentionCtx.quotedHasMedia && !mentionCtx.quotedMessage?.trim()) {
+        await sendTextWaha(
+          from,
+          "I can see you're replying to a file — @mention me on the image or PDF directly and I'll proof it.",
+          message.id,
+        );
+        return { handled: true, action: "text" };
+      }
+
+      const textToProof = resolveTextToProof(mentionCtx);
+      if (textToProof) {
+        const report = await proofPlainText(textToProof, orgId);
+        const responseStyle = await getProofResponseStyle();
+        const reply = formatWhatsAppReply(report.issues, responseStyle, {
+          humanReply: report.humanReply,
+          summary: report.summary,
+        });
+        await sendTextWaha(from, reply, message.id);
+        logUsage({
+          direction: "outbound",
+          msg_type: "text",
+          to_phone: from,
+          group_id: groupId,
+          status: "text-proof",
+        });
+        return { handled: true, action: "text" };
+      }
+    }
+
+    const reply = await wallnutChatReply(buildMentionChatInput(mentionCtx, groupId));
     await sendTextWaha(from, reply, message.id);
     logUsage({
       direction: "outbound",

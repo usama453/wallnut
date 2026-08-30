@@ -1,6 +1,7 @@
 import type {
   AnalyzeInput,
   AnalyzeOutput,
+  AnalyzeTextInput,
   RawReport,
   TranscribeInput,
   TranscriptionOutput,
@@ -17,6 +18,8 @@ export interface AiProvider {
   transcribeAsset(input: TranscribeInput): Promise<TranscriptionOutput>;
   /** Stage 2: analyze an artwork image + optional OCR text and brand rules. */
   analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput>;
+  /** Proof plain text copy (no image) — grammar, clarity, marketing checks. */
+  analyzeText(input: AnalyzeTextInput): Promise<AnalyzeOutput>;
   /** Casual chat reply in the bot's persona (short, characterful). */
   chat(message: string): Promise<string>;
   /** Short WhatsApp reply after proofing, based on the finalized report. */

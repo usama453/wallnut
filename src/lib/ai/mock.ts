@@ -1,5 +1,5 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
 import { buildSystemPrompt, buildStandaloneProofPrompt } from "./prompt";
 
 /**
@@ -121,6 +121,40 @@ export class MockProvider implements AiProvider {
             ? "This artwork looks clean. No issues found."
             : `Found ${issues.length} issue${issues.length > 1 ? "s" : ""}.`,
         issues,
+      },
+    };
+  }
+
+  async analyzeText(input: AnalyzeTextInput): Promise<AnalyzeOutput> {
+    const text = input.text;
+    const issues = [];
+    if (/\bteh\b/i.test(text)) {
+      issues.push({
+        category: "text",
+        severity: "high" as const,
+        title: 'Grammar: "teh" → "the"',
+        description: 'Found "teh" in the copy.',
+        suggestion: 'Change "teh" to "the".',
+      });
+    }
+    if (!/\b(sense check|cta|call to action)\b/i.test(text) && text.length > 40) {
+      issues.push({
+        category: "marketing",
+        severity: "low" as const,
+        title: "Sense check",
+        description: "Consider whether the list items are actionable for your audience.",
+        suggestion: "Tighten each bullet to a clear capability Wallnut can verify.",
+      });
+    }
+    const score = Math.max(40, 100 - issues.length * 12);
+    return {
+      rawText: text,
+      report: {
+        score,
+        status: score >= 90 ? "passed" : score >= 70 ? "needs_review" : "errors",
+        summary: issues.length ? `Found ${issues.length} issue${issues.length === 1 ? "" : "s"} in the text.` : "Copy looks clean.",
+        issues,
+        extractedText: text,
       },
     };
   }

@@ -1,6 +1,6 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
-import { buildSystemPrompt, buildStandaloneProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt } from "./prompt";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
+import { buildSystemPrompt, buildStandaloneProofPrompt, buildTextProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -63,6 +63,60 @@ export class GeminiProvider implements AiProvider {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         return await this.attempt(url, input, systemPrompt);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+    }
+    throw lastError;
+  }
+
+  async analyzeText(input: AnalyzeTextInput): Promise<AnalyzeOutput> {
+    const systemPrompt = buildTextProofPrompt(
+      input.text,
+      input.brand,
+      input.enabledChecks,
+    );
+    const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 4096,
+              responseMimeType: "application/json",
+              responseSchema: REPORT_SCHEMA,
+            },
+          }),
+        });
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          throw new Error(`Gemini API error ${res.status}: ${body.slice(0, 500)}`);
+        }
+
+        const data = await res.json();
+        const candidate = data?.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+        const rawText =
+          candidate?.content?.parts
+            ?.map((part: { text?: string }) => part.text ?? "")
+            .filter(Boolean)
+            .join("\n") ?? "";
+        if (!rawText) throw new Error("Gemini returned an empty response");
+        if (finishReason === "MAX_TOKENS") {
+          throw new Error("Gemini response truncated (MAX_TOKENS)");
+        }
+
+        const report = parseReport(rawText);
+        report.extractedText = input.text.trim();
+        return { rawText, report };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));

@@ -52,6 +52,7 @@ export function extractWahaMessages(
   );
   const groupId = from.endsWith("@g.us") ? from : undefined;
   const buttonId = extractWahaButtonId(payload);
+  const quotedMessage = extractQuotedMessage(payload);
   const media = payload.media as
     | { url?: string | null; mimetype?: string; mimeType?: string; filename?: string | null }
     | null
@@ -72,6 +73,10 @@ export function extractWahaMessages(
     context: groupId ? { group_id: groupId } : undefined,
     pushName: pushName || undefined,
   };
+
+  if (quotedMessage) {
+    message.quoted = quotedMessage;
+  }
 
   if (buttonId) {
     message.type = "interactive";
@@ -170,6 +175,49 @@ export function isButtonReply(message: any): boolean {
 
 export function getButtonReplyId(message: any): string | null {
   return message?.interactive?.button_reply?.id ?? null;
+}
+
+function extractQuotedMessage(payload: Record<string, any>) {
+  const direct = payload.quotedMessage;
+  if (direct && (direct.body || direct.hasMedia)) {
+    return {
+      body: firstString(direct.body) ?? "",
+      stanzaId: firstString(direct.stanzaId) ?? undefined,
+      participant: firstString(direct.participant) ?? undefined,
+      hasMedia: Boolean(direct.hasMedia),
+    };
+  }
+
+  const native =
+    payload._data?.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+    payload._data?.message?.imageMessage?.contextInfo?.quotedMessage ||
+    payload._data?.message?.documentMessage?.contextInfo?.quotedMessage;
+  if (!native) return null;
+
+  const body =
+    firstString(
+      native.conversation,
+      native.extendedTextMessage?.text,
+      native.imageMessage?.caption,
+      native.documentMessage?.caption,
+      native.videoMessage?.caption,
+    ) ?? "";
+  const hasMedia = Boolean(
+    native.imageMessage || native.documentMessage || native.videoMessage,
+  );
+  if (!body && !hasMedia) return null;
+
+  const contextInfo =
+    payload._data?.message?.extendedTextMessage?.contextInfo ||
+    payload._data?.message?.imageMessage?.contextInfo ||
+    payload._data?.message?.documentMessage?.contextInfo;
+
+  return {
+    body,
+    stanzaId: firstString(contextInfo?.stanzaId) ?? undefined,
+    participant: firstString(contextInfo?.participant) ?? undefined,
+    hasMedia,
+  };
 }
 
 function extractWahaButtonId(payload: Record<string, any>): string | null {

@@ -177,6 +177,40 @@ ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu. Variant spellings ar
 ${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n${previous.issues.map((i) => `- [${i.category}] ${i.title}`).join("\n")}` : "No previous version."}`;
 }
 
+/** Plain-text proofing — WhatsApp messages, quoted replies, captions pasted as text. */
+export function buildTextProofPrompt(
+  text: string,
+  brand?: BrandContext | null,
+  checks: ProofChecksConfig = DEFAULT_PROOF_CHECKS,
+): string {
+  const checkSections = buildEnabledCheckSections(checks, {
+    spellingHandled: true,
+    includeTyposInModel: false,
+  });
+
+  return `You are AI Proof, a copy QA engine for marketing text.
+
+Analyze the TEXT below (not an image). Return JSON only with score, status, summary, and issues.
+
+TEXT TO PROOF:
+"""
+${text.slice(0, 8000)}
+"""
+
+CHECK THESE CATEGORIES (spelling/typos are checked separately — do NOT flag misspellings):
+${checkSections}
+
+RULES:
+- Be specific and actionable — reference exact phrases from the text.
+- List at most 8 issues, highest severity first.
+- If the copy is clean, return a high score with an empty or near-empty issues list.
+- Score 0–100. status "passed" if score >= 90 and no high issues; "needs_review" if >= 70; else "errors".
+
+${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured."}
+
+ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu. Variant spellings are normal — do not flag Roman Urdu as English spelling errors.${brand?.allow_slang_roman_urdu ? `\nCASUAL LANGUAGE MODE: loose Roman Urdu and slang are intentional.` : ""}`;
+}
+
 /** Prompt for a natural WhatsApp reply after proofing is complete. */
 export function buildHumanReplyPrompt(report: RawReport): string {
   const issuesText = report.issues

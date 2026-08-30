@@ -411,6 +411,59 @@ async function resetPairing() {
 /* Inbound mapping: Baileys message -> Wallnut waha-mode event         */
 /* ------------------------------------------------------------------ */
 
+function extractQuotedBody(quoted) {
+  if (!quoted) return { body: "", hasMedia: false };
+  const inner =
+    quoted.ephemeralMessage?.message ||
+    quoted.viewOnceMessage?.message ||
+    quoted.documentWithCaptionMessage?.message ||
+    quoted;
+  if (inner.conversation) return { body: inner.conversation, hasMedia: false };
+  if (inner.extendedTextMessage?.text) {
+    return { body: inner.extendedTextMessage.text, hasMedia: false };
+  }
+  if (inner.imageMessage) {
+    return { body: inner.imageMessage.caption || "", hasMedia: true };
+  }
+  if (inner.documentMessage) {
+    return { body: inner.documentMessage.caption || "", hasMedia: true };
+  }
+  if (inner.videoMessage) {
+    return { body: inner.videoMessage.caption || "", hasMedia: true };
+  }
+  return { body: "", hasMedia: Boolean(Object.keys(inner).length) };
+}
+
+function resolveQuotedContext(inner) {
+  const contextInfo =
+    inner.extendedTextMessage?.contextInfo ||
+    inner.imageMessage?.contextInfo ||
+    inner.documentMessage?.contextInfo ||
+    inner.videoMessage?.contextInfo ||
+    null;
+  if (!contextInfo) return null;
+
+  let { body, hasMedia } = extractQuotedBody(contextInfo.quotedMessage);
+
+  if (!body && !hasMedia && contextInfo.stanzaId) {
+    const cached = msgCache.get(contextInfo.stanzaId);
+    if (cached?.message) {
+      const extracted = extractQuotedBody(cached.message);
+      body = extracted.body;
+      hasMedia = extracted.hasMedia;
+    }
+  }
+
+  if (!body && !hasMedia && !contextInfo.stanzaId) return null;
+
+  return {
+    body,
+    stanzaId: contextInfo.stanzaId || null,
+    participant: contextInfo.participant || null,
+    hasMedia,
+  };
+}
+
 function mapMessage(m) {
   const jid = m.key.remoteJid;
   if (!jid || jid === "status@broadcast") return null;
@@ -479,6 +532,8 @@ function mapMessage(m) {
   const pushName = m.pushName || m.verifiedBizName || null;
   if (pushName) rememberContacts([{ id: personJid, notify: pushName }]);
 
+  const quotedMessage = resolveQuotedContext(inner);
+
   return {
     event: "message",
     session: SESSION,
@@ -495,6 +550,7 @@ function mapMessage(m) {
       hasMedia,
       media,
       mentions,
+      ...(quotedMessage ? { quotedMessage } : {}),
       _data: { notifyName: pushName },
       notifyName: contactNameFor(personJid, pushName),
       pushName: contactNameFor(personJid, pushName),

@@ -47,6 +47,13 @@ export interface PreviousProofContext {
   ocr_text?: string | null;
 }
 
+export interface AnalyzeTextInput {
+  /** Plain text copy to proof (WhatsApp message, quoted reply, etc.). */
+  text: string;
+  brand?: BrandContext | null;
+  enabledChecks?: ProofChecksConfig;
+}
+
 export interface AnalyzeInput {
   /** base64-encoded image bytes (original or first page of a PDF). */
   imageBase64: string;
