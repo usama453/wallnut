@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
-import { ScoreRing } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
@@ -55,14 +54,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
         <div className={version?.url ? "mt-3" : ""}>
           {sortedIssues.length > 0 ? (
-            <ReportFindings issues={sortedIssues} score={proof?.score ?? null} />
+            <ReportFindings issues={sortedIssues} />
           ) : (
             <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
-              {proof ? (
-                <div className="flex items-center justify-end border-b border-[#111111] px-4 py-3">
-                  <ScoreRing score={proof.score} size={44} />
-                </div>
-              ) : null}
               <div className="border-b border-[#111111] px-4 py-3">
                 <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
                   Findings

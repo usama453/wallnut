@@ -1,5 +1,4 @@
 import { getCorrectionLines, type SummaryIssue } from "@/lib/reportSummary";
-import { ScoreRing } from "@/components/ui";
 import type { ProofIssue } from "@/types";
 
 function issueSentence(issue: ProofIssue): string {
@@ -19,12 +18,10 @@ const MARKER_COLORS = [
 
 export function ReportFindings({
   issues,
-  score = null,
   activeIndex = null,
   onSelectIssue,
 }: {
   issues: ProofIssue[];
-  score?: number | null;
   activeIndex?: number | null;
   onSelectIssue?: (index: number | null) => void;
 }) {
@@ -40,11 +37,6 @@ export function ReportFindings({
 
   return (
     <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
-      {typeof score === "number" ? (
-        <div className="flex items-center justify-end border-b border-[#111111] px-4 py-3">
-          <ScoreRing score={score} size={44} />
-        </div>
-      ) : null}
       {corrections.length > 0 ? (
         <section>
           <div className="border-b border-[#111111] px-4 py-3">
