@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
 import { ProofBadge, ScoreRing, StatusBadge, fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
-import { MetricChip } from "@/components/wallnut/metric-chip";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
 import type { ProofIssue } from "@/types";
@@ -37,52 +36,53 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     : { data: [] };
 
   const sortedIssues = sortIssues((issues ?? []) as ProofIssue[]);
+  const reportedAt = proof?.created_at ?? version?.created_at ?? null;
 
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
       <AppHeader />
       <main className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#6c6c6c]">
-              Public report
-            </p>
-            <h1 className="mt-2 text-[clamp(24px,4vw,34px)] font-bold leading-tight tracking-[-0.72px]">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[clamp(24px,4vw,34px)] font-bold leading-tight tracking-[-0.72px]">
               {asset.name}
             </h1>
-            <p className="mt-2 text-[12px] text-[#919191]">
-              {proof
-                ? `Version ${version?.version} · ${proof.model} · ${fmtDate(proof.created_at)}`
-                : `Version ${version?.version ?? asset.current_version}`}
-            </p>
           </div>
-          <div className="flex items-center gap-3">
-            {asset.status ? <StatusBadge status={asset.status} /> : null}
-            {proof ? (
-              <>
-                <ProofBadge status={proof.status} />
-                <ScoreRing score={proof.score} size={72} />
-              </>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
+              {asset.status ? <StatusBadge status={asset.status} /> : null}
+              {proof ? (
+                <>
+                  <ProofBadge status={proof.status} />
+                  <ScoreRing score={proof.score} size={72} />
+                </>
+              ) : null}
+            </div>
+            {reportedAt ? (
+              <p className="text-[11px] text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
             ) : null}
           </div>
         </header>
-
-        <section className="mb-6 flex flex-wrap gap-2">
-          <MetricChip value={`v${version?.version ?? asset.current_version}`} label="version" />
-          <MetricChip value={sortedIssues.length} label="issues" />
-        </section>
 
         {proof?.summary ? (
           <p className="mb-6 max-w-3xl text-[14px] leading-relaxed text-[#bdbdbd]">{proof.summary}</p>
         ) : null}
 
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-          <div className="space-y-4">
-            <ReportFindings issues={sortedIssues} />
-          </div>
+        <div
+          className={
+            sortedIssues.length > 0
+              ? "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]"
+              : "mx-auto max-w-3xl"
+          }
+        >
+          {sortedIssues.length > 0 ? (
+            <div className="space-y-4">
+              <ReportFindings issues={sortedIssues} />
+            </div>
+          ) : null}
 
           {version?.url ? (
-            <div className="lg:sticky lg:top-6">
+            <div className={sortedIssues.length > 0 ? "lg:sticky lg:top-6" : ""}>
               <ReportPreview
                 title={asset.name}
                 kind={asset.kind as "image" | "pdf"}

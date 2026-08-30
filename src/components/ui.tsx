@@ -30,7 +30,6 @@ export function ScoreRing({ score, size = 96 }: { score: number; size?: number }
       </svg>
       <div className="absolute text-center">
         <div className="text-2xl font-bold leading-none text-[#fbfbfb]">{score}</div>
-        <div className="text-[9px] uppercase tracking-wide text-[#6c6c6c]">/ 100</div>
       </div>
     </div>
   );

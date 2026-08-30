@@ -32,13 +32,7 @@ export function ReportFindings({
   const otherIssues = issues.filter((issue) => !typoIds.has(issue.id));
 
   if (!issues.length) {
-    return (
-      <div className="rounded-[12px] border border-emerald-950 bg-emerald-950/20 px-5 py-8 text-center">
-        <p className="text-[28px]">🟢</p>
-        <p className="mt-2 text-[18px] font-bold text-emerald-200">All good</p>
-        <p className="mt-1 text-[13px] text-emerald-300/80">No issues found in this report.</p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -56,14 +50,14 @@ export function ReportFindings({
               <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#e8a0a0]">
                 {correction.label}
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="text-[clamp(28px,5vw,36px)] font-bold leading-none tracking-[-0.04em] text-[#ffb4b4] line-through decoration-[#ff6b6b]/80">
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="text-[clamp(22px,4vw,28px)] font-bold leading-snug tracking-[-0.03em] text-[#ffb4b4] line-through decoration-[#ff6b6b]/80">
                   {correction.before}
                 </span>
-                <span className="text-[22px] text-[#555]" aria-hidden>
+                <span className="text-[18px] text-[#555]" aria-hidden>
                   →
                 </span>
-                <span className="text-[clamp(28px,5vw,36px)] font-bold leading-none tracking-[-0.04em] text-[#7dffb2]">
+                <span className="text-[clamp(22px,4vw,28px)] font-bold leading-snug tracking-[-0.03em] text-[#7dffb2]">
                   {correction.after}
                 </span>
               </div>
