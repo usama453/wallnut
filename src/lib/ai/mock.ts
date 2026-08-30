@@ -163,10 +163,10 @@ export class MockProvider implements AiProvider {
     await delay(300);
     const text = message.toLowerCase();
     if (/hello|hi|hey|salam|assalam|salaam/.test(text)) {
-      return "Hello! I'm Wallnut the proofreading duck. Send me an image or PDF whenever you're ready.";
+      return "Hello — I'm Wallnut, a proofreading assistant. Send me an image or PDF whenever you're ready.";
     }
     if (/how are you|how're you|how do you/.test(text)) {
-      return "Feeling great — feathers dry, glasses on. How can I help your artwork today?";
+      return "All good here. How can I help with your artwork or copy today?";
     }
     if (/help|what can|how do|how does/.test(text)) {
       return "Simple as can be: send me an image or a PDF and I'll proof it — spelling, brand rules, design — then give you a score out of 100.";
@@ -175,9 +175,9 @@ export class MockProvider implements AiProvider {
       return "See you later! I'll be right here when you need another proof.";
     }
     if (/thank/.test(text)) {
-      return "You're most welcome — happy to waddle through your copy anytime.";
+      return "You're most welcome — happy to help with your copy anytime.";
     }
-    return "Hmm... let me paddle on that. Meanwhile, if you send me an image or PDF, I can proof it and give you a score.";
+    return "Let me know if you want something proofed — send an image or PDF and I'll score it.";
   }
 
   async generateHumanReply(report: RawReport): Promise<string> {
