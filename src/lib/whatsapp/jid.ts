@@ -3,6 +3,23 @@ export function phoneDigits(raw: string | null | undefined) {
   if (!raw) return "";
   return raw.split("@")[0].split(":")[0].replace(/\D/g, "");
 }
+
+/** Contact id for the avatar proxy (full JID or bare phone digits). */
+export function whatsappAvatarContact(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  const value = raw.trim();
+  if (value.includes("@")) return value;
+  const digits = phoneDigits(value);
+  return digits || null;
+}
+
+/** Resolve a contact id to the JID the bridge should query. */
+export function whatsappAvatarJid(contact: string): string {
+  const value = contact.trim();
+  if (value.includes("@")) return value;
+  const digits = phoneDigits(value);
+  return `${digits}@s.whatsapp.net`;
+}
 /** Canonical id used for access-control rows and dashboard display. */
 export function canonicalChatId(raw: string): string {
   const value = raw.trim();

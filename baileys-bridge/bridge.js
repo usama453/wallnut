@@ -159,22 +159,51 @@ function lookupContact(rawId) {
 
 async function profilePictureFor(rawId) {
   if (!sock || status !== "WORKING") return null;
-  const jid = normalizeJid(rawId);
-  const cached = pictureCache.get(jid);
-  if (cached && Date.now() - cached.at < PICTURE_TTL_MS) return cached;
-  try {
-    const url = await sock.profilePictureUrl(jid, "image");
-    if (!url) return null;
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const mimetype = response.headers.get("content-type") || "image/jpeg";
-    const entry = { buffer, mimetype, at: Date.now() };
-    pictureCache.set(jid, entry);
-    return entry;
-  } catch {
-    return null;
+  for (const jid of profilePictureCandidates(rawId)) {
+    const cached = pictureCache.get(jid);
+    if (cached && Date.now() - cached.at < PICTURE_TTL_MS) return cached;
+    try {
+      const url = await sock.profilePictureUrl(jid, "image");
+      if (!url) continue;
+      const response = await fetch(url);
+      if (!response.ok) continue;
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const mimetype = response.headers.get("content-type") || "image/jpeg";
+      const entry = { buffer, mimetype, at: Date.now() };
+      pictureCache.set(jid, entry);
+      return entry;
+    } catch {
+      // Try the next JID variant.
+    }
   }
+  return null;
+}
+
+function profilePictureCandidates(rawId) {
+  const seen = new Set();
+  const out = [];
+  const push = (value) => {
+    const jid = String(value || "").trim();
+    if (!jid || seen.has(jid)) return;
+    seen.add(jid);
+    out.push(jid);
+  };
+
+  const raw = String(rawId || "").trim();
+  push(raw.includes("@") ? raw : normalizeJid(raw));
+
+  const digits = digitsOf(raw);
+  if (digits) {
+    push(`${digits}@s.whatsapp.net`);
+    push(`${digits}@c.us`);
+    push(`${digits}@lid`);
+    for (const key of [raw, `${digits}@s.whatsapp.net`, `${digits}@c.us`, `${digits}@lid`]) {
+      const remembered = contactBook.get(key);
+      if (remembered?.id) push(remembered.id);
+    }
+  }
+
+  return out;
 }
 
 function digitsOf(jid) {

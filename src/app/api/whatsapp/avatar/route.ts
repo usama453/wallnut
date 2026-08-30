@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveConnection } from "@/lib/whatsapp/connection";
-import { phoneDigits } from "@/lib/whatsapp/jid";
+import { phoneDigits, whatsappAvatarContact, whatsappAvatarJid } from "@/lib/whatsapp/jid";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -10,13 +10,19 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-  const phone = phoneDigits(request.nextUrl.searchParams.get("phone"));
-  if (phone.length < 6) return new NextResponse("Not found", { status: 404 });
+  const params = request.nextUrl.searchParams;
+  const contact =
+    whatsappAvatarContact(params.get("contact")) ??
+    whatsappAvatarContact(params.get("jid")) ??
+    whatsappAvatarContact(params.get("phone"));
+  if (!contact) return new NextResponse("Not found", { status: 404 });
 
   const connection = await resolveConnection();
   if (!connection) return new NextResponse("Not configured", { status: 404 });
 
-  const jid = `${phone}@s.whatsapp.net`;
+  const jid = whatsappAvatarJid(contact);
+  if (phoneDigits(jid).length < 6) return new NextResponse("Not found", { status: 404 });
+
   try {
     const base = connection.baseUrl.endsWith("/")
       ? connection.baseUrl

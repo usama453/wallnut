@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { WAHA_API_KEY } from "@/lib/whatsapp/config";
+import { resolveConnection } from "@/lib/whatsapp/connection";
 import { fetchWahaContactName } from "@/lib/whatsapp/client";
 import {
   loadOrgWhatsAppContacts,
@@ -7,7 +7,7 @@ import {
   rememberWhatsAppContact,
   syncOrgWhatsAppGroupContacts,
 } from "@/lib/whatsapp/contacts";
-import { phoneDigits } from "@/lib/whatsapp/jid";
+import { phoneDigits, whatsappAvatarContact } from "@/lib/whatsapp/jid";
 
 export interface PersonStats {
   key: string;
@@ -187,9 +187,21 @@ async function enrichPeople(
   orgId: string | null,
 ): Promise<PersonStats[]> {
   const phones = people.map((person) => person.phone).filter(Boolean) as string[];
-  const stored = await loadWhatsAppContactNames(phones).catch(
-    () => new Map<string, string>(),
-  );
+  const [stored, contacts, connection] = await Promise.all([
+    loadWhatsAppContactNames(phones).catch(() => new Map<string, string>()),
+    orgId ? loadOrgWhatsAppContacts(orgId) : Promise.resolve([]),
+    Promise.resolve(resolveConnection()),
+  ]);
+
+  const contactByDigits = new Map<string, string>();
+  for (const row of contacts) {
+    const digits = phoneDigits(row.phone);
+    if (!digits) continue;
+    const existing = contactByDigits.get(digits);
+    if (!existing || (!existing.includes("@") && row.phone.includes("@"))) {
+      contactByDigits.set(digits, row.phone);
+    }
+  }
 
   const missing = phones.filter((phone) => !stored.get(phoneDigits(phone)));
   const live = await Promise.all(
@@ -207,12 +219,15 @@ async function enrichPeople(
   return people.map((person) => {
     const digits = phoneDigits(person.phone);
     const display = (digits && stored.get(digits)) || person.display;
+    const contactKey =
+      whatsappAvatarContact(person.phone) ??
+      (digits ? whatsappAvatarContact(contactByDigits.get(digits) ?? null) : null);
     return {
       ...person,
       display,
       avatarUrl:
-        digits && WAHA_API_KEY
-          ? `/api/whatsapp/avatar?phone=${encodeURIComponent(digits)}`
+        connection && contactKey
+          ? `/api/whatsapp/avatar?contact=${encodeURIComponent(contactKey)}`
           : null,
     };
   });
