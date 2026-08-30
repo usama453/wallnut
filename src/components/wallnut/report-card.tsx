@@ -43,30 +43,30 @@ export function ReportCard({ report }: { report: ReportRow }) {
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col px-3.5 py-3.5">
-        <h2 className="line-clamp-2 text-[13px] font-bold leading-[1.35] text-[#fbfbfb]">
-          {report.name}
-        </h2>
-
-        <div className="mt-3 flex items-center gap-2">
-          <InitialAvatar label={uploader} size={20} />
-          <div className="min-w-0">
-            <p className="text-[9px] leading-none text-[#6c6c6c]">Uploaded by</p>
-            <p className="mt-1 truncate text-[11px] leading-none text-[#bdbdbd]">
-              {uploader}
-            </p>
-          </div>
+      <div className="flex flex-1 flex-col gap-2.5 px-3.5 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="line-clamp-2 min-w-0 flex-1 text-[13px] font-bold leading-[1.35] text-[#fbfbfb]">
+            {report.name}
+          </h2>
+          {report.score != null ? (
+            <span className={`shrink-0 text-[11px] font-semibold tabular-nums ${scoreTone}`}>
+              {report.score}/100
+            </span>
+          ) : null}
         </div>
 
-        <div className="mt-auto flex items-center gap-1.5 border-t border-[#111111] pt-3 text-[10px]">
-          <span className="font-bold text-[#fbfbfb]">{report.issueCount}</span>
-          <span className="text-[#919191]">
-            issue{report.issueCount === 1 ? "" : "s"}
+        <div className="mt-auto flex items-center gap-3 border-t border-[#111111] pt-2.5 text-[10px]">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <InitialAvatar label={uploader} size={18} />
+            <span className="truncate text-[#bdbdbd]">{uploader}</span>
+          </div>
+          <span className="shrink-0 whitespace-nowrap text-[#919191]">
+            <span className="font-bold text-[#fbfbfb]">{report.issueCount}</span> issue
+            {report.issueCount === 1 ? "" : "s"}
           </span>
-          {report.score != null ? (
-            <span className={`ml-1 font-medium ${scoreTone}`}>{report.score}/100</span>
-          ) : null}
-          <span className="ml-auto text-[#6c6c6c]">{timeAgo(report.createdAt)}</span>
+          <span className="shrink-0 whitespace-nowrap text-[#6c6c6c]">
+            {timeAgo(report.createdAt)}
+          </span>
         </div>
       </div>
     </Link>
