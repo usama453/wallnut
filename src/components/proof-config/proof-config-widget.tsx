@@ -1,6 +1,7 @@
 "use client";
 
 import { SettingsIcon, Spinner } from "@/components/wallnut/icons";
+import { WALLNUT_PILL_BUTTON } from "@/components/wallnut/panel";
 import {
   DEFAULT_PROOF_ADMIN_SETTINGS,
   PROOF_CHECK_LABELS,
@@ -15,9 +16,6 @@ import { useProofConfig } from "./use-proof-config";
 const QUICK_CHECKS: ProofCheckType[] = ["typos", "grammar", "punctuation"];
 
 const REPLY_LABELS = ["Plain", "Mixed", "Human"] as const;
-
-const PILL_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#0a0a0a] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70";
 
 const LIST_ROW =
   "flex w-full cursor-pointer items-start gap-2.5 rounded-[6px] px-1 py-1.5 text-left transition hover:bg-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-50";
@@ -63,7 +61,7 @@ export function ProofConfigWidget({
           aria-label="Wallnut's settings"
           className="wallnut-reveal absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-[min(calc(100vw-2rem),480px)] -translate-x-1/2 rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
-          <div className="grid grid-cols-2 divide-x divide-[#131313]">
+          <div className="grid grid-cols-2 divide-x divide-[#111111]">
             <section className="px-3 py-3">
               <SectionTitle>Wallnut&apos;s reply</SectionTitle>
               <div
@@ -107,7 +105,7 @@ export function ProofConfigWidget({
           {error && error !== "Forbidden" ? (
             <p
               role="alert"
-              className="border-t border-[#131313] px-3 py-2 text-center text-[10px] text-[#e8b4b4]"
+              className="border-t border-[#111111] px-3 py-2 text-center text-[10px] text-[#e8b4b4]"
             >
               {error}
             </p>
@@ -121,7 +119,7 @@ export function ProofConfigWidget({
         aria-expanded={open}
         aria-haspopup="dialog"
         disabled={busy && !open}
-        className={`${PILL_BUTTON} ${open ? "border-[#3a3a3a] text-white" : ""}`}
+        className={`${WALLNUT_PILL_BUTTON} ${open ? "border-[#1a1a1a] text-white" : ""}`}
       >
         {busy ? <Spinner /> : <SettingsIcon size={14} />}
         Wallnut&apos;s settings
@@ -164,7 +162,7 @@ function ReplyOption({
       <span
         aria-hidden
         className={`mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border transition ${
-          checked ? "border-[#bdbdbd]" : "border-[#444] bg-[#060606]"
+          checked ? "border-[#bdbdbd]" : "border-[#111111] bg-[#060606]"
         }`}
       >
         {checked ? <span className="size-1.5 rounded-full bg-[#d4d4d4]" /> : null}
@@ -212,7 +210,7 @@ function CheckOption({
         className={`mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border transition ${
           checked
             ? "border-[#bdbdbd] bg-[#d4d4d4] text-[#060606]"
-            : "border-[#444] bg-[#060606]"
+            : "border-[#111111] bg-[#060606]"
         }`}
       >
         {checked ? (

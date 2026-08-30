@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { ProofConfigWidget } from "@/components/proof-config/proof-config-widget";
+import { WALLNUT_PILL_BUTTON } from "@/components/wallnut/panel";
 import { PersonAvatar } from "@/components/wallnut/person-avatar";
 import { PlatformIcon, Spinner } from "@/components/wallnut/icons";
 import { PendingLink } from "@/components/wallnut/pending";
@@ -130,7 +131,7 @@ export function DashboardGrid({
         <Reveal dramatic delayMs={400}>
           <Link
             href={orgRankingsPath(orgSlug)}
-            className="mt-12 rounded-full border border-[#292929] px-3 py-1.5 text-[11px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white"
+            className="mt-12 rounded-full border border-[#111111] px-3 py-1.5 text-[11px] text-[#919191] transition hover:border-[#1a1a1a] hover:text-white"
           >
             Rankings will appear after a WhatsApp group is linked
           </Link>
@@ -164,7 +165,7 @@ export function DashboardGrid({
                 onClick={() => void addWhatsAppGroup()}
                 disabled={addingGroup}
                 aria-busy={addingGroup}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#0a0a0a] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:cursor-progress disabled:opacity-70"
+                className={WALLNUT_PILL_BUTTON}
               >
                 {addingGroup ? <Spinner /> : <span aria-hidden className="text-[14px] leading-none">+</span>}
                 {addingGroup ? "Creating code…" : "Add WhatsApp group"}
@@ -200,7 +201,7 @@ export function DashboardGrid({
             </Reveal>
           ))
         ) : invites.length === 0 && !showOnboarding ? (
-          <div className="rounded-[8px] border border-dashed border-[#141414] px-6 py-14 text-center">
+          <div className="rounded-[8px] border border-dashed border-[#111111] px-6 py-14 text-center">
             <p className="text-[12px] font-bold text-[#bdbdbd]">No groups yet</p>
             <p className="mt-1 text-[11px] text-[#5f5f5f]">
               {canAddGroup
@@ -262,7 +263,7 @@ function RankedAvatar({
   return (
     <span className="group relative flex items-end">
       <PersonAvatar label={leader.display} src={leader.avatarUrl} size={size} />
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-[8px] border border-[#2a2a2a] bg-[#0a0a0a] px-2.5 py-2 text-center opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition group-hover:opacity-100 group-focus-within:opacity-100">
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-[8px] border border-[#111111] bg-[#0a0a0a] px-2.5 py-2 text-center opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition group-hover:opacity-100 group-focus-within:opacity-100">
         <span className="block text-[11px] font-bold text-white">
           {leader.display}
         </span>
@@ -332,7 +333,7 @@ function PendingWhatsAppGroupCard({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="relative border-t border-[#131313] px-4 py-6 text-center">
+          <div className="relative border-t border-[#111111] px-4 py-6 text-center">
             {open && canRemove ? (
               <RemoveWhatsAppGroup
                 orgSlug={orgSlug}
@@ -405,7 +406,7 @@ function DashboardGroupCard({
           <span className="min-w-0 flex-1">
             <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               {sourceBadge ? (
-                <span className="shrink-0 rounded-full border border-[#2a2a2a] bg-[#0a0a0a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#7a7a7a]">
+                <span className="shrink-0 rounded-full border border-[#111111] bg-[#0a0a0a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#7a7a7a]">
                   {sourceBadge}
                 </span>
               ) : null}
@@ -458,7 +459,7 @@ function DashboardGroupCard({
       >
         <div className="overflow-hidden">
           {awaitingSync && inviteCode ? (
-            <div className="border-t border-[#131313] px-4 py-6 text-center">
+            <div className="border-t border-[#111111] px-4 py-6 text-center">
               <p className="font-mono text-[22px] font-bold tracking-[0.18em] text-white">
                 {inviteCode}
               </p>
@@ -467,7 +468,7 @@ function DashboardGroupCard({
               </p>
             </div>
           ) : (
-            <div className="border-t border-[#131313] px-4 py-3">
+            <div className="border-t border-[#111111] px-4 py-3">
               {preview.length > 0 ? (
                 <div className="flex flex-col gap-1">
                   {preview.map((report) => (
@@ -506,21 +507,24 @@ function DashboardReportRow({ report }: { report: ReportRow }) {
           router.push(href);
         });
       }}
-      className="flex items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#080808]"
+      className="group flex items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#080808]"
     >
       <ReportMarker report={report} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[12px] text-[#bdbdbd]">{report.name}</span>
-        <span className="mt-0.5 block truncate text-[10px] text-[#555]">
-          {report.uploader ? `By ${report.uploader} · ` : ""}
-          {report.issueCount} issue{report.issueCount === 1 ? "" : "s"}
-        </span>
+      <span className="min-w-0 flex-1 truncate text-[12px] text-[#bdbdbd] transition group-hover:text-[#fbfbfb]">
+        {report.name}
       </span>
       {pending ? (
         <Spinner />
       ) : (
-        <span className="ml-3 shrink-0 text-[11px] text-[#6c6c6c]">
-          {timeAgo(report.createdAt)}
+        <span className="ml-3 flex shrink-0 items-center gap-2 text-[11px]">
+          {report.uploader ? (
+            <span className="max-w-[120px] truncate text-[#555] transition group-hover:text-[#8a8a8a]">
+              By {report.uploader}
+            </span>
+          ) : null}
+          <span className="shrink-0 text-[#6c6c6c] transition group-hover:text-[#bdbdbd]">
+            {timeAgo(report.createdAt)}
+          </span>
         </span>
       )}
     </Link>

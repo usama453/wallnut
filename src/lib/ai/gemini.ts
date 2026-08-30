@@ -105,13 +105,18 @@ export class GeminiProvider implements AiProvider {
     }
 
     const data = await res.json();
+    const candidate = data?.candidates?.[0];
+    const finishReason = candidate?.finishReason;
     const rawText =
-      data?.candidates?.[0]?.content?.parts
+      candidate?.content?.parts
         ?.map((part: { text?: string }) => part.text ?? "")
         .filter(Boolean)
         .join("\n") ?? "";
     if (!rawText) {
       throw new Error("Gemini returned an empty response");
+    }
+    if (finishReason === "MAX_TOKENS") {
+      throw new Error("Gemini response truncated (MAX_TOKENS)");
     }
 
     let report: RawReport;
@@ -229,8 +234,8 @@ export class GeminiProvider implements AiProvider {
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: {
-              temperature: 0.65,
-              maxOutputTokens: 180,
+              temperature: 0.6,
+              maxOutputTokens: 80,
             },
           }),
         });
@@ -248,7 +253,7 @@ export class GeminiProvider implements AiProvider {
             .join("\n") ?? "";
         const reply = sanitizeText(text.trim().replace(/^["']|["']$/g, ""));
         if (!reply) throw new Error("Gemini human reply returned an empty response");
-        return reply.slice(0, 600);
+        return reply.slice(0, 160);
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < 2) await new Promise((r) => setTimeout(r, 300 * attempt));
@@ -312,14 +317,21 @@ export function parseReport(rawText: string): RawReport {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence) text = fence[1].trim();
 
-  const object = extractFirstJsonObject(text);
+  text = compactJsonNumberLiterals(text);
+  let object = extractFirstJsonObject(text);
+  if (!object) object = repairTruncatedJson(text);
   if (!object) throw new Error("Model did not return valid JSON");
 
   let json: any;
   try {
     json = JSON.parse(object);
   } catch (err) {
-    throw new Error(`Model did not return valid JSON: ${(err as Error).message}`);
+    const repaired = repairTruncatedJson(object);
+    try {
+      json = JSON.parse(repaired);
+    } catch {
+      throw new Error(`Model did not return valid JSON: ${(err as Error).message}`);
+    }
   }
 
   const score = clampNumber(Number(json.score ?? 0), 0, 100);
@@ -341,10 +353,6 @@ export function parseReport(rawText: string): RawReport {
  */
 export { sanitizeText };
 
-/**
- * Extract the first complete top-level JSON object from a string, ignoring any
- * prose or trailing content the model may add around it.
- */
 function extractFirstJsonObject(text: string): string | null {
   const start = text.indexOf("{");
   if (start < 0) return null;
@@ -370,7 +378,61 @@ function extractFirstJsonObject(text: string): string | null {
   return null;
 }
 
-function normalizeIssue(raw: any): RawReport["issues"][number] {  const loc = raw.location ?? raw.coordinates ?? null;
+/** Collapse runaway float literals that blow up JSON size (e.g. y: 535.0000000…). */
+function compactJsonNumberLiterals(json: string): string {
+  return json.replace(/-?(\d+)\.(\d{6,})/g, (_match, intPart: string, fracPart: string) => {
+    const n = Number(`${intPart}.${fracPart.slice(0, 8)}`);
+    if (!Number.isFinite(n)) return "0";
+    return Number(n.toFixed(4)).toString();
+  });
+}
+
+/** Best-effort close for truncated model JSON. */
+function repairTruncatedJson(text: string): string {
+  let s = compactJsonNumberLiterals(text.trim());
+  const start = s.indexOf("{");
+  if (start < 0) return s;
+  s = s.slice(start);
+
+  s = s.replace(/,\s*\{[\s\S]*$/, "");
+  s = s.replace(/,\s*"[^"]*":\s*"[^"]*$/, "");
+  s = s.replace(/,\s*"[^"]*":\s*-?\d+\.?\d*$/, "");
+  s = s.replace(/,\s*"[^"]*":\s*\{[\s\S]*$/, "");
+  s = s.replace(/,\s*$/, "");
+
+  let braces = 0;
+  let brackets = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") braces++;
+    else if (ch === "}") braces--;
+    else if (ch === "[") brackets++;
+    else if (ch === "]") brackets--;
+  }
+
+  if (inString) s += '"';
+  while (brackets > 0) {
+    s += "]";
+    brackets--;
+  }
+  while (braces > 0) {
+    s += "}";
+    braces--;
+  }
+  return s;
+}
+
+function normalizeIssue(raw: any): RawReport["issues"][number] {
+  const loc = raw.location ?? raw.coordinates ?? null;
   return {
     category: sanitizeText(String(raw.category ?? "text").toLowerCase()),
     severity: ["low", "medium", "high"].includes(raw.severity) ? raw.severity : "medium",
@@ -382,12 +444,22 @@ function normalizeIssue(raw: any): RawReport["issues"][number] {  const loc = ra
 }
 
 function sanitizeLocation(loc: any) {
-  const num = (v: any) => (typeof v === "number" && Number.isFinite(v) ? clampNumber(v, 0, 1) : 0);
+  const num = (v: any) => {
+    const n = typeof v === "number" ? v : Number(v);
+    if (!Number.isFinite(n)) return null;
+    return n;
+  };
+  const x = num(loc.x ?? 0);
+  const y = num(loc.y ?? 0);
+  const w = num(loc.w ?? 0);
+  const h = num(loc.h ?? 0);
+  if (x == null || y == null || w == null || h == null) return null;
+  if ([x, y, w, h].some((value) => value > 1.05 || value < -0.05)) return null;
   return {
-    x: num(loc.x ?? 0),
-    y: num(loc.y ?? 0),
-    w: clampNumber(num(loc.w ?? 0), 0, 1 - num(loc.x ?? 0)),
-    h: clampNumber(num(loc.h ?? 0), 0, 1 - num(loc.y ?? 0)),
+    x: clampNumber(x, 0, 1),
+    y: clampNumber(y, 0, 1),
+    w: clampNumber(w, 0, 1 - clampNumber(x, 0, 1)),
+    h: clampNumber(h, 0, 1 - clampNumber(y, 0, 1)),
   };
 }
 

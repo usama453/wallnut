@@ -138,7 +138,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
           {brand && (
             <Link
               href="/brand"
-              className="rounded-[7px] border border-[#2a2a2a] px-3 py-2 text-[11px] text-[#bdbdbd] transition hover:border-[#444] hover:text-white"
+              className="rounded-[7px] border border-[#111111] px-3 py-2 text-[11px] text-[#bdbdbd] transition hover:border-[#1a1a1a] hover:text-white"
             >
               Brand: {brand.company_name ?? "profile"}
             </Link>
@@ -146,7 +146,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
           <button
             onClick={reproof}
             disabled={busy !== null}
-            className="rounded-[7px] border border-[#2a2a2a] px-3 py-2 text-[11px] font-medium text-[#bdbdbd] transition hover:border-[#444] hover:text-white disabled:opacity-50"
+            className="rounded-[7px] border border-[#111111] px-3 py-2 text-[11px] font-medium text-[#bdbdbd] transition hover:border-[#1a1a1a] hover:text-white disabled:opacity-50"
           >
             {busy === "reproof" ? "Proofing…" : "Re-proof"}
           </button>
@@ -160,7 +160,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
       </div>
 
       {note && (
-        <div className="rounded-[8px] border border-[#2a2a2a] bg-[#060606] px-4 py-2.5 text-[12px] text-[#bdbdbd]">
+        <div className="rounded-[8px] border border-[#111111] bg-[#060606] px-4 py-2.5 text-[12px] text-[#bdbdbd]">
           {note}
         </div>
       )}
@@ -277,7 +277,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 <p className="text-[12px] text-[#6c6c6c]">No comments yet.</p>
               )}
               {comments.map((c) => (
-                <div key={c.id} className="rounded-[7px] border border-[#202020] bg-[#080808] px-3 py-2.5 text-[12px]">
+                <div key={c.id} className="rounded-[7px] border border-[#111111] bg-[#080808] px-3 py-2.5 text-[12px]">
                   <p className="text-[#d0d0d0]">{c.body}</p>
                   <p className="mt-1 text-[10px] text-[#555]">{fmtDate(c.created_at)}</p>
                 </div>
@@ -289,7 +289,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addComment()}
                 placeholder="Add a comment…"
-                className="min-w-0 flex-1 rounded-[7px] border border-[#2a2a2a] bg-[#0b0b0b] px-3 py-2 text-[12px] text-[#d0d0d0] outline-none focus:border-[#444]"
+                className="min-w-0 flex-1 rounded-[7px] border border-[#111111] bg-[#0b0b0b] px-3 py-2 text-[12px] text-[#d0d0d0] outline-none focus:border-[#1a1a1a]"
               />
               <button
                 onClick={addComment}

@@ -19,7 +19,7 @@ export function ReportCard({ report }: { report: ReportRow }) {
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col overflow-hidden rounded-[10px] border border-[#111111] bg-[#060606] shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-[#303030]"
+      className="group flex h-full flex-col overflow-hidden rounded-[10px] border border-[#111111] bg-[#060606] shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-[#1a1a1a]"
     >
       <div className="relative aspect-video overflow-hidden bg-[#080808]">
         {report.thumbnail ? (

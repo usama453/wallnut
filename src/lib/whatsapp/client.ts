@@ -117,7 +117,7 @@ export async function sendInteractiveWaha(
     );
     const links = (buttons.url ?? [])
       .filter((button) => !bodyText.includes(button.url))
-      .map((button) => `${button.title}: ${button.url}`)
+      .map((button) => button.url)
       .join("\n");
     return sendTextWaha(
       chatId,

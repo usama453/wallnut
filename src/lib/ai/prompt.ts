@@ -109,7 +109,7 @@ SPELLING: spelling and typos are checked separately against the canonical text a
 CHECK THESE CATEGORIES:
 ${checkSections}
 
-COORDINATES: for every issue, return a tight bounding box around the exact text or element affected (normalized 0–1: x, y = top-left; w, h = size). Place the box on the visible pixels of the word or UI element — not the general area. If you cannot locate it confidently, set location to null instead of guessing.
+COORDINATES: for every issue, return a tight bounding box (normalized 0–1 only: x, y, w, h each between 0 and 1, rounded to 3 decimal places max). Never use pixel values. If unsure, set location to null.
 
 RULES:
 - Be specific and actionable. Reference exact phrases from the canonical text when applicable.
@@ -160,7 +160,7 @@ FIELDS:
 CHECK ONLY THESE ENABLED CATEGORIES:
 ${checkSections}
 
-COORDINATES: tight normalized bounding box (0–1: x, y, w, h) on the affected pixels when confident.
+COORDINATES: normalized 0–1 only (x, y, w, h each 0–1, max 3 decimals). Never pixel values. Use null if unsure.
 
 RULES:
 - Read the image directly. Do not invent text that is not visible.
@@ -194,14 +194,12 @@ export function buildHumanReplyPrompt(report: RawReport): string {
 Write the reply message body ONLY. No quotes, labels, or greeting.
 
 Requirements:
-- 1–3 short sentences, direct and human — not robotic or templated
-- Base the reply on the actual findings below; reference specifics from this asset
-- If misspellings/typos exist, mention how many and show fixes as word → correction (up to 4)
-- If there are no typos, do not use stock phrases like "No typos found" or "Rest looks clean"
-- If everything looks fine, say what looks good about this specific piece
-- If non-typo issues exist, call out the most important one plainly
-- No bullet lists, markdown, emojis, or sign-off
-- Stay under 320 characters unless several typos need listing
+- Exactly 1 short sentence — casual, direct, no filler
+- Base it on the findings below; be specific to this asset
+- If typos exist, mention count and at most 1–2 word → fix pairs inline
+- If clean, one brief positive line about this piece — no stock phrases
+- No bullet lists, markdown, emojis, greeting, or sign-off
+- Hard limit: 140 characters
 
 Score: ${report.score}/100 (${report.status})
 Summary: ${report.summary?.trim() || "(none)"}

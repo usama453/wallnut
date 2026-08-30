@@ -83,7 +83,7 @@ export function ReportFindings({
             const active = activeIndex === markerIndex;
             const cardClass = `rounded-[12px] border px-5 py-5 transition ${
               active
-                ? "border-[#333] bg-[#0a0a0a]"
+                ? "border-[#1a1a1a] bg-[#0a0a0a]"
                 : "border-[#111111] bg-[#060606] hover:border-[#1a1a1a]"
             }`;
 

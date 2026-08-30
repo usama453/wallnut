@@ -204,7 +204,7 @@ function Leaderboard({
 }) {
   return (
     <section className="flex h-[326px] flex-col overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.5)]">
-      <h2 className="border-b border-[#131313] px-4 py-3 text-[12px] font-bold text-[#fbfbfb]">
+      <h2 className="border-b border-[#111111] px-4 py-3 text-[12px] font-bold text-[#fbfbfb]">
         {title}
       </h2>
       {rows.length > 0 ? (

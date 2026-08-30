@@ -10,6 +10,11 @@ import {
   buildCanonicalNameIndex,
 } from "@/lib/whatsapp/contacts";
 import {
+  avatarProxyUrl,
+  loadCachedAvatarPaths,
+  syncOrgWhatsAppAvatars,
+} from "@/lib/whatsapp/avatars";
+import {
   isLidJid,
   isUserPhoneJid,
   phoneDigits,
@@ -108,6 +113,7 @@ export async function getStats(orgIdOverride?: string | null) {
     await syncOrgWhatsAppGroupContacts(orgId);
     contacts = await loadOrgWhatsAppContacts(orgId);
     aliasMap = buildContactAliasMap(contacts);
+    void syncOrgWhatsAppAvatars(orgId).catch(() => {});
   }
 
   const byPerson = new Map<string, PersonStats>();
@@ -212,6 +218,9 @@ async function enrichPeople(
     orgId ? loadOrgWhatsAppContacts(orgId) : Promise.resolve(seedContacts),
     Promise.resolve(resolveConnection()),
   ]);
+  const avatarPaths = orgId
+    ? await loadCachedAvatarPaths(orgId, contacts)
+    : new Map<string, string>();
   const nameIndex = buildCanonicalNameIndex(contacts, aliasMap);
 
   const contactByDigits = new Map<string, string>();
@@ -244,14 +253,15 @@ async function enrichPeople(
     const contactKey =
       whatsappAvatarContact(person.phone) ??
       (digits ? whatsappAvatarContact(contactByDigits.get(digits) ?? null) : null);
+    const hasCachedAvatar = Boolean(digits && avatarPaths.has(digits));
+    const proxyUrl = contactKey && (connection || hasCachedAvatar)
+      ? avatarProxyUrl(contactKey)
+      : null;
     return {
       ...person,
       key: digits,
       display,
-      avatarUrl:
-        connection && contactKey
-          ? `/api/whatsapp/avatar?contact=${encodeURIComponent(contactKey)}`
-          : null,
+      avatarUrl: proxyUrl,
     };
   });
 }

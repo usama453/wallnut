@@ -69,7 +69,7 @@ export function TeamAccess({ orgSlug }: { orgSlug: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open team members and invites"
-        className="group rounded-full border border-transparent p-1 transition hover:border-[#2e2e2e] hover:bg-[#0a0a0a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="group rounded-full border border-transparent p-1 transition hover:border-[#111111] hover:bg-[#0a0a0a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <AvatarStack
           labels={stack.shown}
@@ -93,7 +93,7 @@ export function TeamAccess({ orgSlug }: { orgSlug: string }) {
                 aria-labelledby="team-access-title"
                 className="relative z-10 flex max-h-[min(90vh,760px)] w-full max-w-[680px] flex-col overflow-hidden rounded-[10px] border border-[#111111] bg-[#0a0a0a] shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
               >
-                <div className="flex shrink-0 items-center justify-between border-b border-[#131313] px-4 py-3">
+                <div className="flex shrink-0 items-center justify-between border-b border-[#111111] px-4 py-3">
                   <h2 id="team-access-title" className="text-[14px] font-bold text-[#fbfbfb]">
                     Dashboard access
                   </h2>
@@ -139,7 +139,7 @@ function AvatarStack({
 
   if (labels.length === 0) {
     return (
-      <span className="inline-flex size-[26px] items-center justify-center rounded-full border border-dashed border-[#333] bg-[#060606] text-[12px] text-[#6c6c6c] ring-[1.5px] ring-black">
+      <span className="inline-flex size-[26px] items-center justify-center rounded-full border border-dashed border-[#111111] bg-[#060606] text-[12px] text-[#6c6c6c] ring-[1.5px] ring-black">
         +
       </span>
     );
@@ -153,13 +153,13 @@ function AvatarStack({
             key={`${label}-${index}`}
             label={label}
             size={26}
-            className="ring-2 ring-black transition group-hover:ring-[#2a2a2a]"
+            className="ring-2 ring-black transition group-hover:ring-[#1a1a1a]"
             style={{ zIndex: labels.length - index }}
           />
         ))}
       </span>
       {overflow > 0 ? (
-        <span className="ml-1.5 inline-flex size-[26px] items-center justify-center rounded-full bg-[#090909] text-[9px] font-bold text-[#919191] ring-[1.5px] ring-black transition group-hover:bg-[#222] group-hover:text-[#bdbdbd] group-hover:ring-[#2a2a2a]">
+        <span className="ml-1.5 inline-flex size-[26px] items-center justify-center rounded-full bg-[#090909] text-[9px] font-bold text-[#919191] ring-[1.5px] ring-black transition group-hover:bg-[#222] group-hover:text-[#bdbdbd] group-hover:ring-[#1a1a1a]">
           +{overflow}
         </span>
       ) : null}

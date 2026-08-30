@@ -93,7 +93,7 @@ export function RemoveWhatsAppGroup({
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={removing}
-                className="rounded-full border border-[#2e2e2e] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:opacity-60"
+                className="rounded-full border border-[#111111] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#1a1a1a] hover:text-white disabled:opacity-60"
               >
                 Cancel
               </button>

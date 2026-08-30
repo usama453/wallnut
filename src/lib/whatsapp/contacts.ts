@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { fetchWahaGroup } from "@/lib/whatsapp/client";
+import { syncOrgWhatsAppAvatars } from "@/lib/whatsapp/avatars";
 import { BOT_PHONE_NUMBER } from "@/lib/whatsapp/config";
 import { canonicalChatId, isLidJid, isUserPhoneJid, looksLikeMobilePhoneDigits, participantLidJid, phoneDigits, preferParticipantPhone } from "@/lib/whatsapp/jid";
 import { isPendingGroupExternalId } from "@/lib/whatsapp/placeholder-groups";
@@ -21,6 +22,7 @@ export function rememberWhatsAppContact(input: {
       await saveWhatsAppContacts(input.orgId, [
         { phone: input.phone, displayName: name },
       ]);
+      void syncOrgWhatsAppAvatars(input.orgId).catch(() => {});
     } catch (error) {
       console.error(
         `[contacts] upsert failed: ${error instanceof Error ? error.message : error}`,
@@ -82,6 +84,7 @@ export async function importWhatsAppGroupContacts(orgId: string, groupJid: strin
   console.log(
     `[contacts] imported ${count} participant(s) from ${groupJid} for org ${orgId}`,
   );
+  void syncOrgWhatsAppAvatars(orgId).catch(() => {});
   return count;
 }
 

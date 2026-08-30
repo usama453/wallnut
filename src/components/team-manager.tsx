@@ -153,7 +153,7 @@ export function TeamManager({
       ) : (
         <>
       <article className={PANEL}>
-        <div className="border-b border-[#131313] px-4 py-3">
+        <div className="border-b border-[#111111] px-4 py-3">
           <h2 className="text-[12px] font-bold text-[#fbfbfb]">
             Invite someone to this dashboard
           </h2>
@@ -198,7 +198,7 @@ export function TeamManager({
                 type="submit"
                 disabled={Boolean(busy) || !email.trim()}
                 aria-busy={busy === "invite"}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#0a0a0a] px-3.5 py-2 text-[12px] text-[#fbfbfb] transition hover:border-[#3a3a3a] disabled:cursor-progress disabled:opacity-70"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#111111] bg-[#0a0a0a] px-3.5 py-2 text-[12px] text-[#fbfbfb] transition hover:border-[#1a1a1a] disabled:cursor-progress disabled:opacity-70"
               >
                 {busy === "invite" ? <Spinner /> : null}
                 {busy === "invite" ? "Sending…" : "Send invite"}
@@ -209,7 +209,7 @@ export function TeamManager({
       </article>
 
       <article className={PANEL}>
-        <div className="border-b border-[#131313] px-4 py-3">
+        <div className="border-b border-[#111111] px-4 py-3">
           <h2 className="text-[12px] font-bold text-[#fbfbfb]">
             Members ({members.length})
           </h2>
@@ -257,7 +257,7 @@ export function TeamManager({
 
       {invites.length > 0 ? (
         <article className={PANEL}>
-          <div className="border-b border-[#131313] px-4 py-3">
+          <div className="border-b border-[#111111] px-4 py-3">
             <h2 className="text-[12px] font-bold text-[#fbfbfb]">
               Pending invites ({invites.length})
             </h2>
@@ -311,7 +311,7 @@ export function TeamManager({
                 type="button"
                 onClick={() => setRemoveTarget(null)}
                 disabled={Boolean(busy)}
-                className="rounded-full border border-[#2e2e2e] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#3a3a3a] hover:text-white disabled:opacity-60"
+                className="rounded-full border border-[#111111] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#1a1a1a] hover:text-white disabled:opacity-60"
               >
                 Cancel
               </button>

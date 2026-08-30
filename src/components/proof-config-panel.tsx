@@ -22,7 +22,7 @@ export function ProofConfigPanel({
 
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="border-b border-[#131313] px-4 py-3">
+      <div className="border-b border-[#111111] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">Proof checks</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
           Choose what Wallnut should look for on the next proof run.
@@ -36,8 +36,8 @@ export function ProofConfigPanel({
               key={key}
               className={`flex cursor-pointer items-start gap-3 rounded-[6px] border px-3 py-2.5 transition ${
                 settings.checks[key]
-                  ? "border-[#3a3a3a] bg-[#0c0c0c]"
-                  : "border-[#141414] bg-[#050505] opacity-80"
+                  ? "border-[#1a1a1a] bg-[#0c0c0c]"
+                  : "border-[#111111] bg-[#050505] opacity-80"
               }`}
             >
               <input
@@ -59,7 +59,7 @@ export function ProofConfigPanel({
           ))}
         </div>
 
-        <div className="mt-6 border-t border-[#131313] pt-5">
+        <div className="mt-6 border-t border-[#111111] pt-5">
           <h3 className="text-[12px] font-bold text-[#fbfbfb]">WhatsApp reply style</h3>
           <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
             How Wallnut phrases findings when it messages back on WhatsApp.
@@ -77,8 +77,8 @@ export function ProofConfigPanel({
                   onClick={() => selectStyle(style)}
                   className={`rounded-[6px] border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     active
-                      ? "border-[#3a3a3a] bg-[#0d0d0d]"
-                      : "border-[#141414] hover:bg-[#0c0c0c]"
+                      ? "border-[#1a1a1a] bg-[#0d0d0d]"
+                      : "border-[#111111] hover:bg-[#0c0c0c]"
                   }`}
                 >
                   <span className={`block text-[12px] ${active ? "font-bold text-white" : "text-[#bdbdbd]"}`}>

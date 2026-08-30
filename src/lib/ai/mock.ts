@@ -150,22 +150,21 @@ export class MockProvider implements AiProvider {
     await delay(200);
     const typoIssues = report.issues.filter((issue) => /^Misspelled "/i.test(issue.title));
     if (typoIssues.length) {
-      const pairs = typoIssues
-        .slice(0, 3)
-        .map((issue) => {
-          const word = /Misspelled "([^"]+)"/i.exec(issue.title)?.[1];
-          const fix = /did you mean:\s*([^?.]+)/i.exec(issue.suggestion ?? "")?.[1]?.trim();
-          return word && fix ? `${word} → ${fix}` : word ?? issue.title;
-        })
-        .join(", ");
-      return `Found ${typoIssues.length} typo${typoIssues.length === 1 ? "" : "s"}: ${pairs}.`;
+      const word = /Misspelled "([^"]+)"/i.exec(typoIssues[0].title)?.[1];
+      const fix = /did you mean:\s*([^?.]+)/i.exec(typoIssues[0].suggestion ?? "")?.[1]?.trim();
+      if (word && fix) {
+        return typoIssues.length === 1
+          ? `Typo: ${word} → ${fix}.`
+          : `${typoIssues.length} typos — ${word} → ${fix}.`;
+      }
+      return `${typoIssues.length} typo${typoIssues.length === 1 ? "" : "s"} to fix.`;
     }
     if (!report.issues.length) {
-      return report.summary || "Copy and layout look solid on this one.";
+      return report.summary?.slice(0, 140) || "Looks good.";
     }
     const top = report.issues[0];
     const detail = top.description?.trim() || top.title?.trim();
-    return report.summary?.trim() || `Mostly good — ${detail}.`;
+    return (report.summary?.trim() || detail || "Needs a quick look.").slice(0, 140);
   }
 }
 

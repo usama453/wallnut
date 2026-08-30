@@ -556,7 +556,7 @@ async function sendButtons(chatId, body, buttons, quotedId) {
   // URL buttons aren't reliably supported by the buttons proto — append links.
   let fullBody = body;
   for (const u of urlButtons) {
-    fullBody += `\n${u.text || u.title || "Open"}: ${u.url}`;
+    if (u.url) fullBody += `\n${u.url}`;
   }
 
   if (replyButtons.length > 0) {
