@@ -199,9 +199,9 @@ export class MockProvider implements AiProvider {
     }
     if (!report.issues.length) {
       const closings = [
-        "Looks clean — copy reads well.",
-        "All good on this one.",
-        "Nothing major jumped out.",
+        "No typos or copy errors found.",
+        "Copy looks clean — nothing to fix.",
+        "All clear on spelling and grammar.",
       ];
       return closings[report.score % closings.length];
     }

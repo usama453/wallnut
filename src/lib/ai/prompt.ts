@@ -213,9 +213,28 @@ ${brand ? `BRAND PROFILE:\n${formatBrand(brand)}` : "No brand profile configured
 ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu. Variant spellings are normal — do not flag Roman Urdu as English spelling errors.${brand?.allow_slang_roman_urdu ? `\nCASUAL LANGUAGE MODE: loose Roman Urdu and slang are intentional.` : ""}`;
 }
 
+function isCopyErrorFinding(issue: RawReport["issues"][number]): boolean {
+  const category = (issue.category ?? "").toLowerCase();
+  if (category === "visual") return false;
+
+  const hay = `${issue.title ?? ""} ${issue.suggestion ?? ""} ${issue.description ?? ""}`.toLowerCase();
+  const designCue =
+    /\b(contrast|color|colour|spacing|alignment|hierarchy|font.?size|readability|layout|padding|margin|overflow|darken|lighten|brighten|visual|type.?hierarchy|low contrast|small text|unreadable|kerning|leading)\b/;
+  if (
+    designCue.test(hay) &&
+    !/\b(misspell|typo|grammar|punctuation|comma|apostrophe|phone|url|email|link|disclaimer|cta|truncated|missing|banned|brand)\b/.test(
+      hay,
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /** Prompt for a natural WhatsApp reply after proofing is complete. */
 export function buildHumanReplyPrompt(report: RawReport): string {
-  const issuesText = report.issues
+  const copyErrors = report.issues.filter(isCopyErrorFinding);
+  const issuesText = copyErrors
     .slice(0, 10)
     .map((issue) => {
       const parts = [`- [${issue.severity}/${issue.category}] ${issue.title}`];
@@ -231,18 +250,18 @@ Write the reply message body ONLY. No quotes, labels, or greeting.
 Voice:
 - Sound like a sharp colleague texting back — warm, direct, human
 - 1–2 short sentences max; natural spoken rhythm, not a report
-- Be specific to this asset using the findings below
+- ONLY talk about typos, spelling, grammar, punctuation, wrong facts, broken links, brand/copy errors, or missing text
+- Do NOT comment on design, layout, spacing, colors, fonts, visuals, or how the piece "feels" or "looks"
 - If there are typos, mention the count and 1–2 concrete word → fix pairs inline
-- If there are other issues too, weave in the most important one briefly
-- If clean, give a brief positive read on the piece — vary the wording, no stock filler
+- If there are other copy errors too, weave in the most important one briefly
+- If there are no copy errors, say the text/copy is clean — vary the wording; do not praise the design
 - No bullet lists, markdown, emojis, greeting, or sign-off
 - Hard limit: 160 characters
 
 Score: ${report.score}/100 (${report.status})
-Summary: ${report.summary?.trim() || "(none)"}
 
-Findings (${report.issues.length}):
-${issuesText || "(none — artwork looks clean)"}`;
+Copy/text findings (${copyErrors.length}):
+${issuesText || "(none — no typos or copy errors)"}`;
 }
 
 function formatBrand(brand: BrandContext): string {

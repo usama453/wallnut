@@ -83,7 +83,7 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
     title: "Conversational",
     description: "A short, human WhatsApp-style reply — specific to the asset.",
     example:
-      'Found 2 typos: wna → wan, teh → the. Headline spacing feels tight otherwise.',
+      'Found 2 typos: wna → wan, teh → the. Also missing a comma after "Homes".',
   },
   custom: {
     title: "Custom",

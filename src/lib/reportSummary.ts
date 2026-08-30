@@ -478,9 +478,9 @@ function formatHumanWhatsAppReply(
 
   if (!typoLines.length) {
     if (tip) return clampHumanReply(tip);
-    if (!issues.length) return "Looks clean — nothing jumped out.";
-    const summary = summarizeIssues(issues);
-    return clampHumanReply(summary ? `${summary}.` : "Worth a quick look.");
+    if (!issues.length) return "No typos or copy errors found.";
+    const summary = summarizeIssues(issues.filter(isCopyErrorIssue));
+    return clampHumanReply(summary ? `${summary}.` : "Worth a quick look on the copy.");
   }
 
   const typoPart = formatTypoSummary(typoLines);
@@ -501,11 +501,30 @@ function getTypoCorrections(issues: SummaryIssue[]) {
   return buildCorrectionLines(issues).filter((line) => line.label === "Typo");
 }
 
+function isCopyErrorIssue(issue: SummaryIssue): boolean {
+  const category = (issue.category ?? "").toLowerCase();
+  if (category === "visual") return false;
+
+  const hay = `${issue.title ?? ""} ${issue.suggestion ?? ""} ${issue.description ?? ""}`.toLowerCase();
+  const designCue =
+    /\b(contrast|color|colour|spacing|alignment|hierarchy|font.?size|readability|layout|padding|margin|overflow|darken|lighten|brighten|visual|type.?hierarchy|low contrast|small text|unreadable|kerning|leading)\b/;
+  if (
+    designCue.test(hay) &&
+    !/\b(misspell|typo|grammar|punctuation|comma|apostrophe|phone|url|email|link|disclaimer|cta|truncated|missing|banned|brand)\b/.test(
+      hay,
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function pickTopTip(issues: SummaryIssue[]): string | null {
   const candidates = issues
     .filter((issue) => {
+      if (!isCopyErrorIssue(issue)) return false;
       const label = issueLabel(issue);
-      if (label === "typos" || label === "nouns") return false;
+      if (label === "typos" || label === "nouns" || label === "visual") return false;
       if (/\bproper nouns?\b/i.test(issue.title ?? "")) return false;
       return Boolean(humanizeTip(issue));
     })
