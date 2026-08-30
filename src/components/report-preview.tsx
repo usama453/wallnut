@@ -1,5 +1,4 @@
 import { markerPosition } from "@/lib/proof/issue-locations";
-import { fmtDate } from "@/components/ui";
 import type { ProofIssue } from "@/types";
 
 const MARKER_COLORS = [
@@ -21,7 +20,6 @@ export function ReportPreview({
   url,
   previewMeta,
   issues,
-  reportedAt = null,
   activeIndex = null,
   onSelectIssue,
 }: {
@@ -30,7 +28,6 @@ export function ReportPreview({
   url: string;
   previewMeta?: { pages: PreviewPage[] } | null;
   issues: ProofIssue[];
-  reportedAt?: string | null;
   activeIndex?: number | null;
   onSelectIssue?: (index: number | null) => void;
 }) {
@@ -38,17 +35,6 @@ export function ReportPreview({
 
   return (
     <section className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
-      <div className="flex items-center justify-between gap-3 border-b border-[#111111] px-4 py-3">
-        <div className="text-[12px] font-bold text-[#fbfbfb]">
-          Preview
-          <span className="ml-2 font-normal text-[#6c6c6c]">
-            ({issues.length} issue{issues.length === 1 ? "" : "s"})
-          </span>
-        </div>
-        {reportedAt ? (
-          <p className="shrink-0 text-[11px] font-normal text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
-        ) : null}
-      </div>
       <div className="relative bg-[#080808]">
         {previewMeta?.pages?.length ? (
           <div className="space-y-1">

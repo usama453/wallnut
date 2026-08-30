@@ -1,4 +1,5 @@
 import { getCorrectionLines, type SummaryIssue } from "@/lib/reportSummary";
+import { fmtDate } from "@/components/ui";
 import type { ProofIssue } from "@/types";
 
 function issueSentence(issue: ProofIssue): string {
@@ -18,10 +19,12 @@ const MARKER_COLORS = [
 
 export function ReportFindings({
   issues,
+  reportedAt = null,
   activeIndex = null,
   onSelectIssue,
 }: {
   issues: ProofIssue[];
+  reportedAt?: string | null;
   activeIndex?: number | null;
   onSelectIssue?: (index: number | null) => void;
 }) {
@@ -39,11 +42,10 @@ export function ReportFindings({
     <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
       {corrections.length > 0 ? (
         <section>
-          <div className="border-b border-[#111111] px-4 py-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
-              Corrections
-            </h2>
-          </div>
+          <FindingsSectionHeader
+            title="Corrections"
+            reportedAt={otherIssues.length === 0 ? reportedAt : null}
+          />
           <div className="flex flex-col gap-1 px-4 py-3">
             {corrections.map((correction, index) => (
               <div
@@ -67,11 +69,10 @@ export function ReportFindings({
 
       {otherIssues.length > 0 ? (
         <section className={corrections.length > 0 ? "border-t border-[#111111]" : ""}>
-          <div className="border-b border-[#111111] px-4 py-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
-              {corrections.length > 0 ? "Other findings" : "Findings"}
-            </h2>
-          </div>
+          <FindingsSectionHeader
+            title={corrections.length > 0 ? "Other findings" : "Findings"}
+            reportedAt={reportedAt}
+          />
           <div className="flex flex-col gap-1 px-4 py-3">
             {otherIssues.map((issue) => {
               const markerIndex = issues.indexOf(issue);
@@ -100,6 +101,25 @@ export function ReportFindings({
         </section>
       ) : null}
     </article>
+  );
+}
+
+function FindingsSectionHeader({
+  title,
+  reportedAt,
+}: {
+  title: string;
+  reportedAt?: string | null;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-[#111111] px-4 py-3">
+      <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
+        {title}
+      </h2>
+      {reportedAt ? (
+        <p className="shrink-0 text-[11px] font-normal text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
+      ) : null}
+    </div>
   );
 }
 

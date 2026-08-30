@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
+import { fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
@@ -48,19 +49,21 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             url={version.url}
             previewMeta={version.preview_meta as { pages: Array<{ url: string; width: number; height: number }> } | null}
             issues={sortedIssues}
-            reportedAt={reportedAt}
           />
         ) : null}
 
         <div className={version?.url ? "mt-3" : ""}>
           {sortedIssues.length > 0 ? (
-            <ReportFindings issues={sortedIssues} />
+            <ReportFindings issues={sortedIssues} reportedAt={reportedAt} />
           ) : (
             <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
-              <div className="border-b border-[#111111] px-4 py-3">
+              <div className="flex items-center justify-between gap-3 border-b border-[#111111] px-4 py-3">
                 <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
                   Findings
                 </h2>
+                {reportedAt ? (
+                  <p className="shrink-0 text-[11px] font-normal text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
+                ) : null}
               </div>
               <p className="px-4 py-3 text-[12px] leading-relaxed text-[#bdbdbd]">
                 No issues found.
