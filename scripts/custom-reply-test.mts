@@ -24,5 +24,23 @@ const mixed = formatWhatsAppReply(
 assert.match(mixed, /1 Error\nteh/);
 assert.match(mixed, /1 Potential Error\nOneHomes/);
 
-console.log("CUSTOM REPLY OK");
-console.log(reply);
+const grouped = formatWhatsAppReply(
+  [
+    {
+      title: "5 words may be proper nouns or brand names",
+      description:
+        "Not in the dictionary: OneHomes, LiveBeyond, YearinRewind, OverseasPakistanis, CloserToHome.",
+      severity: "low",
+      category: "typography",
+    },
+  ],
+  "custom",
+);
+assert.match(grouped, /^5 Potential Errors\n/);
+assert.match(
+  grouped,
+  /OneHomes \| LiveBeyond \| YearinRewind \| OverseasPakistanis \| CloserToHome/,
+);
+
+console.log("GROUPED DICTIONARY OK");
+console.log(grouped);

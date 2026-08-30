@@ -198,9 +198,9 @@ export function whatsappReplyPreview(
         `${potentialErrors.length} Potential Error${potentialErrors.length === 1 ? "" : "s"}`,
       );
     }
-    const terms = [...errors, ...potentialErrors].slice(0, 3).join(" | ");
-    const extra = total > 3 ? ` +${total - 3}` : "";
-    return `${parts.join(", ")}: ${terms}${extra}`;
+    const terms = [...errors, ...potentialErrors];
+    const extra = total > 5 ? ` +${total - 5}` : "";
+    return `${parts.join(", ")}: ${terms.slice(0, 5).join(" | ")}${extra}`;
   }
   const typoLines = getTypoCorrections(issues);
   if (typoLines.length > 0) {
@@ -283,48 +283,69 @@ interface CustomReplyBuckets {
   potentialErrors: string[];
 }
 
-function customTermFromIssue(issue: SummaryIssue): string | null {
+function customTermsFromIssue(issue: SummaryIssue): string[] {
   const title = issue.title ?? "";
   const suggestion = issue.suggestion ?? "";
   const description = issue.description ?? "";
   const hay = `${title} ${suggestion} ${description}`;
+  const terms = new Set<string>();
+
+  const dictList = /not in the dictionary:\s*([^.]+)/i.exec(hay);
+  if (dictList?.[1]) {
+    for (const part of dictList[1].split(/,\s*/)) {
+      const word = part.trim().replace(/[.]+$/, "");
+      if (word && /[A-Za-z]/.test(word)) terms.add(word);
+    }
+  }
+
+  for (const match of hay.matchAll(/Misspelled\s+"([^"]+)"/gi)) {
+    if (match[1]) terms.add(match[1].trim());
+  }
 
   const pair = extractPair(hay);
-  if (pair?.before && pair.before !== "—") return pair.before.trim();
-
-  const misspelled = /Misspelled\s+"([^"]+)"/i.exec(title);
-  if (misspelled?.[1]) return misspelled[1].trim();
+  if (pair?.before && pair.before !== "—") terms.add(pair.before.trim());
 
   for (const quoted of extractQuotedWords({
-    title: title,
+    title,
     description: issue.description,
     suggestion: issue.suggestion,
   })) {
     const token = quoted.trim();
     if (!token) continue;
-    if (!/\s/.test(token) && token.length <= 48) return token;
+    if (!/\s/.test(token) && token.length <= 48) {
+      terms.add(token);
+      continue;
+    }
     const word = token.match(/\b([A-Za-z][A-Za-z0-9']{2,})\b/)?.[1];
-    if (word && word.length <= 48) return word;
-    if (token.length <= 48) return token;
+    if (word && word.length <= 48) terms.add(word);
+    else if (token.length <= 48) terms.add(token);
   }
 
   const foundIn = /found in:\s*"([^"]+)"/i.exec(hay);
   if (foundIn?.[1]) {
-    const tokens = foundIn[1].match(/[A-Za-z][A-Za-z0-9']{2,}/g) ?? [];
-    const compound = tokens.find((token) => /[a-z][A-Z]/.test(token));
-    if (compound) return compound;
-    if (tokens[0]) return tokens[0];
+    for (const token of foundIn[1].match(/[A-Za-z][A-Za-z0-9']{2,}/g) ?? []) {
+      terms.add(token);
+    }
   }
 
-  const compounds = hay.match(/\b([A-Z][a-z]+(?:[A-Z][a-zA-Z0-9]+)+)\b/g);
-  if (compounds?.[0]) return compounds[0];
+  for (const compound of hay.match(/\b([A-Z][a-z]+(?:[A-Z][a-zA-Z0-9]+)+)\b/g) ?? []) {
+    terms.add(compound);
+  }
+
+  if (terms.size) return [...terms];
 
   const afterColon = title.split(":").pop()?.trim().replace(/^["']|["']$/g, "");
   if (afterColon && afterColon.length <= 48 && !/^(sense check|grammar|marketing)$/i.test(afterColon)) {
-    return afterColon;
+    return [afterColon];
   }
 
-  return null;
+  const fallback = fallbackCustomTerm(issue);
+  return fallback ? [fallback] : [];
+}
+
+/** @deprecated Use customTermsFromIssue */
+function customTermFromIssue(issue: SummaryIssue): string | null {
+  return customTermsFromIssue(issue)[0] ?? null;
 }
 
 function fallbackCustomTerm(issue: SummaryIssue): string | null {
@@ -339,7 +360,7 @@ function fallbackCustomTerm(issue: SummaryIssue): string | null {
 }
 
 function collectCustomTerm(issue: SummaryIssue): string | null {
-  return customTermFromIssue(issue) ?? fallbackCustomTerm(issue);
+  return customTermsFromIssue(issue)[0] ?? null;
 }
 
 /** Definite errors: typos and high-severity findings with a concrete fix. */
@@ -364,12 +385,18 @@ function bucketCustomTerms(issues: SummaryIssue[]): CustomReplyBuckets {
   const potential: string[] = [];
 
   for (const issue of issues) {
-    const term = collectCustomTerm(issue)?.replace(/\s+/g, " ").trim();
-    if (!term) continue;
-    if (isDefiniteCustomError(issue)) {
-      if (!errors.includes(term)) errors.push(term);
-    } else if (!errors.includes(term) && !potential.includes(term)) {
-      potential.push(term);
+    const issueTerms = customTermsFromIssue(issue)
+      .map((term) => term.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    if (!issueTerms.length) continue;
+
+    const definite = isDefiniteCustomError(issue);
+    for (const term of issueTerms) {
+      if (definite) {
+        if (!errors.includes(term)) errors.push(term);
+      } else if (!errors.includes(term) && !potential.includes(term)) {
+        potential.push(term);
+      }
     }
   }
 
@@ -389,10 +416,7 @@ function formatCustomWhatsAppReply(issues: SummaryIssue[]): string {
 
   if (!total) {
     if (!issues.length) return "Looks good 👌🏻";
-    const fallback = issues
-      .map((issue) => collectCustomTerm(issue))
-      .filter((term): term is string => Boolean(term))
-      .slice(0, 8);
+    const fallback = issues.flatMap((issue) => customTermsFromIssue(issue));
     if (!fallback.length) return "Please review 👌🏻";
     return `${formatCustomSection(fallback.length, `Potential Error${fallback.length === 1 ? "" : "s"}`, fallback)}\n\nLooks good otherwise 👌🏻`;
   }
