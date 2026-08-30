@@ -53,28 +53,26 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           />
         ) : null}
 
-        <div className={`flex items-start gap-3 ${version?.url ? "mt-3" : ""}`}>
-          <div className="min-w-0 flex-1">
-            {sortedIssues.length > 0 ? (
-              <ReportFindings issues={sortedIssues} />
-            ) : (
-              <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
-                <div className="border-b border-[#111111] px-4 py-3">
-                  <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
-                    Findings
-                  </h2>
+        <div className={version?.url ? "mt-3" : ""}>
+          {sortedIssues.length > 0 ? (
+            <ReportFindings issues={sortedIssues} score={proof?.score ?? null} />
+          ) : (
+            <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
+              {proof ? (
+                <div className="flex items-center justify-end border-b border-[#111111] px-4 py-3">
+                  <ScoreRing score={proof.score} size={44} />
                 </div>
-                <p className="px-4 py-3 text-[12px] leading-relaxed text-[#bdbdbd]">
-                  No issues found.
-                </p>
-              </article>
-            )}
-          </div>
-          {proof ? (
-            <div className="shrink-0 pt-1">
-              <ScoreRing score={proof.score} size={48} />
-            </div>
-          ) : null}
+              ) : null}
+              <div className="border-b border-[#111111] px-4 py-3">
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
+                  Findings
+                </h2>
+              </div>
+              <p className="px-4 py-3 text-[12px] leading-relaxed text-[#bdbdbd]">
+                No issues found.
+              </p>
+            </article>
+          )}
         </div>
 
         {proof?.summary ? (
