@@ -179,7 +179,7 @@ async function handleApproval(activity: Activity, value: any) {
   }
 }
 
-/** Casual chat reply in the tortoise persona, with a reliable offline fallback. */
+/** Casual chat reply in the duck persona, with a reliable offline fallback. */
 async function chatReply(message: string): Promise<string> {
   return wallnutChatReply(message);
 }

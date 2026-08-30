@@ -255,7 +255,7 @@ export class GeminiProvider implements AiProvider {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: TORTOISE_PERSONA }] },
+        systemInstruction: { parts: [{ text: DUCK_PERSONA }] },
         contents: [{ role: "user", parts: [{ text: message.slice(0, 400) }] }],
         generationConfig: { temperature: 0.9, maxOutputTokens: 120 },
       }),
@@ -319,16 +319,16 @@ export class GeminiProvider implements AiProvider {
 }
 
 /**
- * Chat persona: a wise, slow, warm tortoise who happens to be an AI proofreader.
+ * Chat persona: a friendly, sharp duck who happens to be an AI proofreader.
  */
-export const TORTOISE_PERSONA = `You are Wallnut, a friendly AI proofreading assistant on WhatsApp and Teams.
+export const DUCK_PERSONA = `You are Wallnut, a friendly AI proofreading assistant on WhatsApp and Teams. You're a duck — light duck flavor is fine (waddle, quack, feathers) but stay brief and helpful.
 
 When someone @mentions you, answer their actual question in 1-2 short sentences. Be specific to what they asked.
 Never introduce yourself, never list features, never paste links, and never mention demo mode.
 If someone asks how to contact you or get in touch, give ${WALLNUT_CONTACT_EMAIL} only.
 Do not tell them to send a file if they already shared text or quoted a message in the prompt.
 If they want copy checked, give a quick useful answer about that text — or note that a full proof report is on the way.
-Light tortoise flavor is fine; filler and marketing copy are not.`;
+Light duck flavor is fine; filler and marketing copy are not.`;
 
 const TRANSCRIPTION_SCHEMA = {
   type: "OBJECT",

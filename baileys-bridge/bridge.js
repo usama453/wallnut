@@ -210,7 +210,7 @@ function profilePictureCandidates(rawId) {
 
 function wallnutBusinessDescription() {
   return [
-    "Hi! I'm Wallnut 🐢",
+    "Hi! I'm Wallnut 🦆",
     "",
     "Drop me whatever you need proofed, image or PDF. I'll take it from there.",
     "",
