@@ -3,7 +3,7 @@ process.env.WEBHOOK_URL = "http://app:3000/api/whatsapp/webhook";
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
-const { mapMessage, normalizeJid, server } = require("./bridge");
+const { mapMessage, normalizeJid, expirationFromMessageContent, buildSendOptions, server } = require("./bridge");
 
 let baseUrl;
 
@@ -142,6 +142,25 @@ test("maps quoted reply context for @mentions", () => {
 test("normalizes bare phone numbers for Baileys", () => {
   assert.equal(normalizeJid("+1 (555) 123-4567"), "15551234567@s.whatsapp.net");
   assert.equal(normalizeJid("120363000000@g.us"), "120363000000@g.us");
+});
+
+test("detects disappearing duration from inbound message context", () => {
+  const expiration = expirationFromMessageContent({
+    ephemeralMessage: {
+      message: {
+        extendedTextMessage: {
+          text: "hello",
+          contextInfo: { expiration: 604800 },
+        },
+      },
+    },
+  });
+  assert.equal(expiration, 604800);
+});
+
+test("passes ephemeralExpiration when sending in disappearing chats", () => {
+  const opts = buildSendOptions(undefined, 86400);
+  assert.deepEqual(opts, { ephemeralExpiration: 86400 });
 });
 
 test("exposes the WAHA-compatible session contract", async () => {

@@ -68,11 +68,17 @@ const PICTURE_TTL_MS = 6 * 60 * 60 * 1000;
 /** msgId -> original WAMessage, kept so outbound sends can quote-reply. */
 const msgCache = new Map();
 const MSG_CACHE_MAX = 300;
+/** chat jid -> disappearing duration in seconds (0 = off). */
+const ephemeralByChat = new Map();
+const EPHEMERAL_CACHE_MAX = 500;
+const WA_DEFAULT_EPHEMERAL = 7 * 24 * 60 * 60;
+const EPHEMERAL_SETTING_PROTOCOL_TYPE = 3;
 
 function cacheMessage(m) {
   const id = m?.key?.id;
   if (!id) return;
   msgCache.set(id, m);
+  noteEphemeralFromMessage(m);
   if (msgCache.size > MSG_CACHE_MAX) {
     // Evict oldest entries (insertion order).
     const excess = msgCache.size - MSG_CACHE_MAX;
@@ -335,6 +341,15 @@ async function createSocket() {
   nextSocket.ev.on("contacts.update", (contacts) => {
     if (generation !== socketGeneration) return;
     rememberContacts(contacts);
+  });
+
+  nextSocket.ev.on("groups.update", (groups) => {
+    if (generation !== socketGeneration) return;
+    for (const group of groups || []) {
+      if (group?.id && group.ephemeralDuration) {
+        rememberEphemeralForChat(group.id, group.ephemeralDuration);
+      }
+    }
   });
 
   nextSocket.ev.on("messages.upsert", async ({ type, messages }) => {
@@ -626,20 +641,143 @@ async function downloadBaileysMedia(entry) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Disappearing messages                                               */
+/* ------------------------------------------------------------------ */
+
+function rememberEphemeralForChat(jid, seconds) {
+  if (!jid) return;
+  const normalized = jid.includes("@") ? jid : normalizeJid(jid);
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value <= 0) {
+    ephemeralByChat.delete(normalized);
+    ephemeralByChat.delete(jid);
+    return;
+  }
+  ephemeralByChat.set(normalized, value);
+  if (jid !== normalized) ephemeralByChat.set(jid, value);
+  if (ephemeralByChat.size > EPHEMERAL_CACHE_MAX) {
+    const oldest = ephemeralByChat.keys().next().value;
+    if (oldest) ephemeralByChat.delete(oldest);
+  }
+}
+
+function expirationFromContextInfo(contextInfo) {
+  if (!contextInfo) return null;
+  const direct = Number(contextInfo.expiration);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const mode = contextInfo.disappearingMode;
+  if (mode) {
+    const fromMode = Number(mode.ephemeralExpiration ?? mode.duration);
+    if (Number.isFinite(fromMode) && fromMode > 0) return fromMode;
+  }
+  return null;
+}
+
+function unwrapMessageContent(content) {
+  if (!content) return {};
+  return (
+    content.ephemeralMessage?.message ||
+    content.viewOnceMessage?.message ||
+    content.documentWithCaptionMessage?.message ||
+    content
+  );
+}
+
+function expirationFromMessageContent(content) {
+  if (!content) return null;
+
+  const protocol = content.protocolMessage;
+  if (
+    protocol &&
+    (protocol.type === EPHEMERAL_SETTING_PROTOCOL_TYPE ||
+      protocol.type === "EPHEMERAL_SETTING")
+  ) {
+    return Number(protocol.ephemeralExpiration) || 0;
+  }
+
+  const inner = unwrapMessageContent(content);
+  const parts = [
+    inner.extendedTextMessage,
+    inner.imageMessage,
+    inner.documentMessage,
+    inner.videoMessage,
+    inner.buttonsResponseMessage,
+    inner.conversation ? inner : null,
+  ];
+  for (const part of parts) {
+    const exp = expirationFromContextInfo(part?.contextInfo);
+    if (exp) return exp;
+  }
+
+  if (content.ephemeralMessage) return WA_DEFAULT_EPHEMERAL;
+  return null;
+}
+
+function noteEphemeralFromMessage(m) {
+  const jid = m?.key?.remoteJid;
+  if (!jid) return;
+  const expiration = expirationFromMessageContent(m.message || {});
+  if (expiration === null) return;
+  rememberEphemeralForChat(jid, expiration);
+}
+
+async function resolveEphemeralExpiration(jid, quoted) {
+  const normalized = normalizeJid(jid);
+
+  if (quoted) {
+    const fromQuoted = expirationFromMessageContent(quoted.message || {});
+    if (fromQuoted && fromQuoted > 0) {
+      rememberEphemeralForChat(normalized, fromQuoted);
+      return fromQuoted;
+    }
+  }
+
+  const cached = ephemeralByChat.get(normalized) || ephemeralByChat.get(jid);
+  if (cached) return cached;
+
+  if (normalized.endsWith("@g.us") && sock?.groupMetadata) {
+    try {
+      const meta = await sock.groupMetadata(normalized);
+      if (meta?.ephemeralDuration) {
+        rememberEphemeralForChat(normalized, meta.ephemeralDuration);
+        return meta.ephemeralDuration;
+      }
+    } catch (err) {
+      console.warn("[bridge] groupMetadata for ephemeral failed:", err?.message || err);
+    }
+  }
+
+  return undefined;
+}
+
+function buildSendOptions(quoted, ephemeralExpiration) {
+  const opts = {};
+  if (quoted) opts.quoted = quoted;
+  if (ephemeralExpiration) opts.ephemeralExpiration = ephemeralExpiration;
+  return Object.keys(opts).length ? opts : undefined;
+}
+
+/* ------------------------------------------------------------------ */
 /* Outbound helpers                                                    */
 /* ------------------------------------------------------------------ */
 
 async function sendText(chatId, text, quotedId) {
   const jid = normalizeJid(chatId);
   const quoted = quotedId ? msgCache.get(String(quotedId)) : undefined;
-  const result = await sock.sendMessage(jid, { text }, quoted ? { quoted } : undefined);
+  const ephemeralExpiration = await resolveEphemeralExpiration(jid, quoted);
+  const result = await sock.sendMessage(
+    jid,
+    { text },
+    buildSendOptions(quoted, ephemeralExpiration),
+  );
   return result?.key?.id || crypto.randomUUID();
 }
 
 async function sendButtons(chatId, body, buttons, quotedId) {
   const jid = normalizeJid(chatId);
   const quoted = quotedId ? msgCache.get(String(quotedId)) : undefined;
-  const opts = quoted ? { quoted } : undefined;
+  const ephemeralExpiration = await resolveEphemeralExpiration(jid, quoted);
+  const opts = buildSendOptions(quoted, ephemeralExpiration);
   const replyButtons = buttons.filter(
     (b) => b.type !== "url" && (b.text || b.title),
   );
@@ -932,5 +1070,9 @@ if (require.main === module) {
 module.exports = {
   mapMessage,
   normalizeJid,
+  expirationFromMessageContent,
+  noteEphemeralFromMessage,
+  rememberEphemeralForChat,
+  buildSendOptions,
   server,
 };
