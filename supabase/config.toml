@@ -161,7 +161,6 @@ site_url = "https://wallnut.usama.fun"
 additional_redirect_urls = [
   "https://wallnut.usama.fun/**",
   "https://wallnut.usama.fun/auth/callback",
-  "https://aiproof-beta.vercel.app/**",
   "https://bot.usama.fun/**",
   "http://localhost:3000/**",
   "http://localhost:3001/**",

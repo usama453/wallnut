@@ -516,7 +516,7 @@ function DashboardReportRow({ report }: { report: ReportRow }) {
       {pending ? (
         <Spinner />
       ) : (
-        <span className="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap text-[11px] leading-none">
+        <span className="ml-auto flex shrink-0 items-center gap-4 whitespace-nowrap text-[11px] leading-none">
           {report.uploader ? (
             <span className="max-w-[120px] truncate text-[#555] transition group-hover:text-[#8a8a8a]">
               By {report.uploader}

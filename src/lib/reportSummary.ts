@@ -187,11 +187,19 @@ export function whatsappReplyPreview(
     return summarizeIssues(issues);
   }
   if (style === "custom") {
-    const terms = extractCustomTerms(issues);
-    if (!terms.length) return "Looks good 👌🏻";
-    const list = terms.slice(0, 3).join(" | ");
-    const extra = terms.length > 3 ? ` +${terms.length - 3}` : "";
-    return `${terms.length} Potential Errors: ${list}${extra}`;
+    const { errors, potentialErrors } = bucketCustomTerms(issues);
+    const total = errors.length + potentialErrors.length;
+    if (!total) return "Looks good 👌🏻";
+    const parts: string[] = [];
+    if (errors.length) parts.push(`${errors.length} Error${errors.length === 1 ? "" : "s"}`);
+    if (potentialErrors.length) {
+      parts.push(
+        `${potentialErrors.length} Potential Error${potentialErrors.length === 1 ? "" : "s"}`,
+      );
+    }
+    const terms = [...errors, ...potentialErrors].slice(0, 3).join(" | ");
+    const extra = total > 3 ? ` +${total - 3}` : "";
+    return `${parts.join(", ")}: ${terms}${extra}`;
   }
   const typoLines = getTypoCorrections(issues);
   if (typoLines.length > 0) {
@@ -269,31 +277,97 @@ function formatMixedWhatsAppReply(issues: SummaryIssue[]): string {
 }
 
 /** Terms for the custom reply format — misspelled words and other flagged copy. */
-function extractCustomTerms(issues: SummaryIssue[]): string[] {
-  const fromLines = buildCorrectionLines(issues)
-    .map((line) => line.before.trim())
-    .filter((term) => term && term !== "—");
-  if (fromLines.length) return [...new Set(fromLines)];
+interface CustomReplyBuckets {
+  errors: string[];
+  potentialErrors: string[];
+}
 
-  const typoWords = extractTypoWords(issues);
-  if (typoWords.length) return [...new Set(typoWords)];
+function customTermFromIssue(issue: SummaryIssue): string | null {
+  const hay = `${issue.title ?? ""} ${issue.suggestion ?? ""} ${issue.description ?? ""}`;
+  const pair = extractPair(hay);
+  if (pair?.before && pair.before !== "—") return pair.before.trim();
 
-  const quoted = issues
-    .map((issue) => /"([^"]+)"/.exec(issue.title ?? "")?.[1]?.trim())
-    .filter((term): term is string => Boolean(term));
-  if (quoted.length) return [...new Set(quoted)];
+  const misspelled = /Misspelled\s+"([^"]+)"/i.exec(issue.title ?? "");
+  if (misspelled?.[1]) return misspelled[1].trim();
 
-  return [];
+  const quoted = /"([^"]+)"/.exec(issue.title ?? "");
+  if (quoted?.[1]) return quoted[1].trim();
+
+  return null;
+}
+
+/** Definite errors: typos and high-severity findings with a concrete fix. */
+function isDefiniteCustomError(issue: SummaryIssue): boolean {
+  const label = issueLabel(issue);
+  if (label === "typos") return true;
+  if (issue.severity === "high") return true;
+
+  const hay = `${issue.title ?? ""} ${issue.suggestion ?? ""}`;
+  if (
+    (label === "grammar" || issue.category === "text" || issue.category === "typography") &&
+    issue.severity !== "low" &&
+    /misspelled|did you mean|change .* to |should be |replace with/i.test(hay)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function bucketCustomTerms(issues: SummaryIssue[]): CustomReplyBuckets {
+  const errors = new Set<string>();
+  const potential = new Set<string>();
+
+  for (const issue of issues) {
+    const term = customTermFromIssue(issue);
+    if (!term) continue;
+    if (isDefiniteCustomError(issue)) errors.add(term);
+    else potential.add(term);
+  }
+
+  for (const term of errors) potential.delete(term);
+
+  return {
+    errors: [...errors],
+    potentialErrors: [...potential],
+  };
+}
+
+function formatCustomSection(count: number, label: string, terms: string[]): string {
+  return `${count} ${label}\n${terms.join(" | ")}`;
 }
 
 function formatCustomWhatsAppReply(issues: SummaryIssue[]): string {
-  const terms = extractCustomTerms(issues);
-  if (!terms.length) return "Looks good 👌🏻";
+  const { errors, potentialErrors } = bucketCustomTerms(issues);
+  const total = errors.length + potentialErrors.length;
 
-  const count = terms.length;
-  const header = `${count} Potential Error${count === 1 ? "" : "s"}`;
-  const list = terms.join(" | ");
-  return `${header}\n${list}\n\nLooks good otherwise 👌🏻`;
+  if (!total) {
+    if (!issues.length) return "Looks good 👌🏻";
+    // Issues exist but no extractable terms — treat all as potential.
+    const fallback = issues
+      .map((issue) => customTermFromIssue(issue) ?? issue.title?.trim())
+      .filter((term): term is string => Boolean(term))
+      .slice(0, 8);
+    if (!fallback.length) return "Please review 👌🏻";
+    return `${formatCustomSection(fallback.length, `Potential Error${fallback.length === 1 ? "" : "s"}`, fallback)}\n\nLooks good otherwise 👌🏻`;
+  }
+
+  const sections: string[] = [];
+  if (errors.length) {
+    sections.push(
+      formatCustomSection(errors.length, `Error${errors.length === 1 ? "" : "s"}`, errors),
+    );
+  }
+  if (potentialErrors.length) {
+    sections.push(
+      formatCustomSection(
+        potentialErrors.length,
+        `Potential Error${potentialErrors.length === 1 ? "" : "s"}`,
+        potentialErrors,
+      ),
+    );
+  }
+
+  return `${sections.join("\n\n")}\n\nLooks good otherwise 👌🏻`;
 }
 
 export function buildHumanReplyFallback(issues: SummaryIssue[]): string {

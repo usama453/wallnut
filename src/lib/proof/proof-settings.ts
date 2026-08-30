@@ -86,9 +86,9 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
   },
   custom: {
     title: "Custom",
-    description: "Error count, pipe-separated terms, then a short sign-off.",
+    description: "Separate definite errors from potential issues, pipe-separated.",
     example:
-      "5 Potential Errors\nOneHomes | LiveBeyond | YearinRewind\n\nLooks good otherwise 👌🏻",
+      "2 Errors\nwna | recieve\n\n3 Potential Errors\nOneHomes | LiveBeyond\n\nLooks good otherwise 👌🏻",
   },
 };
 

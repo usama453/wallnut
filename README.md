@@ -1,8 +1,17 @@
 # AI Proof — Marketing Asset Quality Gate (MVP)
 
-Repo: https://github.com/usama453/wallnut · Live: https://aiproof-beta.vercel.app
+Repo: https://github.com/usama453/wallnut · Live: https://wallnut.usama.fun
 
-Auto-deploys to Vercel on every push to `main`.
+Production runs on a VPS (`wallnut.usama.fun`) with Docker (`app` + WhatsApp
+`bridge`). After pushing to `main`, deploy with:
+
+```bash
+./deploy/vps-deploy.sh
+```
+
+To retire the old Vercel preview (`aiproof-beta.vercel.app`), delete the
+`aiproof` project in the Vercel dashboard and disconnect the GitHub integration.
+That URL is no longer referenced in this repo.
 
 AI-powered proofreading + QA for marketing assets. Upload an image or PDF and
 get a score, an annotated issue overlay and an approval workflow — before you

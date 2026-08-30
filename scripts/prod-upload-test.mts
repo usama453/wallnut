@@ -3,7 +3,7 @@ import sharp from "sharp";
 
 const URL = "https://iczutfmnixkhhdvlprtn.supabase.co";
 const ANON = process.env.SUPABASE_ANON_KEY!;
-const APP = "https://aiproof-beta.vercel.app";
+const APP = process.env.WALLNUT_APP_URL ?? "https://wallnut.usama.fun";
 
 const cookies: { name: string; value: string }[] = [];
 const supabase = createServerClient(URL, ANON, {
