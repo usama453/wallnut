@@ -23,6 +23,52 @@ const ROMAN_URDU_VOCAB = new Set(
   `.split(/\s+/).filter(Boolean),
 );
 
+/** Roman Urdu tokens that collide with common English words — cannot trigger detection alone. */
+const WEAK_ROMAN_URDU_HOMOGRAPHS = new Set([
+  "the",
+  "thi",
+  "tha",
+  "thee",
+  "main",
+  "mein",
+  "per",
+  "par",
+  "ya",
+  "ho",
+  "hum",
+  "ham",
+  "kam",
+  "sab",
+  "din",
+  "ji",
+  "han",
+  "haan",
+  "na",
+  "ka",
+  "ki",
+  "ke",
+  "ko",
+  "se",
+  "ne",
+  "wo",
+  "ye",
+  "yeh",
+  "aur",
+  "ab",
+]);
+
+function countRomanUrduMarkers(words: string[]): { strong: number; weak: number } {
+  let strong = 0;
+  let weak = 0;
+  for (const raw of words) {
+    const w = raw.toLowerCase().replace(/'s$/, "");
+    if (!ROMAN_URDU_VOCAB.has(w)) continue;
+    if (WEAK_ROMAN_URDU_HOMOGRAPHS.has(w)) weak++;
+    else strong++;
+  }
+  return { strong, weak };
+}
+
 /** Per-line flags aligned with `text.split("\n")`. */
 export function detectRomanUrduLines(text: string): boolean[] {
   return text.replace(/\r/g, "").split("\n").map(isRomanUrduLine);
@@ -43,17 +89,15 @@ export function isRomanUrduLine(line: string): boolean {
   const words = trimmed.match(/[a-z']+/gi) ?? [];
   if (words.length === 0) return false;
 
-  let markers = 0;
-  for (const raw of words) {
-    const w = raw.toLowerCase().replace(/'s$/, "");
-    if (ROMAN_URDU_VOCAB.has(w)) markers++;
-  }
+  const { strong: strongMarkers, weak: weakMarkers } = countRomanUrduMarkers(words);
 
-  if (markers >= 2) return true;
-  if (markers >= 1 && words.length <= 8) return true;
+  if (strongMarkers >= 2) return true;
+  if (strongMarkers >= 1 && words.length <= 8) return true;
+  if (strongMarkers >= 1 && weakMarkers >= 1 && words.length <= 12) return true;
 
-  // Roman Urdu captions often use several non-English tokens with one helper word.
-  if (markers >= 1) {
+  // Roman Urdu captions often mix helper words with non-English tokens — but English
+  // copy with "the" plus typos must not be skipped (weak homographs alone are not enough).
+  if (strongMarkers >= 1) {
     const nonEnglishish = words.filter((w) => !looksEnglishish(w)).length;
     if (nonEnglishish >= 2 && nonEnglishish / words.length >= 0.4) return true;
   }
