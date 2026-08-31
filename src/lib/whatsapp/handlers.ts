@@ -376,7 +376,7 @@ async function handleMedia(
     const reportUrl = `${APP_URL}/r/${created.slug}`;
 
     const replyBody = result.report.directResponse?.trim()
-      ? `${result.report.directResponse.trim()}\n\n${reportUrl}`
+      ? result.report.directResponse.trim()
       : formatWhatsAppReply(result.report.issues, responseStyle, {
           humanReply: result.report.humanReply,
           summary: result.report.summary,
