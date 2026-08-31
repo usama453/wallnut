@@ -6,7 +6,7 @@ import english50 from "wordlist-english/english-words-50.json";
 import english55 from "wordlist-english/english-words-55.json";
 import english60 from "wordlist-english/english-words-60.json";
 import english70 from "wordlist-english/english-words-70.json";
-import { detectRomanUrduLines, isRomanUrduToken } from "./roman-urdu";
+import { detectRomanUrduLines, isRomanUrduToken, shouldSpellcheckToken } from "./roman-urdu";
 
 const BASE = new Set(
   [
@@ -132,7 +132,7 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
 
   const seen = new Map<string, { context: string; count: number; word: string }>();
   for (const t of tokens) {
-    if (skipLines[t.lineIdx]) continue;
+    if (!shouldSpellcheckToken(t.word, skipLines[t.lineIdx] ?? false)) continue;
     const lower = t.word.toLowerCase();
     if (seen.has(lower)) {
       seen.get(lower)!.count++;
@@ -169,6 +169,10 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
   });
 
   const typos = findings.filter((f) => f.severity === "medium");
+  const broken = findBrokenSpacedWords(text).filter(
+    (f) => !seen.has(f.word.toLowerCase()),
+  );
+  typos.push(...broken);
   // Short unknown tokens (2-3 chars) are almost always OCR noise from logos,
   // watermarks or stylized fonts — not real typos. Keep one only when it has a
   // plausible correction (handled by severity: those are "medium"), and drop
@@ -193,6 +197,56 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
   }
 
   return capped;
+}
+
+/**
+ * Visible gap inside a word (e.g. "b st" printed as two tokens for "best").
+ * Single-letter tokens are skipped by normal spellcheck (`{2,}` regex).
+ */
+function findBrokenSpacedWords(text: string): SpellcheckFinding[] {
+  const findings: SpellcheckFinding[] = [];
+  const lines = text.replace(/\r/g, "").split("\n");
+  const patterns = [
+    /\b([a-z])\s+([a-z]{2,})\b/gi,
+    /\b([a-z]{2,})\s+([a-z])\b/gi,
+  ] as const;
+
+  for (const line of lines) {
+    for (const re of patterns) {
+      re.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = re.exec(line)) !== null) {
+        const before = `${match[1]} ${match[2]}`;
+        const correction = guessMergedWord(match[1]!, match[2]!);
+        if (!correction || correction === `${match[1]}${match[2]}`.toLowerCase()) continue;
+        if (!COMMON.has(correction)) continue;
+
+        findings.push({
+          word: before,
+          context: line.trim(),
+          suggestions: [correction],
+          count: 1,
+          severity: "medium",
+        });
+      }
+    }
+  }
+
+  return findings;
+}
+
+function guessMergedWord(a: string, b: string): string | null {
+  const prefix = a.toLowerCase();
+  const suffix = b.toLowerCase();
+  const direct = `${prefix}${suffix}`;
+  if (COMMON.has(direct) || ACCEPTED.has(direct)) return direct;
+
+  for (const mid of ["e", "a", "i", "o", "u"]) {
+    const candidate = `${prefix}${mid}${suffix}`;
+    if (COMMON.has(candidate) || ACCEPTED.has(candidate)) return candidate;
+  }
+
+  return suggestCorrections(direct).find((word) => COMMON.has(word)) ?? null;
 }
 
 /**

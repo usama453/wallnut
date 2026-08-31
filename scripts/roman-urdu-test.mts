@@ -25,4 +25,9 @@ assert.ok(
   "Roman Urdu liye is not flagged as an English typo",
 );
 
+const brokenWordLine = "fresh feel dene b st choice hain";
+const broken = spellcheck(brokenWordLine).find((f) => f.word === "b st");
+assert.ok(broken, "split-word typo b st is detected");
+assert.equal(broken?.suggestions[0], "best");
+
 console.log("ROMAN URDU DETECTION OK");

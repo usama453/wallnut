@@ -112,8 +112,15 @@ export function isRomanUrduLine(line: string): boolean {
   return false;
 }
 
+/** Whether to dictionary-spellcheck this token on a Roman-Urdu-heavy line. */
+export function shouldSpellcheckToken(word: string, romanUrduLine: boolean): boolean {
+  if (isRomanUrduToken(word)) return false;
+  if (!romanUrduLine) return true;
+  return looksEnglishish(word);
+}
+
 /** Loose check — avoids importing the full spellcheck dictionary. */
-function looksEnglishish(word: string): boolean {
+export function looksEnglishish(word: string): boolean {
   const w = word.toLowerCase().replace(/'s$/, "");
   if (w.length <= 2) return true;
   if (/^(un|re|pre|post|non)/.test(w) && w.length > 5) return true;

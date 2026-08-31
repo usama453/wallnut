@@ -72,10 +72,12 @@ CRITICAL RULES:
 - Read systematically: top to bottom, left to right. Do not skip regions.
 - Copy ONLY text you can actually see. Never invent words, slogans, or corrections.
 - If a word is unclear, transcribe your best reading of the pixels — do NOT guess an alternative spelling.
+- If letters are visibly split by a space inside one word (e.g. "b st" on screen instead of "best"), transcribe WITH the space exactly. Never merge split letters into a corrected English word.
+- When OCR shows a gap inside a word, preserve that gap even if you think you know the intended word.
 - Do NOT report issues, typos, or quality problems. Transcription only.
 - Roman Urdu (Urdu in Latin script) should be copied exactly as printed — do not anglicize or "correct" it to English words.
 
-${ocrText ? `OCR HINT (may contain noise — trust your vision for spelling when they disagree):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : "No OCR hint provided."}
+${ocrText ? `OCR HINT (trust OCR for letter-level splits and gaps; use vision for layout and Urdu script):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : "No OCR hint provided."}
 
 ${brand?.company_name ? `Brand context: artwork is for ${brand.company_name}.` : ""}`;
 }

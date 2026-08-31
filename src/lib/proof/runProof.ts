@@ -174,7 +174,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     };
 
     if (!brand?.allow_slang_roman_urdu && canonicalText && enabledChecks.typos) {
-      mergeSpellcheck(report, canonicalText, brand, asset.name, locationContext);
+      mergeSpellcheck(report, canonicalText, brand, asset.name, locationContext, ocr.text);
     }
 
     enrichIssueLocations(report.issues, locationContext);
@@ -413,6 +413,7 @@ function mergeSpellcheck(
   brand: BrandContext | null,
   assetName: string,
   locationContext: LocationContext,
+  ocrText = "",
 ) {
   // Casual language mode: Roman Urdu spellings are intentionally loose, so a
   // dictionary spellcheck produces false positives. Semantic coherence is
@@ -437,10 +438,16 @@ function mergeSpellcheck(
     }
   }
 
-  const findings = spellcheck(source, {
-    allow,
-    skipLineIndices: detectRomanUrduLines(source),
-  });
+  const sources = [source];
+  const ocr = sanitizeText(ocrText.trim());
+  if (ocr && ocr !== source) sources.push(ocr);
+
+  const findings = sources.flatMap((text) =>
+    spellcheck(text, {
+      allow,
+      skipLineIndices: detectRomanUrduLines(text),
+    }),
+  );
   const newIssues: RawIssue[] = [];
   for (const f of findings) {
     // Aggregated proper-noun / acronym bucket → a single low-severity issue.
