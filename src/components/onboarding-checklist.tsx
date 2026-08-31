@@ -106,7 +106,7 @@ export function OnboardingChecklist({
 
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="border-b border-[#111111] px-4 py-4">
+      <div className="border-b border-[#222222] px-4 py-4">
         <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#6c6c6c]">
           Getting started
         </p>
@@ -117,7 +117,7 @@ export function OnboardingChecklist({
         </p>
       </div>
 
-      <ol className="divide-y divide-[#111111]">
+      <ol className="divide-y divide-[#222222]">
         {steps.map((step, index) => (
           <li key={step.title} className="flex gap-3 px-4 py-4">
             <span
@@ -126,8 +126,8 @@ export function OnboardingChecklist({
                 step.done
                   ? "bg-[#1a2e1f] text-[#4ade80]"
                   : index === completedCount
-                    ? "border border-[#1a1a1a] bg-[#0a0a0a] text-[#bdbdbd]"
-                    : "border border-[#111111] bg-[#050505] text-[#555]"
+                    ? "border border-[#2e2e2e] bg-[#0a0a0a] text-[#bdbdbd]"
+                    : "border border-[#222222] bg-[#050505] text-[#555]"
               }`}
             >
               {step.done ? "✓" : index + 1}

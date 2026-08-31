@@ -138,7 +138,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
           {brand && (
             <Link
               href="/brand"
-              className="rounded-[7px] border border-[#111111] px-3 py-2 text-[11px] text-[#bdbdbd] transition hover:border-[#1a1a1a] hover:text-white"
+              className="rounded-[7px] border border-[#222222] px-3 py-2 text-[11px] text-[#bdbdbd] transition hover:border-[#2e2e2e] hover:text-white"
             >
               Brand: {brand.company_name ?? "profile"}
             </Link>
@@ -146,7 +146,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
           <button
             onClick={reproof}
             disabled={busy !== null}
-            className="rounded-[7px] border border-[#111111] px-3 py-2 text-[11px] font-medium text-[#bdbdbd] transition hover:border-[#1a1a1a] hover:text-white disabled:opacity-50"
+            className="rounded-[7px] border border-[#222222] px-3 py-2 text-[11px] font-medium text-[#bdbdbd] transition hover:border-[#2e2e2e] hover:text-white disabled:opacity-50"
           >
             {busy === "reproof" ? "Proofing…" : "Re-proof"}
           </button>
@@ -160,14 +160,14 @@ export function AssetViewer({ data }: { data: ViewerData }) {
       </div>
 
       {note && (
-        <div className="rounded-[8px] border border-[#111111] bg-[#060606] px-4 py-2.5 text-[12px] text-[#bdbdbd]">
+        <div className="rounded-[8px] border border-[#222222] bg-[#060606] px-4 py-2.5 text-[12px] text-[#bdbdbd]">
           {note}
         </div>
       )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="space-y-4">
-          <div className="rounded-[10px] border border-[#111111] bg-[#060606] p-4">
+          <div className="rounded-[10px] border border-[#222222] bg-[#060606] p-4">
             {proof ? (
               <div className="flex items-center gap-4">
                 <ScoreRing score={proof.score} />
@@ -209,7 +209,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
             ))}
           </div>
 
-          <div className="rounded-[10px] border border-[#111111] bg-[#060606] p-4">
+          <div className="rounded-[10px] border border-[#222222] bg-[#060606] p-4">
             <h3 className="mb-2 text-[12px] font-bold">Approval history</h3>
             {approvals.length === 0 ? (
               <p className="text-[12px] text-[#6c6c6c]">No approvals yet.</p>
@@ -263,12 +263,12 @@ export function AssetViewer({ data }: { data: ViewerData }) {
               }
             />
           ) : (
-            <div className="rounded-[12px] border border-[#111111] bg-[#060606] px-4 py-20 text-center text-[12px] text-[#6c6c6c]">
+            <div className="rounded-[12px] border border-[#222222] bg-[#060606] px-4 py-20 text-center text-[12px] text-[#6c6c6c]">
               No file for this version.
             </div>
           )}
 
-          <div className="rounded-[10px] border border-[#111111] bg-[#060606] p-4">
+          <div className="rounded-[10px] border border-[#222222] bg-[#060606] p-4">
             <h3 className="mb-3 text-[12px] font-bold">
               Comments <span className="font-normal text-[#6c6c6c]">({comments.length})</span>
             </h3>
@@ -277,7 +277,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 <p className="text-[12px] text-[#6c6c6c]">No comments yet.</p>
               )}
               {comments.map((c) => (
-                <div key={c.id} className="rounded-[7px] border border-[#111111] bg-[#080808] px-3 py-2.5 text-[12px]">
+                <div key={c.id} className="rounded-[7px] border border-[#222222] bg-[#080808] px-3 py-2.5 text-[12px]">
                   <p className="text-[#d0d0d0]">{c.body}</p>
                   <p className="mt-1 text-[10px] text-[#555]">{fmtDate(c.created_at)}</p>
                 </div>
@@ -289,7 +289,7 @@ export function AssetViewer({ data }: { data: ViewerData }) {
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addComment()}
                 placeholder="Add a comment…"
-                className="min-w-0 flex-1 rounded-[7px] border border-[#111111] bg-[#0b0b0b] px-3 py-2 text-[12px] text-[#d0d0d0] outline-none focus:border-[#1a1a1a]"
+                className="min-w-0 flex-1 rounded-[7px] border border-[#222222] bg-[#0b0b0b] px-3 py-2 text-[12px] text-[#d0d0d0] outline-none focus:border-[#2e2e2e]"
               />
               <button
                 onClick={addComment}

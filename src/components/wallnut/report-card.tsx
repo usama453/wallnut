@@ -20,7 +20,7 @@ export function ReportCard({ report }: { report: ReportRow }) {
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col overflow-hidden rounded-[10px] border border-[#111111] bg-[#060606] shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-[#1a1a1a]"
+      className="group flex h-full flex-col overflow-hidden rounded-[10px] border border-[#222222] bg-[#060606] shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-[#2e2e2e]"
     >
       <div className="relative aspect-video overflow-hidden bg-[#080808]">
         {report.thumbnail ? (
@@ -55,7 +55,7 @@ export function ReportCard({ report }: { report: ReportRow }) {
           ) : null}
         </div>
 
-        <div className="mt-auto flex items-center gap-3 border-t border-[#111111] pt-2.5 text-[10px]">
+        <div className="mt-auto flex items-center gap-3 border-t border-[#222222] pt-2.5 text-[10px]">
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             <InitialAvatar label={uploader} size={18} />
             <span className="truncate text-[#bdbdbd]">{uploader}</span>

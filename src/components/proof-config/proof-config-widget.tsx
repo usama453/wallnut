@@ -60,9 +60,9 @@ export function ProofConfigWidget({
         <div
           role="dialog"
           aria-label="Wallnut's settings"
-          className="wallnut-reveal absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-[min(calc(100vw-2rem),480px)] -translate-x-1/2 rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="wallnut-reveal absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-[min(calc(100vw-2rem),480px)] -translate-x-1/2 rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
-          <div className="grid grid-cols-2 divide-x divide-[#111111]">
+          <div className="grid grid-cols-2 divide-x divide-[#222222]">
             <section className="px-3 py-3">
               <SectionTitle>Wallnut&apos;s reply</SectionTitle>
               <div
@@ -103,7 +103,7 @@ export function ProofConfigWidget({
             </section>
           </div>
 
-          <div className="border-t border-[#111111] px-3 py-2.5">
+          <div className="border-t border-[#222222] px-3 py-2.5">
             <SectionTitle>{ROMAN_URDU_PROOF_LABEL.title}</SectionTitle>
             <CheckOption
               label="Allow Roman Urdu & slang"
@@ -117,7 +117,7 @@ export function ProofConfigWidget({
           {error && error !== "Forbidden" ? (
             <p
               role="alert"
-              className="border-t border-[#111111] px-3 py-2 text-center text-[10px] text-[#e8b4b4]"
+              className="border-t border-[#222222] px-3 py-2 text-center text-[10px] text-[#e8b4b4]"
             >
               {error}
             </p>
@@ -131,7 +131,7 @@ export function ProofConfigWidget({
         aria-expanded={open}
         aria-haspopup="dialog"
         disabled={busy && !open}
-        className={`${WALLNUT_PILL_BUTTON} ${open ? "border-[#1a1a1a] text-white" : ""}`}
+        className={`${WALLNUT_PILL_BUTTON} ${open ? "border-[#2e2e2e] text-white" : ""}`}
       >
         {busy ? <Spinner /> : <SettingsIcon size={14} />}
         Wallnut&apos;s settings
@@ -174,7 +174,7 @@ function ReplyOption({
       <span
         aria-hidden
         className={`mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border transition ${
-          checked ? "border-[#bdbdbd]" : "border-[#111111] bg-[#060606]"
+          checked ? "border-[#bdbdbd]" : "border-[#222222] bg-[#060606]"
         }`}
       >
         {checked ? <span className="size-1.5 rounded-full bg-[#d4d4d4]" /> : null}
@@ -222,7 +222,7 @@ function CheckOption({
         className={`mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border transition ${
           checked
             ? "border-[#bdbdbd] bg-[#d4d4d4] text-[#060606]"
-            : "border-[#111111] bg-[#060606]"
+            : "border-[#222222] bg-[#060606]"
         }`}
       >
         {checked ? (

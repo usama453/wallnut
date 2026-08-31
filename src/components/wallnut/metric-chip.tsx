@@ -7,7 +7,7 @@ export function MetricChipGroup({
 }) {
   return (
     <div
-      className={`inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-[#111111] bg-[#060606] px-3.5 py-1.5 ${className}`}
+      className={`inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-[#222222] bg-[#060606] px-3.5 py-1.5 ${className}`}
     >
       {children}
     </div>
@@ -27,7 +27,7 @@ export function MetricChip({
 }) {
   const shell = grouped
     ? "inline-flex items-center gap-1.5 text-[11px] leading-none text-[#919191]"
-    : "inline-flex items-center gap-1.5 rounded-full border border-[#111111] px-2.5 py-1.5 text-[11px] leading-none text-[#919191]";
+    : "inline-flex items-center gap-1.5 rounded-full border border-[#222222] px-2.5 py-1.5 text-[11px] leading-none text-[#919191]";
 
   return (
     <span className={`${shell} ${className}`}>

@@ -74,9 +74,9 @@ export function WhatsAppAccess() {
 
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#111111] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#222222] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">WhatsApp access</h2>
-        <div className="flex overflow-hidden rounded-[6px] border border-[#111111] text-[11px]">
+        <div className="flex overflow-hidden rounded-[6px] border border-[#222222] text-[11px]">
           <button
             type="button"
             disabled={busy}
@@ -93,7 +93,7 @@ export function WhatsAppAccess() {
             type="button"
             disabled={busy}
             onClick={() => post({ action: "mode", mode: "allowlist" })}
-            className={`border-l border-[#111111] px-3 py-1.5 transition ${
+            className={`border-l border-[#222222] px-3 py-1.5 transition ${
               mode === "allowlist"
                 ? "bg-[#0d0d0d] font-bold text-white"
                 : "text-[#919191] hover:bg-[#0c0c0c] hover:text-white"
@@ -122,7 +122,7 @@ export function WhatsAppAccess() {
         ) : (
           <>
             {allowed.length > 0 ? (
-              <ul className="mt-4 divide-y divide-[#111111] overflow-hidden rounded-[6px] border border-[#111111]">
+              <ul className="mt-4 divide-y divide-[#222222] overflow-hidden rounded-[6px] border border-[#222222]">
                 {allowed.map((a) => (
                   <li
                     key={a.id}
@@ -156,7 +156,7 @@ export function WhatsAppAccess() {
                 <h3 className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#555]">
                   Recent chats waiting for access
                 </h3>
-                <ul className="mt-2 divide-y divide-[#111111] overflow-hidden rounded-[6px] border border-[#111111]">
+                <ul className="mt-2 divide-y divide-[#222222] overflow-hidden rounded-[6px] border border-[#222222]">
                   {recent.map((c) => (
                     <li
                       key={c.chat_id}

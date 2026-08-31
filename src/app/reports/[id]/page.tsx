@@ -61,7 +61,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       <AppHeader />
       <main className="mx-auto flex w-full max-w-[1080px] flex-1 flex-col px-4 pb-8 pt-5 sm:px-6">
         {org?.slug && org?.name ? (
-          <div className="mb-5">
+          <div className="mb-5 flex justify-center">
             <ReportDashboardLink orgName={org.name} orgSlug={org.slug} />
           </div>
         ) : null}
@@ -76,9 +76,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
               />
             ) : (
               <article
-                className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${PANEL_HEIGHT}`}
+                className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${PANEL_HEIGHT}`}
               >
-                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#111111] px-4 py-3">
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#222222] px-4 py-3">
                   <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
                     Suggestions
                   </h2>
@@ -89,7 +89,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                   ) : null}
                 </div>
                 <p className="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-[12px] leading-relaxed text-[#bdbdbd]">
-                  No issues found.
+                  Artwork is all ok.
                 </p>
               </article>
             )}

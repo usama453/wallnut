@@ -7,9 +7,9 @@ export function ReportTranscription({
 }) {
   return (
     <article
-      className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${className}`}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${className}`}
     >
-      <div className="shrink-0 border-b border-[#111111] px-4 py-3">
+      <div className="shrink-0 border-b border-[#222222] px-4 py-3">
         <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
           Transcription
         </h2>

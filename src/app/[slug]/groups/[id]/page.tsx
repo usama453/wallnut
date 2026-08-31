@@ -264,7 +264,7 @@ export default async function OrgGroupReportsPage({
           ))}
         </div>
       ) : (
-        <div className="rounded-[10px] border border-dashed border-[#111111] px-6 py-16 text-center">
+        <div className="rounded-[10px] border border-dashed border-[#222222] px-6 py-16 text-center">
           <p className="text-[12px] font-bold text-[#bdbdbd]">No reports yet</p>
           <p className="mt-2 text-[11px] text-[#5f5f5f]">
             Reports sent from this group will appear here.

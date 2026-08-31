@@ -84,7 +84,7 @@ export default function LoginForm() {
                 setError(null);
               }}
               placeholder="you@company.com"
-              className="w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#1a1a1a] focus:outline-none"
+              className="w-full rounded-[8px] border border-[#222222] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#2e2e2e] focus:outline-none"
             />
 
             <label htmlFor="login-password" className="text-[11px] text-[#919191]">
@@ -100,7 +100,7 @@ export default function LoginForm() {
                 setPassword(event.target.value);
                 setError(null);
               }}
-              className="w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] focus:border-[#1a1a1a] focus:outline-none"
+              className="w-full rounded-[8px] border border-[#222222] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] focus:border-[#2e2e2e] focus:outline-none"
             />
 
             {error ? <AuthNotice tone="error">{error}</AuthNotice> : null}

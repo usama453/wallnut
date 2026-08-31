@@ -44,7 +44,7 @@ export function PublicDashboard({
 
       {reports.length > 0 ? (
         <Reveal dramatic delayMs={120}>
-          <article className="mt-8 overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
+          <article className="mt-8 overflow-hidden rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
             <div className="flex flex-col gap-1 px-4 py-3">
               {reports.map((report) => (
                 <DashboardReportRow key={report.assetId} report={report} />
@@ -56,7 +56,7 @@ export function PublicDashboard({
 
       {allEmpty ? (
         <Reveal dramatic delayMs={120}>
-          <div className="mt-10 rounded-[8px] border border-dashed border-[#111111] px-6 py-14 text-center">
+          <div className="mt-10 rounded-[8px] border border-dashed border-[#222222] px-6 py-14 text-center">
             <p className="text-[12px] font-bold text-[#bdbdbd]">Nothing in Public yet</p>
             <p className="mt-1 text-[11px] text-[#5f5f5f]">
               When someone messages Wallnut on WhatsApp, their proofs appear here.

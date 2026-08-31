@@ -58,7 +58,7 @@ export function ProofPipelineToggle({
 
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="border-b border-[#111111] px-4 py-3">
+      <div className="border-b border-[#222222] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">Proof pipeline</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
           Compare Wallnut&apos;s split pipeline against Gemini-only proofing. Settings apply to
@@ -67,7 +67,7 @@ export function ProofPipelineToggle({
       </div>
 
       <div className="px-4 py-4">
-        <div className="flex overflow-hidden rounded-[6px] border border-[#111111] text-[11px]">
+        <div className="flex overflow-hidden rounded-[6px] border border-[#222222] text-[11px]">
           <PipelineOption
             active={mode === "split"}
             disabled={busy || envLocked}
@@ -135,7 +135,7 @@ function PipelineOption({
       disabled={disabled}
       onClick={onClick}
       className={`min-w-0 flex-1 px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
-        borderLeft ? "border-l border-[#111111]" : ""
+        borderLeft ? "border-l border-[#222222]" : ""
       } ${active ? "bg-[#0d0d0d]" : "hover:bg-[#0c0c0c]"}`}
     >
       <span className={`block text-[12px] ${active ? "font-bold text-white" : "text-[#bdbdbd]"}`}>

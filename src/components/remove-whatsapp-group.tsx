@@ -81,7 +81,7 @@ export function RemoveWhatsAppGroup({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="remove-group-title"
-                className="relative z-10 w-full max-w-[360px] rounded-[10px] border border-[#111111] bg-[#060606] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+                className="relative z-10 w-full max-w-[360px] rounded-[10px] border border-[#222222] bg-[#060606] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
               >
                 <h2 id="remove-group-title" className="text-[14px] font-bold text-[#fbfbfb]">
                   Remove WhatsApp group?
@@ -101,7 +101,7 @@ export function RemoveWhatsAppGroup({
                     type="button"
                     onClick={() => setOpen(false)}
                     disabled={removing}
-                    className="rounded-full border border-[#111111] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#1a1a1a] hover:text-white disabled:opacity-60"
+                    className="rounded-full border border-[#222222] px-3.5 py-1.5 text-[12px] text-[#919191] transition hover:border-[#2e2e2e] hover:text-white disabled:opacity-60"
                   >
                     Cancel
                   </button>

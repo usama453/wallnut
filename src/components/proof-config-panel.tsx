@@ -25,7 +25,7 @@ export function ProofConfigPanel({
 
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="border-b border-[#111111] px-4 py-3">
+      <div className="border-b border-[#222222] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">Proof checks</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
           Choose what Wallnut should look for on the next proof run. Settings apply to this
@@ -40,8 +40,8 @@ export function ProofConfigPanel({
               key={key}
               className={`flex cursor-pointer items-start gap-3 rounded-[6px] border px-3 py-2.5 transition ${
                 settings.checks[key]
-                  ? "border-[#1a1a1a] bg-[#0c0c0c]"
-                  : "border-[#111111] bg-[#050505] opacity-80"
+                  ? "border-[#2e2e2e] bg-[#0c0c0c]"
+                  : "border-[#222222] bg-[#050505] opacity-80"
               }`}
             >
               <input
@@ -63,7 +63,7 @@ export function ProofConfigPanel({
           ))}
         </div>
 
-        <div className="mt-6 border-t border-[#111111] pt-5">
+        <div className="mt-6 border-t border-[#222222] pt-5">
           <h3 className="text-[12px] font-bold text-[#fbfbfb]">WhatsApp reply style</h3>
           <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
             How Wallnut phrases findings when it messages back on WhatsApp.
@@ -81,8 +81,8 @@ export function ProofConfigPanel({
                   onClick={() => selectStyle(style)}
                   className={`rounded-[6px] border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     active
-                      ? "border-[#1a1a1a] bg-[#0d0d0d]"
-                      : "border-[#111111] hover:bg-[#0c0c0c]"
+                      ? "border-[#2e2e2e] bg-[#0d0d0d]"
+                      : "border-[#222222] hover:bg-[#0c0c0c]"
                   }`}
                 >
                   <span className={`block text-[12px] ${active ? "font-bold text-white" : "text-[#bdbdbd]"}`}>
@@ -96,12 +96,12 @@ export function ProofConfigPanel({
           </div>
         </div>
 
-        <div className="mt-6 border-t border-[#111111] pt-5">
+        <div className="mt-6 border-t border-[#222222] pt-5">
           <h3 className="text-[12px] font-bold text-[#fbfbfb]">{ROMAN_URDU_PROOF_LABEL.title}</h3>
           <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
             {ROMAN_URDU_PROOF_LABEL.description}
           </p>
-          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-[6px] border border-[#111111] px-3 py-2.5 transition hover:bg-[#0c0c0c]">
+          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-[6px] border border-[#222222] px-3 py-2.5 transition hover:bg-[#0c0c0c]">
             <input
               type="checkbox"
               className="mt-0.5"

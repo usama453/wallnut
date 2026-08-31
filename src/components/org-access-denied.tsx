@@ -14,7 +14,7 @@ export function OrgAccessDenied({
   return (
     <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-14">
       <div className="w-full max-w-[420px]">
-        <Reveal className="rounded-[12px] border border-[#111111] bg-[#060606] px-6 py-8 text-center">
+        <Reveal className="rounded-[12px] border border-[#222222] bg-[#060606] px-6 py-8 text-center">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#6c6c6c]">
             Access denied
           </p>

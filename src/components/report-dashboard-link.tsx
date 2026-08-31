@@ -15,9 +15,31 @@ export function ReportDashboardLink({
   return (
     <Link
       href={orgHomePath(orgSlug)}
-      className={`inline-flex items-center justify-center rounded-[8px] border border-[#1a1a1a] bg-[#060606] px-4 py-2.5 text-[12px] font-bold text-[#fbfbfb] transition hover:bg-[#0a0a0a] ${className}`}
+      className={`inline-flex items-center gap-2 text-[12px] font-bold text-[#fbfbfb] transition hover:text-white ${className}`}
     >
-      Open {orgName} workspace
+      <BackArrow />
+      {orgName} Workspace
     </Link>
+  );
+}
+
+function BackArrow() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      aria-hidden
+      className="shrink-0"
+    >
+      <path
+        d="M8.5 2.5 4 7l4.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

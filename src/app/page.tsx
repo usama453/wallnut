@@ -36,7 +36,7 @@ export default async function LandingPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-[12px] border border-dashed border-[#111111] px-6 py-14 text-center">
+            <div className="rounded-[12px] border border-dashed border-[#222222] px-6 py-14 text-center">
               <p className="text-[13px] font-bold text-[#d0d0d0]">
                 No public organizations yet
               </p>
@@ -64,7 +64,7 @@ function OrganizationCard({ org }: { org: PublicOrganization }) {
   return (
     <Link
       href={`/${encodeURIComponent(org.slug)}`}
-      className="group relative w-full overflow-hidden rounded-[12px] border border-[#111111] bg-[#060606] px-5 py-6 text-left shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition-colors hover:border-[#1a1a1a] sm:px-7 sm:py-7"
+      className="group relative w-full overflow-hidden rounded-[12px] border border-[#222222] bg-[#060606] px-5 py-6 text-left shadow-[0_16px_24px_rgba(0,0,0,0.35)] transition-colors hover:border-[#2e2e2e] sm:px-7 sm:py-7"
     >
       <span
         aria-hidden

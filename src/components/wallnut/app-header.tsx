@@ -120,7 +120,7 @@ export function AppHeader({
           >
             <span className="group/pfp relative inline-flex">
               <InitialAvatar label={userName || userEmail} size={28} />
-              <span className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-[#111111] bg-[#0a0a0a] px-2 py-1 text-[10px] font-medium text-[#fbfbfb] opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition group-hover/pfp:opacity-100">
+              <span className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-[10px] font-medium text-[#fbfbfb] opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition group-hover/pfp:opacity-100">
                 You
               </span>
             </span>
@@ -129,9 +129,9 @@ export function AppHeader({
           {open ? (
             <div
               role="menu"
-              className="absolute right-0 top-[38px] w-[248px] overflow-hidden rounded-[10px] border border-[#111111] bg-[#060606] shadow-[0_24px_60px_rgba(0,0,0,0.7)] wallnut-reveal"
+              className="absolute right-0 top-[38px] w-[248px] overflow-hidden rounded-[10px] border border-[#222222] bg-[#060606] shadow-[0_24px_60px_rgba(0,0,0,0.7)] wallnut-reveal"
             >
-              <div className="border-b border-[#111111] px-4 py-3">
+              <div className="border-b border-[#222222] px-4 py-3">
                 <p className="truncate text-[12px] font-bold text-[#fbfbfb]">
                   {userName || userEmail || "Account"}
                 </p>
@@ -164,7 +164,7 @@ export function AppHeader({
                 })}
               </nav>
 
-              <div className="border-t border-[#111111] p-2">
+              <div className="border-t border-[#222222] p-2">
                 <button
                   type="button"
                   role="menuitem"

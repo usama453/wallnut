@@ -88,7 +88,7 @@ export function DashboardPasswordPanel({
 
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="border-b border-[#111111] px-4 py-3">
+      <div className="border-b border-[#222222] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">Guest dashboard password</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
           Lets people open this workspace from a public report without signing in. Applies to
@@ -102,7 +102,7 @@ export function DashboardPasswordPanel({
             className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
               configured
                 ? "border-[#1f3d28] bg-[#101a14] text-[#4ade80]"
-                : "border-[#111111] bg-[#0a0a0a] text-[#919191]"
+                : "border-[#222222] bg-[#0a0a0a] text-[#919191]"
             }`}
           >
             {configured ? "● Password set" : "○ No password"}
@@ -127,7 +127,7 @@ export function DashboardPasswordPanel({
               setMessage(null);
             }}
             placeholder="Set a guest password"
-            className="mt-2 w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 font-mono text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#1a1a1a] focus:outline-none disabled:opacity-60"
+            className="mt-2 w-full rounded-[8px] border border-[#222222] bg-[#060606] px-3.5 py-3 font-mono text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#2e2e2e] focus:outline-none disabled:opacity-60"
           />
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -145,7 +145,7 @@ export function DashboardPasswordPanel({
                 type="button"
                 disabled={busy}
                 onClick={removePassword}
-                className="rounded-[8px] border border-[#111111] px-4 py-2.5 text-[12px] font-medium text-[#bdbdbd] transition hover:bg-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[8px] border border-[#222222] px-4 py-2.5 text-[12px] font-medium text-[#bdbdbd] transition hover:bg-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Remove password
               </button>

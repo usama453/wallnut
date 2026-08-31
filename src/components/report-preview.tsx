@@ -37,7 +37,7 @@ export function ReportPreview({
 
   return (
     <section
-      className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${className}`}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${className}`}
     >
       <div className="min-h-0 flex-1 overflow-y-auto bg-[#080808]">
         {previewMeta?.pages?.length ? (

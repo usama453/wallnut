@@ -67,7 +67,7 @@ export function DashboardAccessForm({
               setPassword(event.target.value);
               setError(null);
             }}
-            className="mt-2 w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] focus:border-[#1a1a1a] focus:outline-none"
+            className="mt-2 w-full rounded-[8px] border border-[#222222] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] focus:border-[#2e2e2e] focus:outline-none"
           />
 
           {error ? (

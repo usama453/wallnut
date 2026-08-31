@@ -41,7 +41,7 @@ export function WhatsAppStatusWidget({
     : "WhatsApp is offline";
 
   const className =
-    "inline-flex items-center gap-1.5 rounded-full border border-[#111111] px-2.5 py-1 text-[10px] font-medium leading-none text-[#919191]";
+    "inline-flex items-center gap-1.5 rounded-full border border-[#222222] px-2.5 py-1 text-[10px] font-medium leading-none text-[#919191]";
 
   const content = (
     <>
