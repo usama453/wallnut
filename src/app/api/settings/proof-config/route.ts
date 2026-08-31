@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
   const settings = normalizeProofAdminSettings({
     checks: nextChecks,
     responseStyle: nextStyle,
+    allowSlangRomanUrdu:
+      typeof body.allowSlangRomanUrdu === "boolean"
+        ? body.allowSlangRomanUrdu
+        : current.allowSlangRomanUrdu,
   });
 
   try {

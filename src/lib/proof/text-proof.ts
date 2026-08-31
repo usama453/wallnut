@@ -26,10 +26,7 @@ export async function proofPlainText(
 
   const settings = orgId
     ? await getProofAdminSettings(orgId)
-    : {
-        checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks },
-        responseStyle: DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
-      };
+    : { ...DEFAULT_PROOF_ADMIN_SETTINGS };
   const admin = await createAdminClient();
   const brand = orgId ? await loadBrand(admin, orgId) : null;
   const provider = getProvider();

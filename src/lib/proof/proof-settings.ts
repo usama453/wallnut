@@ -19,6 +19,8 @@ export type ProofChecksConfig = Record<ProofCheckType, boolean>;
 export interface ProofAdminSettings {
   checks: ProofChecksConfig;
   responseStyle: ProofResponseStyle;
+  /** Loose Roman Urdu + casual slang — skip dictionary spellcheck strictness. */
+  allowSlangRomanUrdu: boolean;
 }
 
 export const DEFAULT_PROOF_CHECKS: ProofChecksConfig = {
@@ -97,7 +99,14 @@ export const PROOF_RESPONSE_STYLE_LABELS: Record<
 export const DEFAULT_PROOF_ADMIN_SETTINGS: ProofAdminSettings = {
   checks: { ...DEFAULT_PROOF_CHECKS },
   responseStyle: "human",
+  allowSlangRomanUrdu: false,
 };
+
+export const ROMAN_URDU_PROOF_LABEL = {
+  title: "Roman Urdu & slang",
+  description:
+    "Allow loose Roman Urdu spellings (mein/main, bohat/bahut) and casual slang. Wallnut checks meaning, not dictionary English — only flags genuine gibberish.",
+} as const;
 
 export function normalizeProofChecks(
   value: unknown,
@@ -126,10 +135,12 @@ export function normalizeProofResponseStyle(value: unknown): ProofResponseStyle 
 export function normalizeProofAdminSettings(value: {
   checks?: unknown;
   responseStyle?: unknown;
+  allowSlangRomanUrdu?: unknown;
 }): ProofAdminSettings {
   return {
     checks: normalizeProofChecks(value.checks),
     responseStyle: normalizeProofResponseStyle(value.responseStyle),
+    allowSlangRomanUrdu: value.allowSlangRomanUrdu === true,
   };
 }
 

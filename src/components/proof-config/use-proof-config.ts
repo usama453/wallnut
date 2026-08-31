@@ -25,6 +25,7 @@ export function useProofConfig(orgSlug: string, initialSettings = DEFAULT_PROOF_
       setSettings({
         checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks, ...data.checks },
         responseStyle: data.responseStyle ?? DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+        allowSlangRomanUrdu: data.allowSlangRomanUrdu === true,
       });
       setError(null);
     } catch (e) {
@@ -52,6 +53,7 @@ export function useProofConfig(orgSlug: string, initialSettings = DEFAULT_PROOF_
       setSettings({
         checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks, ...data.checks },
         responseStyle: data.responseStyle ?? DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+        allowSlangRomanUrdu: data.allowSlangRomanUrdu === true,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
@@ -83,6 +85,15 @@ export function useProofConfig(orgSlug: string, initialSettings = DEFAULT_PROOF_
     void save(next);
   }
 
+  function toggleRomanUrdu() {
+    const next = {
+      ...settings,
+      allowSlangRomanUrdu: !settings.allowSlangRomanUrdu,
+    };
+    setSettings(next);
+    void save(next);
+  }
+
   return {
     settings,
     busy,
@@ -91,5 +102,6 @@ export function useProofConfig(orgSlug: string, initialSettings = DEFAULT_PROOF_
     toggleCheck,
     selectStyle,
     setCheckDepth,
+    toggleRomanUrdu,
   };
 }

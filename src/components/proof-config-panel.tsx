@@ -8,6 +8,7 @@ import {
   PROOF_CHECK_TYPES,
   PROOF_RESPONSE_STYLE_LABELS,
   PROOF_RESPONSE_STYLES,
+  ROMAN_URDU_PROOF_LABEL,
   type ProofAdminSettings,
 } from "@/lib/proof/proof-settings";
 import { useProofConfig } from "@/components/proof-config/use-proof-config";
@@ -19,7 +20,7 @@ export function ProofConfigPanel({
   orgSlug: string;
   initialSettings?: ProofAdminSettings;
 }) {
-  const { settings, busy, error, toggleCheck, selectStyle } =
+  const { settings, busy, error, toggleCheck, selectStyle, toggleRomanUrdu } =
     useProofConfig(orgSlug, initialSettings);
 
   return (
@@ -93,6 +94,30 @@ export function ProofConfigPanel({
               );
             })}
           </div>
+        </div>
+
+        <div className="mt-6 border-t border-[#111111] pt-5">
+          <h3 className="text-[12px] font-bold text-[#fbfbfb]">{ROMAN_URDU_PROOF_LABEL.title}</h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
+            {ROMAN_URDU_PROOF_LABEL.description}
+          </p>
+          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-[6px] border border-[#111111] px-3 py-2.5 transition hover:bg-[#0c0c0c]">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={settings.allowSlangRomanUrdu}
+              disabled={busy}
+              onChange={() => toggleRomanUrdu()}
+            />
+            <span className="min-w-0">
+              <span className="block text-[12px] font-medium text-[#fbfbfb]">
+                Allow Roman Urdu &amp; slang
+              </span>
+              <span className="mt-0.5 block text-[10px] leading-relaxed text-[#6c6c6c]">
+                When on, Wallnut won&apos;t flag casual Roman Urdu spellings in WhatsApp replies.
+              </span>
+            </span>
+          </label>
         </div>
 
         {busy ? (

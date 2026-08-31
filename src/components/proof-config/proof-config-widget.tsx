@@ -7,6 +7,7 @@ import {
   PROOF_CHECK_LABELS,
   PROOF_RESPONSE_STYLES,
   PROOF_RESPONSE_STYLE_LABELS,
+  ROMAN_URDU_PROOF_LABEL,
   type ProofAdminSettings,
   type ProofCheckType,
 } from "@/lib/proof/proof-settings";
@@ -27,7 +28,7 @@ export function ProofConfigWidget({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const { settings, busy, error, loaded, toggleCheck, selectStyle } =
+  const { settings, busy, error, loaded, toggleCheck, selectStyle, toggleRomanUrdu } =
     useProofConfig(orgSlug, initialSettings);
 
   useEffect(() => {
@@ -100,6 +101,17 @@ export function ProofConfigWidget({
                 ))}
               </div>
             </section>
+          </div>
+
+          <div className="border-t border-[#111111] px-3 py-2.5">
+            <SectionTitle>{ROMAN_URDU_PROOF_LABEL.title}</SectionTitle>
+            <CheckOption
+              label="Allow Roman Urdu & slang"
+              description="Skip strict spellcheck on casual Roman Urdu in replies."
+              checked={settings.allowSlangRomanUrdu}
+              disabled={busy}
+              onChange={() => toggleRomanUrdu()}
+            />
           </div>
 
           {error && error !== "Forbidden" ? (

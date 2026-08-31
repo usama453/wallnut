@@ -5,7 +5,6 @@ import {
   DEFAULT_PROOF_ADMIN_SETTINGS,
   normalizeProofAdminSettings,
   normalizeProofChecks,
-  normalizeProofResponseStyle,
   type ProofAdminSettings,
   type ProofChecksConfig,
   type ProofResponseStyle,
@@ -37,10 +36,10 @@ async function getLegacyPlatformSettings(): Promise<ProofAdminSettings | null> {
       }
     }
 
-    return {
+    return normalizeProofAdminSettings({
       checks,
-      responseStyle: normalizeProofResponseStyle(responseStyleRaw),
-    };
+      responseStyle: responseStyleRaw,
+    });
   } catch {
     return null;
   }
@@ -50,12 +49,53 @@ function cloneDefaults(): ProofAdminSettings {
   return {
     checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks },
     responseStyle: DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+    allowSlangRomanUrdu: DEFAULT_PROOF_ADMIN_SETTINGS.allowSlangRomanUrdu,
   };
+}
+
+async function getBrandRomanUrduSetting(
+  admin: Awaited<ReturnType<typeof createAdminClient>>,
+  orgId: string,
+): Promise<boolean> {
+  const { data } = await admin
+    .from("brand_profiles")
+    .select("allow_slang_roman_urdu")
+    .eq("org_id", orgId)
+    .maybeSingle();
+  return data?.allow_slang_roman_urdu === true;
+}
+
+async function setBrandRomanUrduSetting(
+  admin: Awaited<ReturnType<typeof createAdminClient>>,
+  orgId: string,
+  enabled: boolean,
+): Promise<void> {
+  const { data: existing } = await admin
+    .from("brand_profiles")
+    .select("id")
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { error } = await admin
+      .from("brand_profiles")
+      .update({ allow_slang_roman_urdu: enabled, updated_at: new Date().toISOString() })
+      .eq("org_id", orgId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const { error } = await admin.from("brand_profiles").insert({
+    org_id: orgId,
+    allow_slang_roman_urdu: enabled,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function getProofAdminSettings(orgId: string): Promise<ProofAdminSettings> {
   try {
     const admin = await createAdminClient();
+    const allowSlangRomanUrdu = await getBrandRomanUrduSetting(admin, orgId);
     const { data } = await admin
       .from("org_proof_settings")
       .select("checks, response_style")
@@ -66,11 +106,15 @@ export async function getProofAdminSettings(orgId: string): Promise<ProofAdminSe
       return normalizeProofAdminSettings({
         checks: data.checks,
         responseStyle: data.response_style,
+        allowSlangRomanUrdu,
       });
     }
 
     const legacy = await getLegacyPlatformSettings();
-    return legacy ?? cloneDefaults();
+    return {
+      ...(legacy ?? cloneDefaults()),
+      allowSlangRomanUrdu,
+    };
   } catch {
     return cloneDefaults();
   }
@@ -113,4 +157,5 @@ export async function setProofAdminSettings(
     { onConflict: "org_id" },
   );
   if (error) throw new Error(error.message);
+  await setBrandRomanUrduSetting(admin, orgId, normalized.allowSlangRomanUrdu);
 }
