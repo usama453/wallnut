@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const COOKIE_PREFIX = "wallnut_dash_";
-const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days
 const GUEST_USER_ID = "guest";
 
 export { GUEST_USER_ID };
@@ -83,7 +83,9 @@ export async function hasDashboardAccess(orgId: string) {
 }
 
 export function dashboardAccessCookieOptions() {
-  const secure = process.env.NODE_ENV === "production";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const secure =
+    process.env.NODE_ENV === "production" || appUrl.startsWith("https://");
   return {
     httpOnly: true,
     sameSite: "lax" as const,

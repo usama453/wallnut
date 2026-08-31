@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Spinner } from "@/components/wallnut/icons";
 import { Reveal } from "@/components/wallnut/reveal";
@@ -14,7 +13,6 @@ export function DashboardAccessForm({
   orgSlug: string;
   orgName: string;
 }) {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +25,7 @@ export function DashboardAccessForm({
     try {
       const response = await fetch("/api/org/dashboard-access", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: orgSlug, password }),
       });
@@ -34,8 +33,9 @@ export function DashboardAccessForm({
       if (!response.ok) {
         throw new Error(body?.error ?? "Unable to unlock workspace");
       }
-      router.push(typeof body?.redirect === "string" ? body.redirect : `/${orgSlug}`);
-      router.refresh();
+      const redirectTo =
+        typeof body?.redirect === "string" ? body.redirect : `/${orgSlug}`;
+      window.location.assign(redirectTo);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to unlock workspace");
     } finally {

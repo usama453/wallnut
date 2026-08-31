@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   activateOrgForUser,
@@ -13,9 +13,8 @@ import { getPublicOrganization } from "@/lib/organizations";
 import {
   GUEST_USER_ID,
   hasDashboardAccess,
-  orgHasDashboardPassword,
 } from "@/lib/dashboard-access";
-import { isReservedOrgSlug, orgHomePath, orgLoginPath } from "@/lib/org-paths";
+import { isReservedOrgSlug } from "@/lib/org-paths";
 import { userIsSuperAdmin } from "@/lib/roles";
 
 export type OrgAccess =
@@ -69,13 +68,23 @@ export const resolveOrgAccess = cache(async function resolveOrgAccess(
           memberships: [],
         };
       }
-      if (await orgHasDashboardPassword(org.id)) {
-        return { status: "password_required", slug: org.slug, orgName: org.name };
-      }
-      return { status: "unauthenticated", slug: org.slug };
+      return { status: "password_required", slug: org.slug, orgName: org.name };
     }
     const published = await getPublicOrganization(slug);
-    return published ? { status: "unauthenticated", slug } : { status: "unknown" };
+    if (!published) return { status: "unknown" };
+    if (await hasDashboardAccess(published.id)) {
+      return {
+        status: "ok",
+        slug: published.slug,
+        user: { id: GUEST_USER_ID },
+        org: { id: published.id, name: published.name, slug: published.slug },
+        profile: { full_name: "Guest", role: "viewer" },
+        isSuperAdmin: false,
+        isGuest: true,
+        memberships: [],
+      };
+    }
+    return { status: "password_required", slug: published.slug, orgName: published.name };
   }
 
   if (!org) return { status: "unknown" };
@@ -143,9 +152,8 @@ export function requireOrgPageAccess(
   access: OrgAccess,
 ): access is Extract<OrgAccess, { status: "ok" }> {
   if (access.status === "reserved" || access.status === "unknown") notFound();
-  if (access.status === "password_required") return false;
-  if (access.status === "unauthenticated") {
-    redirect(orgLoginPath(access.slug, orgHomePath(access.slug)));
+  if (access.status === "password_required" || access.status === "unauthenticated") {
+    return false;
   }
   if (access.status === "forbidden") return false;
   return true;

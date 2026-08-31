@@ -1,9 +1,8 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { DashboardAccessForm } from "@/components/dashboard-access-form";
 import { OrgAccessDenied } from "@/components/org-access-denied";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { resolveOrgAccess } from "@/lib/org-access";
-import { orgHomePath, orgLoginPath } from "@/lib/org-paths";
 
 export default async function OrgLayout({
   children,
@@ -23,9 +22,6 @@ export default async function OrgLayout({
         <DashboardAccessForm orgSlug={access.slug} orgName={access.orgName} />
       </div>
     );
-  }
-  if (access.status === "unauthenticated") {
-    redirect(orgLoginPath(slug, orgHomePath(slug)));
   }
   if (access.status === "forbidden") {
     const homeMembership =
@@ -51,6 +47,8 @@ export default async function OrgLayout({
       </div>
     );
   }
+
+  if (access.status !== "ok") notFound();
 
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
