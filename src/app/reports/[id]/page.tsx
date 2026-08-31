@@ -1,11 +1,14 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
+import { ReportTranscription } from "@/components/report-transcription";
+import { getProofTranscription } from "@/lib/proof/transcription";
+import { userIsSuperAdmin } from "@/lib/roles";
 import type { ProofIssue } from "@/types";
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,9 +30,18 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   const { data: proof } = await admin
     .from("proofs")
-    .select("id, score, status, summary, model, created_at")
+    .select("id, score, status, summary, model, created_at, raw, ocr_text")
     .eq("asset_version_id", version?.id ?? "")
     .maybeSingle();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isSuperAdmin = user
+    ? await userIsSuperAdmin(user.id, user.email)
+    : false;
+  const transcription = isSuperAdmin ? getProofTranscription(proof) : null;
 
   const { data: issues } = proof
     ? await admin.from("proof_issues").select("*").eq("proof_id", proof.id).order("severity", { ascending: false })
@@ -59,7 +71,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
               <div className="flex items-center justify-between gap-3 border-b border-[#111111] px-4 py-3">
                 <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
-                  Findings
+                  Suggestions
                 </h2>
                 {reportedAt ? (
                   <p className="shrink-0 text-[11px] font-normal text-[#6c6c6c]">{fmtDate(reportedAt)}</p>
@@ -71,6 +83,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             </article>
           )}
         </div>
+
+        {transcription ? <ReportTranscription text={transcription} /> : null}
 
         {proof?.summary ? (
           <div className="mt-8">

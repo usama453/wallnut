@@ -12,20 +12,22 @@ import { requireProofConfigApi } from "@/lib/proof-config-access";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const auth = await requireProofConfigApi();
+export async function GET(req: NextRequest) {
+  const auth = await requireProofConfigApi(req.nextUrl.searchParams.get("org"));
   if (auth.error) return auth.error;
 
-  const settings = await getProofAdminSettings();
+  const settings = await getProofAdminSettings(auth.orgId);
   return NextResponse.json(settings);
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireProofConfigApi();
+  const body = await request.json().catch(() => ({}));
+  const auth = await requireProofConfigApi(
+    typeof body.org === "string" ? body.org : request.nextUrl.searchParams.get("org"),
+  );
   if (auth.error) return auth.error;
 
-  const body = await request.json().catch(() => ({}));
-  const current = await getProofAdminSettings();
+  const current = await getProofAdminSettings(auth.orgId);
 
   const nextChecks = { ...current.checks };
   if (body.checks && typeof body.checks === "object") {
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    await setProofAdminSettings(settings);
+    await setProofAdminSettings(auth.orgId, settings);
     return NextResponse.json(settings);
   } catch (error) {
     return NextResponse.json(

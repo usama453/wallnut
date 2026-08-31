@@ -3,7 +3,7 @@ import { getProvider } from "@/lib/ai";
 import type { BrandContext, RawIssue, RawReport } from "@/lib/ai";
 import { getProofAdminSettings } from "./proof-settings-store";
 import { filterIssuesByChecks } from "./issue-checks";
-import { hasEnabledProofChecks } from "./proof-settings";
+import { DEFAULT_PROOF_ADMIN_SETTINGS, hasEnabledProofChecks } from "./proof-settings";
 import { spellcheck } from "./spellcheck";
 import { detectRomanUrduLines } from "./roman-urdu";
 import { sanitizeText } from "@/lib/text";
@@ -23,7 +23,12 @@ export async function proofPlainText(
     };
   }
 
-  const settings = await getProofAdminSettings();
+  const settings = orgId
+    ? await getProofAdminSettings(orgId)
+    : {
+        checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks },
+        responseStyle: DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+      };
   const admin = await createAdminClient();
   const brand = orgId ? await loadBrand(admin, orgId) : null;
   const provider = getProvider();

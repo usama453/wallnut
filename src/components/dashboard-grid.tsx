@@ -214,7 +214,7 @@ export function DashboardGrid({
         {canManageProofConfig ? (
           <Reveal dramatic delayMs={760}>
             <div className="flex justify-center pt-1">
-              <ProofConfigWidget initialSettings={proofAdminSettings} />
+              <ProofConfigWidget orgSlug={orgSlug} initialSettings={proofAdminSettings} />
             </div>
           </Reveal>
         ) : null}

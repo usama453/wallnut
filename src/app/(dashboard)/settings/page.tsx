@@ -1,19 +1,28 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { WhatsAppAccess } from "@/components/whatsapp-access";
 import { ProofPipelineToggle } from "@/components/proof-pipeline-toggle";
 import { ProofConfigPanel } from "@/components/proof-config-panel";
 import { Reveal } from "@/components/wallnut/reveal";
 import { WALLNUT_PANEL } from "@/components/wallnut/panel";
+import { getOrgBySlug } from "@/lib/org-membership";
+import { ORG_COOKIE, PUBLIC_ORG_SLUG } from "@/lib/org-paths";
 import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
 import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
+import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
 import { requireSuperAdmin } from "@/lib/super-admin-access";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   await requireSuperAdmin();
-  const proofPipelineMode = await getProofPipelineMode();
-  const proofAdminSettings = await getProofAdminSettings();
+  const cookieStore = await cookies();
+  const orgSlug = cookieStore.get(ORG_COOKIE)?.value ?? PUBLIC_ORG_SLUG;
+  const org = await getOrgBySlug(orgSlug);
+  const proofPipelineMode = org ? await getProofPipelineMode(org.id) : "split";
+  const proofAdminSettings = org
+    ? await getProofAdminSettings(org.id)
+    : DEFAULT_PROOF_ADMIN_SETTINGS;
   const aiProvider = process.env.AI_PROVIDER ?? "gemini";
   const model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
   const wahaConfigured = Boolean(
@@ -38,11 +47,11 @@ export default async function SettingsPage() {
       </Reveal>
 
       <Reveal dramatic delayMs={120}>
-        <ProofPipelineToggle initialMode={proofPipelineMode} />
+        <ProofPipelineToggle orgSlug={orgSlug} initialMode={proofPipelineMode} />
       </Reveal>
 
       <Reveal dramatic delayMs={140}>
-        <ProofConfigPanel initialSettings={proofAdminSettings} />
+        <ProofConfigPanel orgSlug={orgSlug} initialSettings={proofAdminSettings} />
       </Reveal>
 
       <Reveal dramatic delayMs={160}>

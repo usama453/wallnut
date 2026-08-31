@@ -14,6 +14,7 @@ import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } 
 import { logUsage } from "./usage";
 import { formatWhatsAppReply, whatsappReplyPreview } from "@/lib/reportSummary";
 import { getProofResponseStyle } from "@/lib/proof/proof-settings-store";
+import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
 import {
   extractMedia,
   extractWahaMessages,
@@ -248,8 +249,13 @@ async function dispatchMessage(
 
       const textToProof = resolveTextToProof(mentionCtx);
       if (textToProof) {
-        const report = await proofPlainText(textToProof, orgId);
-        const responseStyle = await getProofResponseStyle();
+        const admin = await createAdminClient();
+        const sender = message.attributedSender ?? message.sender ?? from;
+        const resolvedOrg = orgId ?? (await resolveOrgId(sender, admin));
+        const report = await proofPlainText(textToProof, resolvedOrg);
+        const responseStyle = resolvedOrg
+          ? await getProofResponseStyle(resolvedOrg)
+          : DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle;
         const reply = formatWhatsAppReply(report.issues, responseStyle, {
           humanReply: report.humanReply,
           summary: report.summary,
@@ -368,7 +374,7 @@ async function handleMedia(
     const result = await proofSemaphore.run(() => runProof(created.versionId));
     console.log(`[whatsapp] proof done for ${created.assetId} score=${result.report.score}`);
 
-    const responseStyle = await getProofResponseStyle();
+    const responseStyle = await getProofResponseStyle(resolvedOrg);
     const replyTitle = whatsappReplyPreview(result.report.issues, responseStyle, {
       humanReply: result.report.humanReply,
       summary: result.report.summary,

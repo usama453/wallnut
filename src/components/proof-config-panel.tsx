@@ -13,19 +13,22 @@ import {
 import { useProofConfig } from "@/components/proof-config/use-proof-config";
 
 export function ProofConfigPanel({
+  orgSlug,
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
 }: {
+  orgSlug: string;
   initialSettings?: ProofAdminSettings;
 }) {
   const { settings, busy, error, toggleCheck, selectStyle } =
-    useProofConfig(initialSettings);
+    useProofConfig(orgSlug, initialSettings);
 
   return (
     <article className={WALLNUT_PANEL}>
       <div className="border-b border-[#111111] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">Proof checks</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
-          Choose what Wallnut should look for on the next proof run.
+          Choose what Wallnut should look for on the next proof run. Settings apply to this
+          organization only.
         </p>
       </div>
 

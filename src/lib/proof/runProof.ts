@@ -98,8 +98,8 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
 
 
   // 4. OCR — skipped in Gemini-only mode; split pipeline uses it as a transcription hint.
-  const pipelineMode = await getProofPipelineMode();
-  const proofSettings = await getProofAdminSettings();
+  const pipelineMode = await getProofPipelineMode(asset.org_id);
+  const proofSettings = await getProofAdminSettings(asset.org_id);
   const enabledChecks = proofSettings.checks;
   let ocr: OcrResult = { text: "", confidence: 0, words: [], width: 0, height: 0 };
   const ocrEnabled =

@@ -70,7 +70,7 @@ export function ReportFindings({
       {otherIssues.length > 0 ? (
         <section className={corrections.length > 0 ? "border-t border-[#111111]" : ""}>
           <FindingsSectionHeader
-            title={corrections.length > 0 ? "Other findings" : "Findings"}
+            title={corrections.length > 0 ? "Other suggestions" : "Suggestions"}
             reportedAt={reportedAt}
           />
           <div className="flex flex-col gap-1 px-4 py-3">

@@ -5,15 +5,23 @@ import { Spinner } from "@/components/wallnut/icons";
 import { WALLNUT_PANEL } from "@/components/wallnut/panel";
 import type { ProofPipelineMode } from "@/lib/proof/pipeline-mode";
 
-export function ProofPipelineToggle({ initialMode }: { initialMode: ProofPipelineMode }) {
+export function ProofPipelineToggle({
+  orgSlug,
+  initialMode,
+}: {
+  orgSlug: string;
+  initialMode: ProofPipelineMode;
+}) {
   const [mode, setMode] = useState<ProofPipelineMode>(initialMode);
   const [envLocked, setEnvLocked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const apiUrl = `/api/settings/proof-pipeline?org=${encodeURIComponent(orgSlug)}`;
+
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/settings/proof-pipeline", { cache: "no-store" });
+      const res = await fetch(apiUrl, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to load");
       if (data.mode === "split" || data.mode === "gemini_only") setMode(data.mode);
@@ -22,7 +30,7 @@ export function ProofPipelineToggle({ initialMode }: { initialMode: ProofPipelin
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     }
-  }, []);
+  }, [apiUrl]);
 
   useEffect(() => {
     void load();
@@ -33,10 +41,10 @@ export function ProofPipelineToggle({ initialMode }: { initialMode: ProofPipelin
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/settings/proof-pipeline", {
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: next }),
+        body: JSON.stringify({ mode: next, org: orgSlug }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to save");
@@ -53,7 +61,8 @@ export function ProofPipelineToggle({ initialMode }: { initialMode: ProofPipelin
       <div className="border-b border-[#111111] px-4 py-3">
         <h2 className="text-[12px] font-bold text-[#fbfbfb]">Proof pipeline</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
-          Compare Wallnut&apos;s split pipeline against Gemini-only proofing.
+          Compare Wallnut&apos;s split pipeline against Gemini-only proofing. Settings apply to
+          this organization only.
         </p>
       </div>
 

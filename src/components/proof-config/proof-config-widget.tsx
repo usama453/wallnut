@@ -19,14 +19,16 @@ const LIST_ROW =
   "flex w-full cursor-pointer items-start gap-2.5 rounded-[6px] px-1 py-1.5 text-left transition hover:bg-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-50";
 
 export function ProofConfigWidget({
+  orgSlug,
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
 }: {
+  orgSlug: string;
   initialSettings?: ProofAdminSettings;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const { settings, busy, error, loaded, toggleCheck, selectStyle } =
-    useProofConfig(initialSettings);
+    useProofConfig(orgSlug, initialSettings);
 
   useEffect(() => {
     if (!open) return;

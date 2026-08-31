@@ -4,7 +4,7 @@ import { PublicDashboard } from "@/components/public-dashboard";
 import { getDashboardData } from "@/lib/groups";
 import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
 import { isPublicOrgSlug } from "@/lib/org-paths";
-import { canManageProofConfig } from "@/lib/proof-config-access";
+import { canManageProofConfigForOrg } from "@/lib/proof-config-access";
 import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { getStats } from "@/lib/stats";
@@ -21,12 +21,13 @@ export default async function OrganizationHome({
   if (!requireOrgPageAccess(access)) return null;
 
   const isPublic = isPublicOrgSlug(slug);
-  const canManageProof = await canManageProofConfig(
+  const canManageProof = await canManageProofConfigForOrg(
     access.user.id,
+    access.org.id,
     access.user.email,
   );
   const proofAdminSettings = canManageProof
-    ? await getProofAdminSettings()
+    ? await getProofAdminSettings(access.org.id)
     : undefined;
   const [data, rankings] = await Promise.all([
     getDashboardData(access.org.id),

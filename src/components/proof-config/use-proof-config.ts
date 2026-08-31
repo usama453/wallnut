@@ -9,15 +9,17 @@ import {
   type ProofResponseStyle,
 } from "@/lib/proof/proof-settings";
 
-export function useProofConfig(initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS) {
+export function useProofConfig(orgSlug: string, initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS) {
   const [settings, setSettings] = useState<ProofAdminSettings>(initialSettings);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
+  const apiUrl = `/api/settings/proof-config?org=${encodeURIComponent(orgSlug)}`;
+
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/settings/proof-config", { cache: "no-store" });
+      const res = await fetch(apiUrl, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to load");
       setSettings({
@@ -30,7 +32,7 @@ export function useProofConfig(initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS) {
     } finally {
       setLoaded(true);
     }
-  }, []);
+  }, [apiUrl]);
 
   useEffect(() => {
     void load();
@@ -40,10 +42,10 @@ export function useProofConfig(initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/settings/proof-config", {
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
+        body: JSON.stringify({ ...next, org: orgSlug }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to save");
@@ -56,7 +58,7 @@ export function useProofConfig(initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS) {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [apiUrl, orgSlug]);
 
   function toggleCheck(key: ProofCheckType) {
     const next = {

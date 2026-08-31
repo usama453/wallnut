@@ -14,7 +14,7 @@ import {
 const CHECKS_KEY = "proof_enabled_checks";
 const RESPONSE_STYLE_KEY = "proof_response_style";
 
-export async function getProofAdminSettings(): Promise<ProofAdminSettings> {
+async function getLegacyPlatformSettings(): Promise<ProofAdminSettings | null> {
   try {
     const admin = await createAdminClient();
     const { data } = await admin
@@ -22,7 +22,9 @@ export async function getProofAdminSettings(): Promise<ProofAdminSettings> {
       .select("key, value")
       .in("key", [CHECKS_KEY, RESPONSE_STYLE_KEY]);
 
-    const byKey = new Map((data ?? []).map((row) => [row.key, row.value]));
+    if (!data?.length) return null;
+
+    const byKey = new Map(data.map((row) => [row.key, row.value]));
     const checksRaw = byKey.get(CHECKS_KEY);
     const responseStyleRaw = byKey.get(RESPONSE_STYLE_KEY);
 
@@ -40,40 +42,75 @@ export async function getProofAdminSettings(): Promise<ProofAdminSettings> {
       responseStyle: normalizeProofResponseStyle(responseStyleRaw),
     };
   } catch {
-    return { ...DEFAULT_PROOF_ADMIN_SETTINGS, checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks } };
+    return null;
   }
 }
 
-export async function getProofChecks(): Promise<ProofChecksConfig> {
-  const settings = await getProofAdminSettings();
+function cloneDefaults(): ProofAdminSettings {
+  return {
+    checks: { ...DEFAULT_PROOF_ADMIN_SETTINGS.checks },
+    responseStyle: DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle,
+  };
+}
+
+export async function getProofAdminSettings(orgId: string): Promise<ProofAdminSettings> {
+  try {
+    const admin = await createAdminClient();
+    const { data } = await admin
+      .from("org_proof_settings")
+      .select("checks, response_style")
+      .eq("org_id", orgId)
+      .maybeSingle();
+
+    if (data) {
+      return normalizeProofAdminSettings({
+        checks: data.checks,
+        responseStyle: data.response_style,
+      });
+    }
+
+    const legacy = await getLegacyPlatformSettings();
+    return legacy ?? cloneDefaults();
+  } catch {
+    return cloneDefaults();
+  }
+}
+
+export async function getProofChecks(orgId: string): Promise<ProofChecksConfig> {
+  const settings = await getProofAdminSettings(orgId);
   return settings.checks;
 }
 
-export async function getProofResponseStyle(): Promise<ProofResponseStyle> {
-  const settings = await getProofAdminSettings();
+export async function getProofResponseStyle(orgId: string): Promise<ProofResponseStyle> {
+  const settings = await getProofAdminSettings(orgId);
   return settings.responseStyle;
 }
 
 export async function setProofAdminSettings(
+  orgId: string,
   settings: ProofAdminSettings,
 ): Promise<void> {
   const admin = await createAdminClient();
   const normalized = normalizeProofAdminSettings(settings);
+  const { data: existing } = await admin
+    .from("org_proof_settings")
+    .select("pipeline_mode")
+    .eq("org_id", orgId)
+    .maybeSingle();
+  const pipelineMode =
+    existing?.pipeline_mode === "gemini_only" || existing?.pipeline_mode === "split"
+      ? existing.pipeline_mode
+      : "split";
   const now = new Date().toISOString();
-  const { error } = await admin.from("platform_settings").upsert(
-    [
-      {
-        key: CHECKS_KEY,
-        value: JSON.stringify(normalized.checks),
-        updated_at: now,
-      },
-      {
-        key: RESPONSE_STYLE_KEY,
-        value: normalized.responseStyle,
-        updated_at: now,
-      },
-    ],
-    { onConflict: "key" },
+  const { error } = await admin.from("org_proof_settings").upsert(
+    {
+      org_id: orgId,
+      checks: normalized.checks,
+      response_style: normalized.responseStyle,
+      pipeline_mode: pipelineMode,
+      updated_at: now,
+    },
+    { onConflict: "org_id" },
   );
   if (error) throw new Error(error.message);
 }
