@@ -135,15 +135,29 @@ ROMAN URDU AWARENESS: Copy may mix English with Roman Urdu (Urdu written in Lati
 ${previous ? `PREVIOUS VERSION v${previous.version} (score ${previous.score}):\n${previous.issues.map((i) => `- [${i.category}] ${i.title}`).join("\n")}\n${previous.ocr_text ? `Previous OCR text:\n"""\n${previous.ocr_text.slice(0, 4000)}\n"""` : ""}` : "No previous version."}`;
 }
 
-/** Gemini-only pipeline — one image, plain-text errors or "All good." */
-export function buildDirectProofPrompt(): string {
-  return `Transcribe all visible text in the image and identify any spelling, grammar, punctuation, or wording errors.
-
-If errors are found, return only the errors and their corrections in a clear, structured format.
+const DIRECT_PROOF_RULES = `If errors are found, return only the errors and their corrections in a clear, structured format.
 
 If no errors are found, respond only with: "All good."
 
 Do not provide explanations, commentary, or rewritten copy.`;
+
+/** Gemini-only pipeline — one image, plain-text errors or "All good." */
+export function buildDirectProofPrompt(): string {
+  return `Transcribe all visible text in the image and identify any spelling, grammar, punctuation, or wording errors.
+
+${DIRECT_PROOF_RULES}`;
+}
+
+/** Gemini-only pipeline — plain text, same response rules as image direct proof. */
+export function buildDirectTextProofPrompt(text: string): string {
+  return `Proofread the text below and identify any spelling, grammar, punctuation, or wording errors.
+
+${DIRECT_PROOF_RULES}
+
+TEXT:
+"""
+${text.slice(0, 8000)}
+"""`;
 }
 
 /**

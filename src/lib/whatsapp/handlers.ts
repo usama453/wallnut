@@ -236,10 +236,12 @@ async function dispatchMessage(
       const responseStyle = resolvedOrg
         ? await getProofResponseStyle(resolvedOrg)
         : DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle;
-      const reply = formatWhatsAppReply(report.issues, responseStyle, {
-        humanReply: report.humanReply,
-        summary: report.summary,
-      });
+      const reply = report.directResponse?.trim()
+        ? report.directResponse.trim()
+        : formatWhatsAppReply(report.issues, responseStyle, {
+            humanReply: report.humanReply,
+            summary: report.summary,
+          });
       await sendTextWaha(from, reply, message.id);
       logUsage({
         direction: "outbound",

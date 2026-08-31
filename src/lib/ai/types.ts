@@ -31,6 +31,10 @@ export interface DirectProofInput {
   mimeType: string;
 }
 
+export interface DirectTextProofInput {
+  text: string;
+}
+
 export interface DirectProofOutput {
   rawText: string;
 }

@@ -1,5 +1,5 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, DirectProofInput, DirectProofOutput, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, DirectProofInput, DirectTextProofInput, DirectProofOutput, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
 import { buildSystemPrompt, buildStandaloneProofPrompt } from "./prompt";
 
 /**
@@ -128,6 +128,18 @@ export class MockProvider implements AiProvider {
   async proofAssetDirect(_input: DirectProofInput): Promise<DirectProofOutput> {
     await delay(500);
     return { rawText: "All good." };
+  }
+
+  async proofTextDirect(input: DirectTextProofInput): Promise<DirectProofOutput> {
+    await delay(500);
+    const text = input.text;
+    const lines: string[] = [];
+    if (/\bcampain\b/i.test(text)) lines.push('Spelling: "campain" → "campaign"');
+    if (/\ba few thing\b/i.test(text)) lines.push('Grammar: "a few thing" → "a few things"');
+    if (/\beveryones\b/i.test(text)) lines.push('Punctuation: "everyones" → "everyone\'s"');
+    if (/\bteh\b/i.test(text)) lines.push('Spelling: "teh" → "the"');
+    if (/\brecieve\b/i.test(text)) lines.push('Spelling: "recieve" → "receive"');
+    return { rawText: lines.length ? lines.join("\n") : "All good." };
   }
 
   async analyzeText(input: AnalyzeTextInput): Promise<AnalyzeOutput> {

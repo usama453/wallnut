@@ -3,6 +3,7 @@ import type {
   AnalyzeOutput,
   AnalyzeTextInput,
   DirectProofInput,
+  DirectTextProofInput,
   DirectProofOutput,
   HumanReplyOptions,
   RawIssue,
@@ -25,6 +26,8 @@ export interface AiProvider {
   analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput>;
   /** Gemini-only: one image + direct prompt, plain-text response. */
   proofAssetDirect(input: DirectProofInput): Promise<DirectProofOutput>;
+  /** Gemini-only: plain text + direct prompt, plain-text response. */
+  proofTextDirect(input: DirectTextProofInput): Promise<DirectProofOutput>;
   /** Proof plain text copy (no image) — grammar, clarity, marketing checks. */
   analyzeText(input: AnalyzeTextInput): Promise<AnalyzeOutput>;
   /** Casual chat reply in the bot's persona (short, characterful). */

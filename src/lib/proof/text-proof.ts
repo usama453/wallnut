@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { getProvider } from "@/lib/ai";
 import type { BrandContext, RawIssue, RawReport } from "@/lib/ai";
+import { isAllGoodDirectResponse } from "@/lib/proof/direct-response";
+import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
 import { getProofAdminSettings } from "./proof-settings-store";
 import { filterIssuesByChecks } from "./issue-checks";
 import { DEFAULT_PROOF_ADMIN_SETTINGS, hasEnabledProofChecks } from "./proof-settings";
@@ -24,12 +26,29 @@ export async function proofPlainText(
     };
   }
 
+  const pipelineMode = orgId ? await getProofPipelineMode(orgId) : "split";
+  const provider = getProvider();
+
+  if (pipelineMode === "gemini_only") {
+    const { rawText } = await provider.proofTextDirect({ text: source });
+    const directResponse = sanitizeText(rawText.trim());
+    const allGood = isAllGoodDirectResponse(directResponse);
+    return {
+      score: allGood ? 100 : 70,
+      status: allGood ? "passed" : "needs_review",
+      summary: directResponse,
+      issues: [],
+      directResponse,
+      humanReply: directResponse,
+      extractedText: source,
+    };
+  }
+
   const settings = orgId
     ? await getProofAdminSettings(orgId)
     : { ...DEFAULT_PROOF_ADMIN_SETTINGS };
   const admin = await createAdminClient();
   const brand = orgId ? await loadBrand(admin, orgId) : null;
-  const provider = getProvider();
 
   const { report } = await provider.analyzeText({
     text: source,
@@ -62,7 +81,6 @@ async function loadBrand(admin: Awaited<ReturnType<typeof createAdminClient>>, o
     .from("brand_profiles")
     .select("*")
     .eq("org_id", orgId)
-    .limit(1)
     .maybeSingle();
   if (!data) return null;
 
