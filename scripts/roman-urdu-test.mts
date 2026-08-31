@@ -18,4 +18,11 @@ assert.ok(
   "spellcheck runs on English paragraph",
 );
 
+const mixedRomanUrdu =
+  "Easy aur budget-friendly decor idea Pakistan ke liye.";
+assert.ok(
+  !spellcheck(mixedRomanUrdu).some((f) => f.word.toLowerCase() === "liye"),
+  "Roman Urdu liye is not flagged as an English typo",
+);
+
 console.log("ROMAN URDU DETECTION OK");

@@ -6,7 +6,7 @@ import english50 from "wordlist-english/english-words-50.json";
 import english55 from "wordlist-english/english-words-55.json";
 import english60 from "wordlist-english/english-words-60.json";
 import english70 from "wordlist-english/english-words-70.json";
-import { detectRomanUrduLines } from "./roman-urdu";
+import { detectRomanUrduLines, isRomanUrduToken } from "./roman-urdu";
 
 const BASE = new Set(
   [
@@ -141,6 +141,7 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
     // Possessives match the stem ("Microsoft's" → "microsoft").
     const stem = lower.replace(/'s$/, "");
     if (allow.has(lower) || allow.has(stem)) continue;
+    if (isRomanUrduToken(t.word)) continue;
     if (ACCEPTED.has(lower) || ACCEPTED.has(stem)) continue;
     if (IGNORE_PATTERN.test(t.word)) continue;
     if (t.len >= 8 && new Set(lower).size === 1) continue;

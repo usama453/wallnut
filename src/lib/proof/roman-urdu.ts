@@ -20,6 +20,7 @@ const ROMAN_URDU_VOCAB = new Set(
   wala wali wale walay saath sath andar bahar upar neeche
   batao batana suno sunna dekho dekhna likho likhna parho parhna
   kaisa kaisi kaise kitna kitni kitne kabhi hamesha aksar shayad zaroor bilkul
+  liye dena dene karna karni karne walay waly kay
   `.split(/\s+/).filter(Boolean),
 );
 
@@ -76,6 +77,12 @@ export function detectRomanUrduLines(text: string): boolean[] {
 
 export function hasRomanUrduContent(text: string): boolean {
   return detectRomanUrduLines(text).some(Boolean);
+}
+
+/** Roman Urdu tokens should never be "corrected" to English by spellcheck. */
+export function isRomanUrduToken(word: string): boolean {
+  const w = word.toLowerCase().replace(/'s$/, "");
+  return ROMAN_URDU_VOCAB.has(w);
 }
 
 /**
