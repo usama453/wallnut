@@ -15,6 +15,7 @@ import {
   type LocationContext,
 } from "./issue-locations";
 import { buildHumanReplyFallback } from "@/lib/reportSummary";
+import { isAllGoodDirectResponse } from "@/lib/proof/direct-response";
 import { sanitizeText } from "@/lib/text";
 import type { OcrResult } from "@/lib/ocr/tesseract";
 import type { BrandContext, PreviousProofContext, RawIssue, RawReport } from "@/lib/ai";
@@ -119,27 +120,21 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
   let modelLabel = provider.name;
 
   if (pipelineMode === "gemini_only") {
-    const { report: standaloneReport } = await provider.analyzeAsset({
+    const { rawText } = await provider.proofAssetDirect({
       imageBase64: normalized.base64,
       mimeType: normalized.mimeType,
-      brand,
-      previous,
-      standalone: true,
-      enabledChecks,
     });
-    report = standaloneReport;
-    report.extractedText = sanitizeText(
-      (report.extractedText || "").trim(),
-    );
-    modelLabel = `${provider.name} · standalone`;
-
-    const locationContext: LocationContext = {
-      canonicalText: report.extractedText ?? "",
-      imageWidth: normalized.width,
-      imageHeight: normalized.height,
-      ocrWords: [],
+    const directResponse = sanitizeText(rawText.trim());
+    const allGood = isAllGoodDirectResponse(directResponse);
+    report = {
+      score: allGood ? 100 : 70,
+      status: allGood ? "passed" : "needs_review",
+      summary: directResponse,
+      issues: [],
+      directResponse,
+      humanReply: directResponse,
     };
-    enrichIssueLocations(report.issues, locationContext);
+    modelLabel = `${provider.name} · direct`;
   } else {
     const transcription = await provider.transcribeAsset({
       imageBase64: normalized.base64,
@@ -208,19 +203,21 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     enrichIssueLocations(report.issues, locationContext);
   }
 
-  report.issues = filterIssuesByChecks(report.issues, enabledChecks);
-  if (!hasEnabledProofChecks(enabledChecks)) {
-    report.issues = [];
-  }
-  finalizeReport(report);
+  if (pipelineMode !== "gemini_only") {
+    report.issues = filterIssuesByChecks(report.issues, enabledChecks);
+    if (!hasEnabledProofChecks(enabledChecks)) {
+      report.issues = [];
+    }
+    finalizeReport(report);
 
-  try {
-    report.humanReply = await provider.generateHumanReply(report);
-  } catch (err) {
-    console.error(
-      `[proof] human reply generation failed: ${err instanceof Error ? err.message : err}`,
-    );
-    report.humanReply = buildHumanReplyFallback(report.issues);
+    try {
+      report.humanReply = await provider.generateHumanReply(report);
+    } catch (err) {
+      console.error(
+        `[proof] human reply generation failed: ${err instanceof Error ? err.message : err}`,
+      );
+      report.humanReply = buildHumanReplyFallback(report.issues);
+    }
   }
 
   // 7. persist

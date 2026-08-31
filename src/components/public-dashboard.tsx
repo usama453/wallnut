@@ -7,6 +7,7 @@ import {
 import { ProofConfigWidget } from "@/components/proof-config/proof-config-widget";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { ProofAdminSettings } from "@/lib/proof/proof-settings";
+import type { ProofPipelineMode } from "@/lib/proof/pipeline-mode";
 import type { GroupCard, PendingWhatsAppInvite, ReportRow } from "@/lib/groups-presentation";
 
 export function PublicDashboard({
@@ -16,6 +17,7 @@ export function PublicDashboard({
   canManageGroups = false,
   canManageProofConfig = false,
   proofAdminSettings,
+  proofPipelineMode = "split",
 }: {
   orgSlug: string;
   cards: GroupCard[];
@@ -30,6 +32,7 @@ export function PublicDashboard({
   canManageGroups?: boolean;
   canManageProofConfig?: boolean;
   proofAdminSettings?: ProofAdminSettings;
+  proofPipelineMode?: ProofPipelineMode;
 }) {
   const reports = flattenPublicReports(cards);
   const allEmpty = reports.length === 0 && pendingInvites.length === 0;
@@ -85,7 +88,11 @@ export function PublicDashboard({
       {canManageProofConfig ? (
         <Reveal dramatic delayMs={260}>
           <div className="mt-8 flex justify-center">
-            <ProofConfigWidget orgSlug={orgSlug} initialSettings={proofAdminSettings} />
+            <ProofConfigWidget
+              orgSlug={orgSlug}
+              initialSettings={proofAdminSettings}
+              pipelineMode={proofPipelineMode}
+            />
           </div>
         </Reveal>
       ) : null}

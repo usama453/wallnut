@@ -5,6 +5,7 @@ import { getDashboardData } from "@/lib/groups";
 import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
 import { isPublicOrgSlug } from "@/lib/org-paths";
 import { canManageProofConfigForOrg } from "@/lib/proof-config-access";
+import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
 import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
 import { getStats } from "@/lib/stats";
@@ -31,6 +32,9 @@ export default async function OrganizationHome({
   const proofAdminSettings = canManageProof
     ? await getProofAdminSettings(access.org.id)
     : undefined;
+  const proofPipelineMode = canManageProof
+    ? await getProofPipelineMode(access.org.id)
+    : "split";
   const [data, rankings] = await Promise.all([
     getDashboardData(access.org.id, access.isGuest),
     isPublic ? Promise.resolve(null) : getStats(access.org.id, access.isGuest),
@@ -48,6 +52,7 @@ export default async function OrganizationHome({
         canManageGroups={access.isSuperAdmin}
         canManageProofConfig={canManageProof}
         proofAdminSettings={proofAdminSettings}
+        proofPipelineMode={proofPipelineMode}
       />
     );
   }
@@ -71,6 +76,7 @@ export default async function OrganizationHome({
         isSuperAdmin={access.isSuperAdmin}
         canManageProofConfig={canManageProof}
         proofAdminSettings={proofAdminSettings}
+        proofPipelineMode={proofPipelineMode}
       />
 
     </div>

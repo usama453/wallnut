@@ -5,15 +5,21 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { ReportDashboardLink } from "@/components/report-dashboard-link";
+import { ReportDirectResponse } from "@/components/report-direct-response";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
 import { ReportTranscription } from "@/components/report-transcription";
+import {
+  getProofDirectResponse,
+  isDirectProofReport,
+} from "@/lib/proof/direct-response";
 import { getProofTranscription } from "@/lib/proof/transcription";
 import type { ProofIssue } from "@/types";
 
 const PANEL_HEIGHT = "h-[280px] sm:h-[300px]";
 const PREVIEW_HEIGHT_TWO_PANELS = "h-[572px] sm:h-[612px]";
 const PREVIEW_HEIGHT_ONE_PANEL = PANEL_HEIGHT;
+const DIRECT_PANEL_HEIGHT = "min-h-[320px] sm:min-h-[360px]";
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,15 +52,21 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     .eq("asset_version_id", version?.id ?? "")
     .maybeSingle();
 
-  const transcription = getProofTranscription(proof);
+  const isDirectReport = isDirectProofReport(proof);
+  const directResponse = isDirectReport ? getProofDirectResponse(proof) : null;
+  const transcription = isDirectReport ? null : getProofTranscription(proof);
 
   const { data: issues } = proof
     ? await admin.from("proof_issues").select("*").eq("proof_id", proof.id).order("severity", { ascending: false })
     : { data: [] };
 
-  const sortedIssues = sortIssues((issues ?? []) as ProofIssue[]);
+  const sortedIssues = isDirectReport ? [] : sortIssues((issues ?? []) as ProofIssue[]);
   const reportedAt = proof?.created_at ?? version?.created_at ?? null;
-  const previewHeight = transcription ? PREVIEW_HEIGHT_TWO_PANELS : PREVIEW_HEIGHT_ONE_PANEL;
+  const previewHeight = isDirectReport
+    ? DIRECT_PANEL_HEIGHT
+    : transcription
+      ? PREVIEW_HEIGHT_TWO_PANELS
+      : PREVIEW_HEIGHT_ONE_PANEL;
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-[#fbfbfb]">
@@ -68,35 +80,45 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-6">
           <div className="order-2 flex min-h-0 flex-col gap-3 lg:order-1">
-            {sortedIssues.length > 0 ? (
-              <ReportFindings
-                issues={sortedIssues}
+            {isDirectReport && directResponse ? (
+              <ReportDirectResponse
+                text={directResponse}
                 reportedAt={reportedAt}
-                className={PANEL_HEIGHT}
+                className={DIRECT_PANEL_HEIGHT}
               />
             ) : (
-              <article
-                className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${PANEL_HEIGHT}`}
-              >
-                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#222222] px-4 py-3">
-                  <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
-                    Suggestions
-                  </h2>
-                  {reportedAt ? (
-                    <p className="shrink-0 text-[11px] font-normal text-[#6c6c6c]">
-                      {fmtDate(reportedAt)}
+              <>
+                {sortedIssues.length > 0 ? (
+                  <ReportFindings
+                    issues={sortedIssues}
+                    reportedAt={reportedAt}
+                    className={PANEL_HEIGHT}
+                  />
+                ) : (
+                  <article
+                    className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${PANEL_HEIGHT}`}
+                  >
+                    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#222222] px-4 py-3">
+                      <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6c6c6c]">
+                        Suggestions
+                      </h2>
+                      {reportedAt ? (
+                        <p className="shrink-0 text-[11px] font-normal text-[#6c6c6c]">
+                          {fmtDate(reportedAt)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <p className="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-[12px] leading-relaxed text-[#bdbdbd]">
+                      Artwork is all ok.
                     </p>
-                  ) : null}
-                </div>
-                <p className="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-[12px] leading-relaxed text-[#bdbdbd]">
-                  Artwork is all ok.
-                </p>
-              </article>
-            )}
+                  </article>
+                )}
 
-            {transcription ? (
-              <ReportTranscription text={transcription} className={PANEL_HEIGHT} />
-            ) : null}
+                {transcription ? (
+                  <ReportTranscription text={transcription} className={PANEL_HEIGHT} />
+                ) : null}
+              </>
+            )}
           </div>
 
           {version?.url ? (
@@ -117,14 +139,20 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           ) : null}
         </div>
 
-        <div className="mt-auto pt-10">
-          {proof?.summary ? (
-            <p className="text-[12px] leading-relaxed text-[#919191]">{proof.summary}</p>
-          ) : null}
-          <p className={`text-center text-[10px] text-[#555] ${proof?.summary ? "mt-6" : ""}`}>
+        {!isDirectReport ? (
+          <div className="mt-auto pt-10">
+            {proof?.summary ? (
+              <p className="text-[12px] leading-relaxed text-[#919191]">{proof.summary}</p>
+            ) : null}
+            <p className={`text-center text-[10px] text-[#555] ${proof?.summary ? "mt-6" : ""}`}>
+              Generated by Wallnut · Reviews should be confirmed by a human before publishing.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-auto pt-10 text-center text-[10px] text-[#555]">
             Generated by Wallnut · Reviews should be confirmed by a human before publishing.
           </p>
-        </div>
+        )}
       </main>
     </div>
   );

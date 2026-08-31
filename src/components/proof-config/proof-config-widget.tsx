@@ -11,6 +11,7 @@ import {
   type ProofAdminSettings,
   type ProofCheckType,
 } from "@/lib/proof/proof-settings";
+import type { ProofPipelineMode } from "@/lib/proof/pipeline-mode";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useProofConfig } from "./use-proof-config";
 
@@ -22,10 +23,13 @@ const LIST_ROW =
 export function ProofConfigWidget({
   orgSlug,
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
+  pipelineMode = "split",
 }: {
   orgSlug: string;
   initialSettings?: ProofAdminSettings;
+  pipelineMode?: ProofPipelineMode;
 }) {
+  const checksDisabled = pipelineMode === "gemini_only";
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const { settings, busy, error, loaded, toggleCheck, selectStyle, toggleRomanUrdu } =
@@ -86,16 +90,21 @@ export function ProofConfigWidget({
               </div>
             </section>
 
-            <section className="px-3 py-3">
+            <section className={`px-3 py-3 ${checksDisabled ? "opacity-45" : ""}`}>
               <SectionTitle>Checks</SectionTitle>
-              <div className="flex flex-col gap-0.5">
+              {checksDisabled ? (
+                <p className="mb-2 text-[10px] leading-snug text-[#555]">
+                  Disabled in Gemini only mode.
+                </p>
+              ) : null}
+              <div className={`flex flex-col gap-0.5 ${checksDisabled ? "pointer-events-none" : ""}`}>
                 {QUICK_CHECKS.map((key) => (
                   <CheckOption
                     key={key}
                     label={PROOF_CHECK_LABELS[key].title}
                     description={PROOF_CHECK_LABELS[key].description}
                     checked={settings.checks[key]}
-                    disabled={busy}
+                    disabled={busy || checksDisabled}
                     onChange={() => toggleCheck(key)}
                   />
                 ))}
@@ -103,13 +112,13 @@ export function ProofConfigWidget({
             </section>
           </div>
 
-          <div className="border-t border-[#222222] px-3 py-2.5">
+          <div className={`border-t border-[#222222] px-3 py-2.5 ${checksDisabled ? "opacity-45 pointer-events-none" : ""}`}>
             <SectionTitle>{ROMAN_URDU_PROOF_LABEL.title}</SectionTitle>
             <CheckOption
               label="Allow Roman Urdu & slang"
               description="Skip strict spellcheck on casual Roman Urdu in replies."
               checked={settings.allowSlangRomanUrdu}
-              disabled={busy}
+              disabled={busy || checksDisabled}
               onChange={() => toggleRomanUrdu()}
             />
           </div>

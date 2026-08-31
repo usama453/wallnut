@@ -13,6 +13,7 @@ import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
 import { formatWhatsAppReply, whatsappReplyPreview } from "@/lib/reportSummary";
+import { directReplyPreview } from "@/lib/proof/direct-response";
 import { getProofResponseStyle } from "@/lib/proof/proof-settings-store";
 import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
 import {
@@ -355,10 +356,12 @@ async function handleMedia(
     console.log(`[whatsapp] proof done for ${created.assetId} score=${result.report.score}`);
 
     const responseStyle = await getProofResponseStyle(resolvedOrg);
-    const replyTitle = whatsappReplyPreview(result.report.issues, responseStyle, {
-      humanReply: result.report.humanReply,
-      summary: result.report.summary,
-    });
+    const replyTitle = result.report.directResponse
+      ? directReplyPreview(result.report.directResponse)
+      : whatsappReplyPreview(result.report.issues, responseStyle, {
+          humanReply: result.report.humanReply,
+          summary: result.report.summary,
+        });
     await admin.from("assets").update({ name: replyTitle }).eq("id", created.assetId);
 
     logUsage({
@@ -372,10 +375,12 @@ async function handleMedia(
 
     const reportUrl = `${APP_URL}/r/${created.slug}`;
 
-    const replyBody = formatWhatsAppReply(result.report.issues, responseStyle, {
-      humanReply: result.report.humanReply,
-      summary: result.report.summary,
-    });
+    const replyBody = result.report.directResponse?.trim()
+      ? `${result.report.directResponse.trim()}\n\n${reportUrl}`
+      : formatWhatsAppReply(result.report.issues, responseStyle, {
+          humanReply: result.report.humanReply,
+          summary: result.report.summary,
+        });
 
     await sendInteractiveWaha(from, replyBody, {
       reply: [

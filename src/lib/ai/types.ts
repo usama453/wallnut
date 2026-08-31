@@ -22,6 +22,17 @@ export interface RawReport {
   extractedText?: string;
   /** Natural WhatsApp reply generated from the finalized report. */
   humanReply?: string;
+  /** Plain-text Gemini response for gemini_only / direct pipeline runs. */
+  directResponse?: string;
+}
+
+export interface DirectProofInput {
+  imageBase64: string;
+  mimeType: string;
+}
+
+export interface DirectProofOutput {
+  rawText: string;
 }
 
 /** Options for short WhatsApp-style closing lines after proofing. */

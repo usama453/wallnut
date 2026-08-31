@@ -80,7 +80,7 @@ export function ProofPipelineToggle({
             disabled={busy || envLocked}
             onClick={() => void select("gemini_only")}
             title="Gemini only"
-            description="One Gemini call, no spellcheck"
+            description="One direct prompt — no proof checks"
             borderLeft
           />
         </div>
@@ -105,8 +105,7 @@ export function ProofPipelineToggle({
         ) : (
           <p className="mt-3 text-[11px] leading-relaxed text-[#555]">
             Active mode applies to the next proof (upload or WhatsApp). Reports store the mode in{" "}
-            <code className="text-[#6c6c6c]">proofs.model</code> — look for{" "}
-            <code className="text-[#6c6c6c]">· standalone</code> on Gemini-only runs.
+            <code className="text-[#6c6c6c]">proofs.raw.pipeline_mode</code>.
           </p>
         )}
       </div>

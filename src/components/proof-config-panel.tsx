@@ -12,14 +12,18 @@ import {
   type ProofAdminSettings,
 } from "@/lib/proof/proof-settings";
 import { useProofConfig } from "@/components/proof-config/use-proof-config";
+import type { ProofPipelineMode } from "@/lib/proof/pipeline-mode";
 
 export function ProofConfigPanel({
   orgSlug,
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
+  pipelineMode = "split",
 }: {
   orgSlug: string;
   initialSettings?: ProofAdminSettings;
+  pipelineMode?: ProofPipelineMode;
 }) {
+  const checksDisabled = pipelineMode === "gemini_only";
   const { settings, busy, error, toggleCheck, selectStyle, toggleRomanUrdu } =
     useProofConfig(orgSlug, initialSettings);
 
@@ -34,7 +38,14 @@ export function ProofConfigPanel({
       </div>
 
       <div className="px-4 py-4">
-        <div className="grid gap-2 sm:grid-cols-2">
+        {checksDisabled ? (
+          <p className="mb-4 rounded-[6px] border border-[#222222] bg-[#0a0a0a] px-3 py-2.5 text-[11px] leading-relaxed text-[#6c6c6c]">
+            Proof checks are disabled while <strong className="font-medium text-[#bdbdbd]">Gemini only</strong>{" "}
+            is active. Wallnut sends one direct prompt to Gemini instead of running separate checks.
+          </p>
+        ) : null}
+
+        <div className={`grid gap-2 sm:grid-cols-2 ${checksDisabled ? "pointer-events-none opacity-45" : ""}`}>
           {PROOF_CHECK_TYPES.map((key) => (
             <label
               key={key}
@@ -48,7 +59,7 @@ export function ProofConfigPanel({
                 type="checkbox"
                 className="mt-0.5"
                 checked={settings.checks[key]}
-                disabled={busy}
+                disabled={busy || checksDisabled}
                 onChange={() => toggleCheck(key)}
               />
               <span className="min-w-0">
@@ -132,8 +143,14 @@ export function ProofConfigPanel({
           </p>
         ) : (
           <p className="mt-3 text-[11px] leading-relaxed text-[#555]">
-            Changes apply to the next proof. Enabled checks are stored on each report in{" "}
-            <code className="text-[#6c6c6c]">proofs.raw.enabled_checks</code>.
+            {checksDisabled
+              ? "Switch back to Split pipeline to configure individual proof checks."
+              : "Changes apply to the next proof. Enabled checks are stored on each report in "}
+            {!checksDisabled ? (
+              <>
+                <code className="text-[#6c6c6c]">proofs.raw.enabled_checks</code>.
+              </>
+            ) : null}
           </p>
         )}
       </div>

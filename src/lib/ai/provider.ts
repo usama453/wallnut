@@ -2,6 +2,8 @@ import type {
   AnalyzeInput,
   AnalyzeOutput,
   AnalyzeTextInput,
+  DirectProofInput,
+  DirectProofOutput,
   HumanReplyOptions,
   RawIssue,
   RawReport,
@@ -21,6 +23,8 @@ export interface AiProvider {
   transcribeAsset(input: TranscribeInput): Promise<TranscriptionOutput>;
   /** Stage 2: analyze an artwork image + optional OCR text and brand rules. */
   analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput>;
+  /** Gemini-only: one image + direct prompt, plain-text response. */
+  proofAssetDirect(input: DirectProofInput): Promise<DirectProofOutput>;
   /** Proof plain text copy (no image) — grammar, clarity, marketing checks. */
   analyzeText(input: AnalyzeTextInput): Promise<AnalyzeOutput>;
   /** Casual chat reply in the bot's persona (short, characterful). */

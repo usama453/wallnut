@@ -68,6 +68,14 @@ export function platformIcon(platform: GroupPlatform): string {
   }
 }
 
+export const RECENT_REPORT_MS = 15 * 60 * 1000;
+
+export function isRecentReport(createdAt: string, now = Date.now()): boolean {
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  return now - t < RECENT_REPORT_MS;
+}
+
 export function timeAgo(iso: string): string {
   const t = new Date(iso).getTime();
   const s = Math.floor((Date.now() - t) / 1000);

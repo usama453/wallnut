@@ -1,5 +1,5 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, DirectProofInput, DirectProofOutput, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
 import { buildSystemPrompt, buildStandaloneProofPrompt } from "./prompt";
 
 /**
@@ -123,6 +123,11 @@ export class MockProvider implements AiProvider {
         issues,
       },
     };
+  }
+
+  async proofAssetDirect(_input: DirectProofInput): Promise<DirectProofOutput> {
+    await delay(500);
+    return { rawText: "All good." };
   }
 
   async analyzeText(input: AnalyzeTextInput): Promise<AnalyzeOutput> {

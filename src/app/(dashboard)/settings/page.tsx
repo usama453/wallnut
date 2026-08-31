@@ -57,7 +57,7 @@ export default async function SettingsPage() {
       </Reveal>
 
       <Reveal dramatic delayMs={140}>
-        <ProofConfigPanel orgSlug={orgSlug} initialSettings={proofAdminSettings} />
+        <ProofConfigPanel orgSlug={orgSlug} initialSettings={proofAdminSettings} pipelineMode={proofPipelineMode} />
       </Reveal>
 
       <Reveal dramatic delayMs={150}>

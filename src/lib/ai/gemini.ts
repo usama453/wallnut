@@ -1,7 +1,7 @@
 import type { AiProvider } from "./provider";
 import { WALLNUT_CONTACT_EMAIL } from "@/lib/whatsapp/config";
-import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, HumanReplyOptions, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
-import { buildSystemPrompt, buildStandaloneProofPrompt, buildTextProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt, buildVisualTypoAuditPrompt } from "./prompt";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, DirectProofInput, DirectProofOutput, HumanReplyOptions, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
+import { buildSystemPrompt, buildStandaloneProofPrompt, buildTextProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt, buildVisualTypoAuditPrompt, buildDirectProofPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -136,6 +136,61 @@ export class GeminiProvider implements AiProvider {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         return await this.attempt(url, input, systemPrompt);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+    }
+    throw lastError;
+  }
+
+  async proofAssetDirect(input: DirectProofInput): Promise<DirectProofOutput> {
+    const prompt = buildDirectProofPrompt();
+    const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  {
+                    inline_data: {
+                      mime_type: input.mimeType,
+                      data: input.imageBase64,
+                    },
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 2048,
+            },
+          }),
+        });
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          throw new Error(`Gemini direct proof error ${res.status}: ${body.slice(0, 500)}`);
+        }
+
+        const data = await res.json();
+        const rawText =
+          data?.candidates?.[0]?.content?.parts
+            ?.map((part: { text?: string }) => part.text ?? "")
+            .filter(Boolean)
+            .join("\n")
+            .trim() ?? "";
+        if (!rawText) throw new Error("Gemini direct proof returned an empty response");
+
+        return { rawText };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));

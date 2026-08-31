@@ -7,12 +7,17 @@ import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { ProofConfigWidget } from "@/components/proof-config/proof-config-widget";
 import { WALLNUT_PILL_BUTTON } from "@/components/wallnut/panel";
 import { PersonAvatar } from "@/components/wallnut/person-avatar";
-import { PlatformIcon, Spinner } from "@/components/wallnut/icons";
+import { PlatformIcon, RefreshIcon, Spinner } from "@/components/wallnut/icons";
 import { PendingLink } from "@/components/wallnut/pending";
 import { RemoveWhatsAppGroup } from "@/components/remove-whatsapp-group";
 import { Reveal } from "@/components/wallnut/reveal";
 import type { GroupCard, PendingWhatsAppInvite, ReportRow } from "@/lib/groups-presentation";
-import { displayGroupName, groupLinkLabel, timeAgo } from "@/lib/groups-presentation";
+import {
+  displayGroupName,
+  groupLinkLabel,
+  isRecentReport,
+  timeAgo,
+} from "@/lib/groups-presentation";
 import { orgGroupPath, orgRankingsPath } from "@/lib/org-paths";
 import type { PersonStats } from "@/lib/stats";
 
@@ -27,6 +32,7 @@ export function DashboardGrid({
   isSuperAdmin = false,
   canManageProofConfig = false,
   proofAdminSettings,
+  proofPipelineMode = "split",
 }: {
   orgName: string;
   orgSlug: string;
@@ -44,6 +50,7 @@ export function DashboardGrid({
   isSuperAdmin?: boolean;
   canManageProofConfig?: boolean;
   proofAdminSettings?: import("@/lib/proof/proof-settings").ProofAdminSettings;
+  proofPipelineMode?: import("@/lib/proof/pipeline-mode").ProofPipelineMode;
 }) {
   const router = useRouter();
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
@@ -214,7 +221,11 @@ export function DashboardGrid({
         {canManageProofConfig ? (
           <Reveal dramatic delayMs={760}>
             <div className="flex justify-center pt-1">
-              <ProofConfigWidget orgSlug={orgSlug} initialSettings={proofAdminSettings} />
+              <ProofConfigWidget
+                orgSlug={orgSlug}
+                initialSettings={proofAdminSettings}
+                pipelineMode={proofPipelineMode}
+              />
             </div>
           </Reveal>
         ) : null}
@@ -374,8 +385,10 @@ function DashboardGroupCard({
   emptyMessage?: string;
   lastActiveLabel?: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
   const preview = card.reports.slice(0, 5);
   const inviteCode = card.inviteCode;
   const awaitingSync = Boolean(inviteCode) && preview.length === 0;
@@ -433,23 +446,41 @@ function DashboardGroupCard({
             ) : null}
           </span>
         </button>
-        {awaitingSync ? (
-          <button
-            type="button"
-            onClick={() => void copyCode()}
-            className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
-          >
-            {copied ? "Copied" : "Copy code"}
-          </button>
-        ) : (
-          <PendingLink
-            href={orgGroupPath(orgSlug, card.group.id)}
-            pendingLabel="Loading…"
-            className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
-          >
-            {groupLinkLabel(card.group)}
-          </PendingLink>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {!awaitingSync ? (
+            <button
+              type="button"
+              onClick={() => startRefresh(() => router.refresh())}
+              disabled={refreshing}
+              aria-busy={refreshing}
+              aria-label="Refresh reports"
+              className="grid size-7 place-items-center rounded-[4px] text-[#919191] transition hover:bg-[#111111] hover:text-white disabled:opacity-60"
+            >
+              {refreshing ? (
+                <Spinner />
+              ) : (
+                <RefreshIcon size={13} />
+              )}
+            </button>
+          ) : null}
+          {awaitingSync ? (
+            <button
+              type="button"
+              onClick={() => void copyCode()}
+              className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
+            >
+              {copied ? "Copied" : "Copy code"}
+            </button>
+          ) : (
+            <PendingLink
+              href={orgGroupPath(orgSlug, card.group.id)}
+              pendingLabel="Loading…"
+              className="shrink-0 text-[12px] text-[#919191] transition hover:text-white"
+            >
+              {groupLinkLabel(card.group)}
+            </PendingLink>
+          )}
+        </div>
       </div>
 
       <div
@@ -510,6 +541,13 @@ function DashboardReportRow({ report }: { report: ReportRow }) {
       className="group flex flex-nowrap items-center gap-2 rounded-[6px] px-1 py-2 transition hover:bg-[#080808]"
     >
       <ReportMarker report={report} />
+      {isRecentReport(report.createdAt) ? (
+        <span
+          className="size-[6px] shrink-0 rounded-full bg-[#25D366]"
+          aria-label="New report"
+          title="Just received"
+        />
+      ) : null}
       <span className="min-w-0 flex-1 truncate text-[12px] leading-none text-[#bdbdbd] transition group-hover:text-[#fbfbfb]">
         {report.name}
       </span>
