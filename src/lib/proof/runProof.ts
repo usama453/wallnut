@@ -6,7 +6,7 @@ import { getProofPipelineMode, type ProofPipelineMode } from "./pipeline-mode-st
 import { getProofAdminSettings } from "./proof-settings-store";
 import { filterIssuesByChecks } from "./issue-checks";
 import { hasEnabledProofChecks, type ProofChecksConfig } from "./proof-settings";
-import { spellcheck } from "./spellcheck";
+import { spellcheck, findSmoothedBrokenWords, preferBrokenSpellingText } from "./spellcheck";
 import { detectRomanUrduLines } from "./roman-urdu";
 import {
   enrichIssueLocations,
@@ -147,8 +147,11 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
       ocrText: ocr.text,
       brand,
     });
+    const geminiText = sanitizeText((transcription.extractedText || "").trim());
     const canonicalText = sanitizeText(
-      (transcription.extractedText || ocr.text || "").trim(),
+      preferBrokenSpellingText(geminiText, ocr.text || "").trim() ||
+        ocr.text ||
+        geminiText,
     );
 
     const analyzed = await provider.analyzeAsset({
@@ -174,7 +177,32 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     };
 
     if (!brand?.allow_slang_roman_urdu && canonicalText && enabledChecks.typos) {
-      mergeSpellcheck(report, canonicalText, brand, asset.name, locationContext, ocr.text);
+      mergeSpellcheck(
+        report,
+        canonicalText,
+        brand,
+        asset.name,
+        locationContext,
+        ocr.text,
+        geminiText,
+      );
+      if (!hasTypoIssues(report.issues)) {
+        try {
+          const visualTypos = await provider.auditVisibleTypos({
+            imageBase64: normalized.base64,
+            mimeType: normalized.mimeType,
+            transcribedText: canonicalText,
+            brand,
+          });
+          if (visualTypos.length) {
+            report.issues = [...report.issues, ...visualTypos];
+          }
+        } catch (err) {
+          console.error(
+            `[proof] visual typo audit failed: ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      }
     }
 
     enrichIssueLocations(report.issues, locationContext);
@@ -347,12 +375,27 @@ async function persistProof(
  * Drop spelling/typo findings from the QA model — typos come from spellcheck
  * against the stage-1 transcription, not from LLM imagination.
  */
+function isVisualTypoIssue(issue: RawIssue): boolean {
+  const hay = `${issue.title} ${issue.description ?? ""} ${issue.suggestion ?? ""}`.toLowerCase();
+  return /visible typo|printed on the image|shown on the image|split letter|letter gap/i.test(hay);
+}
+
+function hasTypoIssues(issues: RawIssue[]): boolean {
+  return issues.some(
+    (issue) =>
+      isVisualTypoIssue(issue) ||
+      /^misspelled "/i.test(issue.title) ||
+      /typo|misspell/i.test(`${issue.title} ${issue.suggestion ?? ""}`),
+  );
+}
+
 function stripSpellingIssues(issues: RawIssue[], canonicalText: string): RawIssue[] {
   const haystack = canonicalText.toLowerCase();
   const lines = canonicalText.split("\n");
   const romanLines = detectRomanUrduLines(canonicalText);
   return issues.filter((issue) => {
     if (!isSpellingIssue(issue)) return true;
+    if (isVisualTypoIssue(issue)) return true;
     const quoted = extractQuotedWords(issue);
     if (!quoted.length) return false;
     if (
@@ -414,6 +457,7 @@ function mergeSpellcheck(
   assetName: string,
   locationContext: LocationContext,
   ocrText = "",
+  geminiText = "",
 ) {
   // Casual language mode: Roman Urdu spellings are intentionally loose, so a
   // dictionary spellcheck produces false positives. Semantic coherence is
@@ -442,12 +486,15 @@ function mergeSpellcheck(
   const ocr = sanitizeText(ocrText.trim());
   if (ocr && ocr !== source) sources.push(ocr);
 
-  const findings = sources.flatMap((text) =>
-    spellcheck(text, {
-      allow,
-      skipLineIndices: detectRomanUrduLines(text),
-    }),
-  );
+  const findings = [
+    ...findSmoothedBrokenWords(geminiText || source, ocr),
+    ...sources.flatMap((text) =>
+      spellcheck(text, {
+        allow,
+        skipLineIndices: detectRomanUrduLines(text),
+      }),
+    ),
+  ];
   const newIssues: RawIssue[] = [];
   for (const f of findings) {
     // Aggregated proper-noun / acronym bucket → a single low-severity issue.
@@ -469,11 +516,14 @@ function mergeSpellcheck(
     const lower = f.word.toLowerCase();
     if (alreadyFlagged.has(lower)) continue;
 
-    const location = locateWord(f.word, locationContext);
+    const lookupWord = f.suggestions[0] ?? f.word.replace(/\s+/g, "");
+    const location = locateWord(lookupWord, locationContext) ?? locateWord(f.word, locationContext);
     newIssues.push({
       category: "typography",
       severity: f.severity,
-      title: `Misspelled "${f.word}"${f.count > 1 ? ` (×${f.count})` : ""}`,
+      title: f.word.includes(" ")
+        ? `Visible typo "${f.word}"`
+        : `Misspelled "${f.word}"${f.count > 1 ? ` (×${f.count})` : ""}`,
       description: f.context
         ? `Found in: "${f.context}"`
         : `Appears ${f.count}× in the artwork.`,

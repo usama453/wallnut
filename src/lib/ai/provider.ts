@@ -3,9 +3,11 @@ import type {
   AnalyzeOutput,
   AnalyzeTextInput,
   HumanReplyOptions,
+  RawIssue,
   RawReport,
   TranscribeInput,
   TranscriptionOutput,
+  VisualTypoAuditInput,
 } from "./types";
 
 /**
@@ -25,6 +27,8 @@ export interface AiProvider {
   chat(message: string): Promise<string>;
   /** Short WhatsApp reply after proofing, based on the finalized report. */
   generateHumanReply(report: RawReport, options?: HumanReplyOptions): Promise<string>;
+  /** Re-read the image for visible typos that transcription auto-corrected away. */
+  auditVisibleTypos(input: VisualTypoAuditInput): Promise<RawIssue[]>;
 }
 
 export type AiProviderId = "gemini" | "mock";

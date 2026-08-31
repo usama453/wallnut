@@ -104,8 +104,9 @@ export function buildSystemPrompt(
 
 Analyze the provided artwork image. Return a JSON report only.
 
-${spellingHandled ? `CANONICAL TEXT (already transcribed from this image — treat as ground truth for what text exists; do NOT invent additional words):\n"""\n${extractedText!.slice(0, 8000)}\n"""\n${imageContext ? `IMAGE CONTEXT: ${imageContext}\n` : ""}
-SPELLING: spelling and typos are checked separately against the canonical text above. Do NOT report spelling mistakes, misspellings, or "did you mean" suggestions. Ignore OCR/typo categories entirely.
+${spellingHandled ? `CANONICAL TEXT (transcribed from this image — use for layout/context; do NOT invent additional words):\n"""\n${extractedText!.slice(0, 8000)}\n"""\n${imageContext ? `IMAGE CONTEXT: ${imageContext}\n` : ""}
+SPELLING: Dictionary spellcheck runs separately on the canonical text. Do NOT report routine dictionary typos that match the canonical text.
+VISUAL TEXT MISMATCH (required): Compare the IMAGE letter-by-letter to the canonical text. If text PRINTED ON THE IMAGE is misspelled, missing a letter, or has a space inside a word (e.g. image shows "b st" but canonical says "best"), you MUST report it. Use title: Visible typo "b st" and suggestion: Should be "best". Category typography. Roman Urdu variant spellings are not errors.
 ` : `TRANSCRIBE EVERY WORD: in the field "extracted_text", transcribe VERBATIM every visible text element in the artwork. Preserve EXACT spelling even if wrong. This transcription is used by an automated spellchecker.\n`}
 
 CHECK THESE CATEGORIES:
@@ -116,7 +117,7 @@ COORDINATES: for every issue, return a tight bounding box (normalized 0–1 only
 RULES:
 - Be specific and actionable. Reference exact phrases from the canonical text when applicable.
 - Quote the flagged word or phrase in every issue title, e.g. Misspelled "recieve" or Compound spacing: "OneHomes".
-- ${spellingHandled ? "Never flag a word as misspelled. Never suggest a spelling correction." : "Check EVERY word for spelling. Do NOT flag proper nouns as spelling errors just because they are uncommon."}
+- ${spellingHandled ? "Never flag a word as misspelled when it matches the canonical text. DO flag visible typos on the image that differ from the canonical text (see VISUAL TEXT MISMATCH)." : "Check EVERY word for spelling. Do NOT flag proper nouns as spelling errors just because they are uncommon."}
 - Keep the report concise: list at most the 8 most important issues. Instead of many trivial cosmetic nits, group them into a single low-severity item. Do not pad the list.
 - Severity: high = blocks publishing (errors, wrong facts, broken layout), medium = should fix, low = nice to have.
 - Do NOT invent issues that are not present. If a word is not in the canonical text, do not claim it appears in the artwork.
@@ -273,6 +274,32 @@ Score: ${report.score}/100 (${report.status})
 
 Copy/text findings (${copyErrors.length}):
 ${issuesText || "(none — no typos or copy errors)"}`;
+}
+
+/** Second-pass read for typos visible on the image but smoothed in transcription. */
+export function buildVisualTypoAuditPrompt(
+  transcribedText: string,
+  brand?: BrandContext | null,
+): string {
+  return `You are a careful proofreader comparing visible text on a marketing image to an automatic transcription.
+
+The transcription below may have AUTO-CORRECTED typos. Your job is to re-read the IMAGE and find ONLY places where the printed text on the image is wrong.
+
+TRANSCRIPTION (may be wrong):
+"""
+${transcribedText.slice(0, 6000)}
+"""
+
+Rules:
+- Compare letter-by-letter what is PRINTED on the image.
+- Flag misspellings, missing letters, and spaces inside a word (e.g. image shows "b st" → correction "best").
+- Do NOT flag Roman Urdu variant spellings (mein/main, bohat/bahut) or intentional slang.
+- Do NOT flag design/font styling unless a letter is clearly missing or split.
+- If the image text matches a reasonable reading of the transcription, return an empty issues list.
+
+${brand?.company_name ? `Brand: ${brand.company_name}` : ""}
+
+Return JSON only with an "issues" array. Each item: visible (exact text on image), correction (intended word), context (short phrase from the image).`;
 }
 
 function formatBrand(brand: BrandContext): string {

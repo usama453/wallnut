@@ -90,6 +90,13 @@ export interface TranscriptionOutput {
   imageContext?: string;
 }
 
+export interface VisualTypoAuditInput {
+  imageBase64: string;
+  mimeType: string;
+  transcribedText: string;
+  brand?: BrandContext | null;
+}
+
 export interface AnalyzeOutput {
   /** text returned by the provider (raw). */
   rawText: string;

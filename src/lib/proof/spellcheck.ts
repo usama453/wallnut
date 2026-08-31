@@ -203,7 +203,7 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
  * Visible gap inside a word (e.g. "b st" printed as two tokens for "best").
  * Single-letter tokens are skipped by normal spellcheck (`{2,}` regex).
  */
-function findBrokenSpacedWords(text: string): SpellcheckFinding[] {
+export function findBrokenSpacedWords(text: string): SpellcheckFinding[] {
   const findings: SpellcheckFinding[] = [];
   const lines = text.replace(/\r/g, "").split("\n");
   const patterns = [
@@ -233,6 +233,46 @@ function findBrokenSpacedWords(text: string): SpellcheckFinding[] {
   }
 
   return findings;
+}
+
+/** Prefer OCR wording when it preserves split-letter typos Gemini smoothed over. */
+export function preferBrokenSpellingText(geminiText: string, ocrText: string): string {
+  const gemini = geminiText.trim();
+  const ocr = ocrText.trim();
+  if (!ocr) return gemini;
+  if (!gemini) return ocr;
+
+  const geminiLines = gemini.split("\n");
+  const ocrLines = ocr.split("\n");
+  const merged = geminiLines.map((line, index) => {
+    const ocrLine = ocrLines[index] ?? "";
+    const ocrBroken = findBrokenSpacedWords(ocrLine);
+    const geminiBroken = findBrokenSpacedWords(line);
+    if (ocrBroken.length && !geminiBroken.length) return ocrLine;
+    return line;
+  });
+
+  if (ocrLines.length > geminiLines.length) {
+    for (const extra of ocrLines.slice(geminiLines.length)) {
+      if (findBrokenSpacedWords(extra).length) merged.push(extra);
+    }
+  }
+
+  return merged.join("\n").trim() || gemini || ocr;
+}
+
+/**
+ * Broken-word typos OCR caught but the AI transcription auto-corrected away.
+ */
+export function findSmoothedBrokenWords(geminiText: string, ocrText: string): SpellcheckFinding[] {
+  const ocrBroken = findBrokenSpacedWords(ocrText);
+  if (!ocrBroken.length) return [];
+
+  const geminiBroken = new Set(
+    findBrokenSpacedWords(geminiText).map((finding) => finding.word.toLowerCase()),
+  );
+
+  return ocrBroken.filter((finding) => !geminiBroken.has(finding.word.toLowerCase()));
 }
 
 function guessMergedWord(a: string, b: string): string | null {

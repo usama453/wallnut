@@ -1,7 +1,7 @@
 import type { AiProvider } from "./provider";
 import { WALLNUT_CONTACT_EMAIL } from "@/lib/whatsapp/config";
-import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, HumanReplyOptions, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
-import { buildSystemPrompt, buildStandaloneProofPrompt, buildTextProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt } from "./prompt";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, HumanReplyOptions, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
+import { buildSystemPrompt, buildStandaloneProofPrompt, buildTextProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt, buildVisualTypoAuditPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -39,6 +39,78 @@ export class GeminiProvider implements AiProvider {
       }
     }
     throw lastError;
+  }
+
+  async auditVisibleTypos(input: VisualTypoAuditInput): Promise<RawIssue[]> {
+    const prompt = buildVisualTypoAuditPrompt(input.transcribedText, input.brand);
+    const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: input.mimeType,
+                  data: input.imageBase64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1024,
+          responseMimeType: "application/json",
+          responseSchema: VISUAL_TYPO_SCHEMA,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Gemini visual typo audit error ${res.status}: ${body.slice(0, 300)}`);
+    }
+
+    const data = await res.json();
+    const rawText =
+      data?.candidates?.[0]?.content?.parts
+        ?.map((part: { text?: string }) => part.text ?? "")
+        .filter(Boolean)
+        .join("\n") ?? "";
+    if (!rawText) return [];
+
+    let parsed: { issues?: Array<{ visible?: string; correction?: string; context?: string }> };
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      return [];
+    }
+
+    const issues: RawIssue[] = [];
+    for (const item of parsed.issues ?? []) {
+      const visible = sanitizeText(item.visible ?? "").trim();
+      const correction = sanitizeText(item.correction ?? "").trim();
+      if (!visible || !correction || visible.toLowerCase() === correction.toLowerCase()) {
+        continue;
+      }
+      issues.push({
+        category: "typography",
+        severity: "medium",
+        title: `Visible typo "${visible}"`,
+        description: item.context
+          ? `Printed on image: "${item.context}"`
+          : "Text on the image differs from the transcription.",
+        suggestion: `Should be "${correction}".`,
+        location: null,
+      });
+    }
+    return issues;
   }
 
   async analyzeAsset(input: AnalyzeInput): Promise<AnalyzeOutput> {
@@ -340,6 +412,24 @@ const TRANSCRIPTION_SCHEMA = {
     image_context: { type: "STRING" },
   },
   required: ["extracted_text"],
+};
+
+const VISUAL_TYPO_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    issues: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          visible: { type: "STRING" },
+          correction: { type: "STRING" },
+          context: { type: "STRING" },
+        },
+        required: ["visible", "correction"],
+      },
+    },
+  },
 };
 
 const REPORT_SCHEMA = {

@@ -1,5 +1,5 @@
 import type { AiProvider } from "./provider";
-import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, RawIssue, RawReport, TranscribeInput, TranscriptionOutput, VisualTypoAuditInput } from "./types";
 import { buildSystemPrompt, buildStandaloneProofPrompt } from "./prompt";
 
 /**
@@ -178,6 +178,11 @@ export class MockProvider implements AiProvider {
       return "You're most welcome — happy to help with your copy anytime.";
     }
     return "Let me know if you want something proofed — send an image or PDF and I'll score it.";
+  }
+
+  async auditVisibleTypos(_input: VisualTypoAuditInput): Promise<RawIssue[]> {
+    await delay(100);
+    return [];
   }
 
   async generateHumanReply(
