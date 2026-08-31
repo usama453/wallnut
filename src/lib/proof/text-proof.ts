@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { getProvider } from "@/lib/ai";
 import type { BrandContext, RawIssue, RawReport } from "@/lib/ai";
-import { isAllGoodDirectResponse } from "@/lib/proof/direct-response";
+import { isAllGoodDirectResponse, sanitizeDirectProofResponse } from "@/lib/proof/direct-response";
 import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
 import { getProofAdminSettings } from "./proof-settings-store";
 import { filterIssuesByChecks } from "./issue-checks";
@@ -31,7 +31,7 @@ export async function proofPlainText(
 
   if (pipelineMode === "gemini_only") {
     const { rawText } = await provider.proofTextDirect({ text: source });
-    const directResponse = sanitizeText(rawText.trim());
+    const directResponse = sanitizeDirectProofResponse(sanitizeText(rawText.trim()));
     const allGood = isAllGoodDirectResponse(directResponse);
     return {
       score: allGood ? 100 : 70,

@@ -15,7 +15,7 @@ import {
   type LocationContext,
 } from "./issue-locations";
 import { buildHumanReplyFallback } from "@/lib/reportSummary";
-import { isAllGoodDirectResponse } from "@/lib/proof/direct-response";
+import { isAllGoodDirectResponse, sanitizeDirectProofResponse } from "@/lib/proof/direct-response";
 import { sanitizeText } from "@/lib/text";
 import type { OcrResult } from "@/lib/ocr/tesseract";
 import type { BrandContext, PreviousProofContext, RawIssue, RawReport } from "@/lib/ai";
@@ -124,7 +124,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
       imageBase64: normalized.base64,
       mimeType: normalized.mimeType,
     });
-    const directResponse = sanitizeText(rawText.trim());
+    const directResponse = sanitizeDirectProofResponse(sanitizeText(rawText.trim()));
     const allGood = isAllGoodDirectResponse(directResponse);
     report = {
       score: allGood ? 100 : 70,

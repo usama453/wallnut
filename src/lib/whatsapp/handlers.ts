@@ -13,7 +13,7 @@ import { createAssetVersionFromBytes } from "@/lib/assets";
 import { downloadMediaWaha, fetchWahaGroup, sendInteractiveWaha, sendTextWaha } from "./client";
 import { logUsage } from "./usage";
 import { formatWhatsAppReply, whatsappReplyPreview } from "@/lib/reportSummary";
-import { directReplyPreview } from "@/lib/proof/direct-response";
+import { directReplyPreview, formatDirectProofWhatsAppReply } from "@/lib/proof/direct-response";
 import { getProofResponseStyle } from "@/lib/proof/proof-settings-store";
 import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
 import {
@@ -237,7 +237,7 @@ async function dispatchMessage(
         ? await getProofResponseStyle(resolvedOrg)
         : DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle;
       const reply = report.directResponse?.trim()
-        ? report.directResponse.trim()
+        ? formatDirectProofWhatsAppReply(report.directResponse)
         : formatWhatsAppReply(report.issues, responseStyle, {
             humanReply: report.humanReply,
             summary: report.summary,
@@ -378,7 +378,7 @@ async function handleMedia(
     const reportUrl = `${APP_URL}/r/${created.slug}`;
 
     const replyBody = result.report.directResponse?.trim()
-      ? result.report.directResponse.trim()
+      ? formatDirectProofWhatsAppReply(result.report.directResponse)
       : formatWhatsAppReply(result.report.issues, responseStyle, {
           humanReply: result.report.humanReply,
           summary: result.report.summary,
