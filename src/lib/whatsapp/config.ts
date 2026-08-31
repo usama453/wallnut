@@ -17,6 +17,9 @@ export const WAHA_WEBHOOK_HMAC_KEY =
  * e.g. 923345818677 */
 export const BOT_PHONE_NUMBER = process.env.BOT_PHONE_NUMBER ?? "";
 
+/** Optional privacy LID digits when WhatsApp hides the bot's phone in groups. */
+export const BOT_LID_NUMBER = process.env.BOT_LID_NUMBER ?? "";
+
 /** Public contact email shown in bios, footers, and support replies. */
 export const WALLNUT_CONTACT_EMAIL =
   process.env.WALLNUT_CONTACT_EMAIL ?? "hey@usama.fun";

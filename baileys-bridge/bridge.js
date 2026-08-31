@@ -350,6 +350,7 @@ async function createSocket() {
       freshPairingAttempts = 0;
       me = {
         id: nextSocket.user?.id || "",
+        lid: nextSocket.user?.lid || undefined,
         pushName: nextSocket.user?.name || undefined,
       };
       console.log(`[bridge] connected as +${digitsOf(me.id)}`);

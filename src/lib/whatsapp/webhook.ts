@@ -9,7 +9,7 @@ export interface IncomingMedia {
 interface WahaWebhookEnvelope {
   event?: string;
   session?: string;
-  me?: { id?: string } | null;
+  me?: { id?: string; lid?: string } | null;
   payload?: Record<string, any>;
 }
 
@@ -66,6 +66,7 @@ export function extractWahaMessages(
     sender: participant,
     senderPhone: senderPhone || undefined,
     botId: event.me?.id,
+    botLid: event.me?.lid,
     mentions:
       payload.mentions ??
       payload._data?.message?.extendedTextMessage?.contextInfo?.mentionedJid ??

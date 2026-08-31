@@ -13,6 +13,7 @@ import {
   canonicalChatId,
   whatsappGroupIdVariants,
 } from "../src/lib/whatsapp/jid.ts";
+import { wasBotMentioned } from "../src/lib/whatsapp/mention-detection.ts";
 
 let failed = 0;
 function check(name: string, condition: boolean) {
@@ -96,6 +97,30 @@ check(
 );
 check("preserves bot identity", groupPdf.botId === "15550000000:1@s.whatsapp.net");
 check("preserves structured mentions", groupPdf.mentions.length === 1);
+check(
+  "detects privacy LID @mention in group",
+  wasBotMentioned(
+    {
+      text: { body: "@187544780189853 proof read this" },
+      mentions: ["187544780189853@lid"],
+      botId: "923345818677:2@s.whatsapp.net",
+      botLid: "187544780189853:2@lid",
+    },
+    "9233458186772",
+  ),
+);
+check(
+  "ignores group text without bot mention",
+  !wasBotMentioned(
+    { text: { body: "wallnut gives a quick copy check" } },
+    "9233458186772",
+    "187544780189853",
+  ),
+);
+check(
+  "accepts @wallnut alias",
+  wasBotMentioned({ text: { body: "@wallnut hello" } }, "9233458186772"),
+);
 check("detects button reply", isButtonReply(button));
 check("parses button id", getButtonReplyId(button) === "approve:abc123:1");
 check(

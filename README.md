@@ -33,6 +33,7 @@ WAHA_BASE_URL=http://localhost:3001
 WAHA_API_KEY=                   # must match the WAHA server
 WAHA_SESSION=default
 BOT_PHONE_NUMBER=              # digits only; used for group @mention checks
+BOT_LID_NUMBER=                # optional; privacy LID digits if me.lid is unavailable
 WHATSAPP_DEFAULT_ORG_ID=        # fallback workspace for direct messages
 
 NEXT_PUBLIC_APP_URL=            # public Wallnut URL

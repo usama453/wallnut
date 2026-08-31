@@ -21,7 +21,8 @@ import {
   isButtonReply,
   getButtonReplyId,
 } from "./webhook";
-import { BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
+import { BOT_LID_NUMBER, BOT_PHONE_NUMBER, WAHA_SESSION } from "./config";
+import { wasBotMentioned } from "./mention-detection";
 import { loadAccessState, trackSeenChat } from "./access";
 import { rememberWhatsAppContact, importWhatsAppGroupContacts, saveWhatsAppContacts, contactsFromGroupParticipant, resolveWhatsAppSenderIdentity } from "./contacts";
 import { clearDisconnectedWhatsAppGroup, isWhatsAppGroupDisconnected } from "./disconnected-groups";
@@ -178,34 +179,8 @@ let accessCache: {
 } | null = null;
 const ACCESS_TTL_MS = 30 * 1000;
 
-/** True when a group message @mentions the bot (phone JID, LID, or @wallnut). */
 function wasMentioned(message: any): boolean {
-  const body: string = message?.text?.body ?? "";
-  if (/@wallnut\b/i.test(body)) return true;
-
-  const tokens = body.match(/@([0-9]{6,})/g) ?? [];
-  const mentions = Array.isArray(message?.mentions) ? message.mentions : [];
-  const botIds = [BOT_PHONE_NUMBER, message?.botId]
-    .filter(Boolean)
-    .map((id) => jidDigits(String(id)));
-
-  if (!botIds.length) return tokens.length > 0 || mentions.length > 0;
-
-  const candidates = [...tokens, ...mentions.map(String)];
-  return candidates.some((mention) => {
-    const digits = jidDigits(mention);
-    if (!digits) return false;
-    return botIds.some(
-      (bot) =>
-        digits === bot ||
-        digits.endsWith(bot.slice(-10)) ||
-        bot.endsWith(digits.slice(-10)),
-    );
-  });
-}
-
-function jidDigits(value: string) {
-  return value.split("@")[0].split(":")[0].replace(/\D/g, "");
+  return wasBotMentioned(message, BOT_PHONE_NUMBER, BOT_LID_NUMBER);
 }
 
 async function dispatchMessage(
