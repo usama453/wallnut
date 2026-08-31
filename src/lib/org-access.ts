@@ -10,6 +10,11 @@ import {
   userCanAccessOrg,
 } from "@/lib/org-membership";
 import { getPublicOrganization } from "@/lib/organizations";
+import {
+  GUEST_USER_ID,
+  hasDashboardAccess,
+  orgHasDashboardPassword,
+} from "@/lib/dashboard-access";
 import { isReservedOrgSlug, orgHomePath, orgLoginPath } from "@/lib/org-paths";
 import { userIsSuperAdmin } from "@/lib/roles";
 
@@ -17,6 +22,7 @@ export type OrgAccess =
   | { status: "reserved" }
   | { status: "unknown" }
   | { status: "unauthenticated"; slug: string }
+  | { status: "password_required"; slug: string; orgName: string }
   | {
       status: "forbidden";
       slug: string;
@@ -34,6 +40,7 @@ export type OrgAccess =
       org: { id: string; name: string; slug: string };
       profile: { full_name: string | null; role: string | null };
       isSuperAdmin: boolean;
+      isGuest: boolean;
       memberships: Array<{ name: string; slug: string; role: string }>;
     };
 
@@ -49,7 +56,24 @@ export const resolveOrgAccess = cache(async function resolveOrgAccess(
   const org = await getOrgBySlug(slug);
 
   if (!user) {
-    if (org) return { status: "unauthenticated", slug: org.slug };
+    if (org) {
+      if (await hasDashboardAccess(org.id)) {
+        return {
+          status: "ok",
+          slug: org.slug,
+          user: { id: GUEST_USER_ID },
+          org: { id: org.id, name: org.name, slug: org.slug },
+          profile: { full_name: "Guest", role: "viewer" },
+          isSuperAdmin: false,
+          isGuest: true,
+          memberships: [],
+        };
+      }
+      if (await orgHasDashboardPassword(org.id)) {
+        return { status: "password_required", slug: org.slug, orgName: org.name };
+      }
+      return { status: "unauthenticated", slug: org.slug };
+    }
     const published = await getPublicOrganization(slug);
     return published ? { status: "unauthenticated", slug } : { status: "unknown" };
   }
@@ -106,6 +130,7 @@ export const resolveOrgAccess = cache(async function resolveOrgAccess(
       role,
     },
     isSuperAdmin,
+    isGuest: false,
     memberships: memberships.map((membership) => ({
       name: membership.name,
       slug: membership.slug,
@@ -118,6 +143,7 @@ export function requireOrgPageAccess(
   access: OrgAccess,
 ): access is Extract<OrgAccess, { status: "ok" }> {
   if (access.status === "reserved" || access.status === "unknown") notFound();
+  if (access.status === "password_required") return false;
   if (access.status === "unauthenticated") {
     redirect(orgLoginPath(access.slug, orgHomePath(access.slug)));
   }

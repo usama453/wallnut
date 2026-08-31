@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { WhatsAppAccess } from "@/components/whatsapp-access";
+import { DashboardPasswordPanel } from "@/components/dashboard-password-panel";
 import { ProofPipelineToggle } from "@/components/proof-pipeline-toggle";
 import { ProofConfigPanel } from "@/components/proof-config-panel";
 import { Reveal } from "@/components/wallnut/reveal";
@@ -8,6 +9,7 @@ import { WALLNUT_PANEL } from "@/components/wallnut/panel";
 import { getOrgBySlug } from "@/lib/org-membership";
 import { ORG_COOKIE, PUBLIC_ORG_SLUG } from "@/lib/org-paths";
 import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
+import { getDashboardPasswordConfigured } from "@/lib/dashboard-password-store";
 import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
 import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
 import { requireSuperAdmin } from "@/lib/super-admin-access";
@@ -23,6 +25,9 @@ export default async function SettingsPage() {
   const proofAdminSettings = org
     ? await getProofAdminSettings(org.id)
     : DEFAULT_PROOF_ADMIN_SETTINGS;
+  const dashboardPasswordConfigured = org
+    ? await getDashboardPasswordConfigured(org.id)
+    : false;
   const aiProvider = process.env.AI_PROVIDER ?? "gemini";
   const model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
   const wahaConfigured = Boolean(
@@ -52,6 +57,13 @@ export default async function SettingsPage() {
 
       <Reveal dramatic delayMs={140}>
         <ProofConfigPanel orgSlug={orgSlug} initialSettings={proofAdminSettings} />
+      </Reveal>
+
+      <Reveal dramatic delayMs={150}>
+        <DashboardPasswordPanel
+          orgSlug={orgSlug}
+          initialConfigured={dashboardPasswordConfigured}
+        />
       </Reveal>
 
       <Reveal dramatic delayMs={160}>

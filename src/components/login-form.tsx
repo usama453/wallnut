@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { initialsFor } from "@/components/wallnut/avatar";
-import { BackIcon, GoogleIcon, Spinner } from "@/components/wallnut/icons";
+import { BackIcon, Spinner } from "@/components/wallnut/icons";
 import { Reveal } from "@/components/wallnut/reveal";
 
 type AuthMode = "signin" | "signup" | "magic";
@@ -61,13 +61,14 @@ export default function LoginForm({
     setStep("credentials");
   }
 
-  async function handleGoogle() {
-    setLoading(true);
-    setError(null);
-    const params = new URLSearchParams({ next: redirectTo });
-    if (organization?.slug) params.set("org", organization.slug);
-    window.location.assign(`/api/auth/google?${params.toString()}`);
-  }
+  // Google OAuth temporarily disabled — use email/password or workspace password.
+  // async function handleGoogle() {
+  //   setLoading(true);
+  //   setError(null);
+  //   const params = new URLSearchParams({ next: redirectTo });
+  //   if (organization?.slug) params.set("org", organization.slug);
+  //   window.location.assign(`/api/auth/google?${params.toString()}`);
+  // }
 
   async function handleCredentials(event: React.FormEvent) {
     event.preventDefault();
@@ -185,8 +186,10 @@ export default function LoginForm({
               </button>
             </form>
 
+            {/* Google OAuth temporarily disabled
             <Divider />
             <GoogleButton loading={loading} onClick={handleGoogle} />
+            */}
           </Reveal>
         ) : (
           <Reveal delayMs={40}>
@@ -285,8 +288,10 @@ export default function LoginForm({
               </button>
             </form>
 
+            {/* Google OAuth temporarily disabled
             <Divider />
             <GoogleButton loading={loading} onClick={handleGoogle} />
+            */}
           </Reveal>
         )}
 
@@ -300,6 +305,7 @@ export default function LoginForm({
   );
 }
 
+/* Google OAuth temporarily disabled — restore Divider + GoogleButton when re-enabled.
 function Divider() {
   return (
     <div className="my-4 flex items-center gap-2.5">
@@ -330,6 +336,7 @@ function GoogleButton({
     </button>
   );
 }
+*/
 
 function AuthNotice({
   tone,
@@ -374,6 +381,9 @@ function buildCallbackUrl(origin: string, next: string, org?: string) {
 }
 
 function callbackErrorMessage(error: string) {
+  if (error === "google_disabled") {
+    return "Google sign-in is temporarily disabled. Use email or workspace password.";
+  }
   if (error === "wrong_org") {
     return "This account does not have access to the selected organization.";
   }

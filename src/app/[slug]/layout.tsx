@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { DashboardAccessForm } from "@/components/dashboard-access-form";
 import { OrgAccessDenied } from "@/components/org-access-denied";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { resolveOrgAccess } from "@/lib/org-access";
@@ -15,6 +16,14 @@ export default async function OrgLayout({
   const access = await resolveOrgAccess(slug);
 
   if (access.status === "reserved" || access.status === "unknown") notFound();
+  if (access.status === "password_required") {
+    return (
+      <div className="min-h-screen bg-black text-[#fbfbfb]">
+        <AppHeader />
+        <DashboardAccessForm orgSlug={access.slug} orgName={access.orgName} />
+      </div>
+    );
+  }
   if (access.status === "unauthenticated") {
     redirect(orgLoginPath(slug, orgHomePath(slug)));
   }
@@ -45,15 +54,16 @@ export default async function OrgLayout({
 
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
-      <AppHeader
-        authenticated
-        orgName={access.org.name}
-        orgSlug={access.org.slug}
-        userName={access.profile.full_name}
-        userEmail={access.user.email}
-        memberships={access.memberships}
-        isSuperAdmin={access.isSuperAdmin}
-      />
+        <AppHeader
+          authenticated
+          orgName={access.org.name}
+          orgSlug={access.org.slug}
+          userName={access.profile.full_name}
+          userEmail={access.user.email}
+          memberships={access.memberships}
+          isSuperAdmin={access.isSuperAdmin}
+          isGuest={access.isGuest}
+        />
       <main className="min-h-[calc(100vh-3.5rem)] px-4 py-6 sm:px-6">{children}</main>
     </div>
   );

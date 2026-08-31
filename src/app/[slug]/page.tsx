@@ -21,11 +21,13 @@ export default async function OrganizationHome({
   if (!requireOrgPageAccess(access)) return null;
 
   const isPublic = isPublicOrgSlug(slug);
-  const canManageProof = await canManageProofConfigForOrg(
-    access.user.id,
-    access.org.id,
-    access.user.email,
-  );
+  const canManageProof = access.isGuest
+    ? false
+    : await canManageProofConfigForOrg(
+        access.user.id,
+        access.org.id,
+        access.user.email,
+      );
   const proofAdminSettings = canManageProof
     ? await getProofAdminSettings(access.org.id)
     : undefined;
@@ -52,10 +54,9 @@ export default async function OrganizationHome({
 
   if (!rankings) notFound();
 
-  const canAddGroup = canCreateWhatsAppGroup(
-    access.profile.role,
-    access.isSuperAdmin,
-  );
+  const canAddGroup = access.isGuest
+    ? false
+    : canCreateWhatsAppGroup(access.profile.role, access.isSuperAdmin);
 
   return (
     <div className="mx-auto max-w-5xl">

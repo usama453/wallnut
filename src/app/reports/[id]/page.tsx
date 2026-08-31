@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { fmtDate } from "@/components/ui";
 import { AppHeader } from "@/components/wallnut/app-header";
+import { ReportDashboardLink } from "@/components/report-dashboard-link";
 import { ReportFindings } from "@/components/report-findings";
 import { ReportPreview } from "@/components/report-preview";
 import { ReportTranscription } from "@/components/report-transcription";
@@ -15,10 +16,18 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const admin = await createAdminClient();
 
-  const select = "id, name, kind, status, current_version, slug";
+  const select = "id, name, kind, status, current_version, slug, org_id";
   const bySlug = await admin.from("assets").select(select).eq("slug", id).maybeSingle();
   const asset = bySlug.data ?? (await admin.from("assets").select(select).eq("id", id).maybeSingle()).data;
   if (!asset) notFound();
+
+  const { data: org } = asset.org_id
+    ? await admin
+        .from("organizations")
+        .select("name, slug")
+        .eq("id", asset.org_id)
+        .maybeSingle()
+    : { data: null };
 
   const { data: version } = await admin
     .from("asset_versions")
@@ -85,6 +94,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         </div>
 
         {transcription ? <ReportTranscription text={transcription} /> : null}
+
+        {org?.slug && org?.name ? (
+          <ReportDashboardLink orgName={org.name} orgSlug={org.slug} />
+        ) : null}
 
         {proof?.summary ? (
           <div className="mt-8">

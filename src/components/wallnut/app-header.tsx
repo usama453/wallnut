@@ -21,6 +21,7 @@ export function AppHeader({
   userEmail,
   memberships = [],
   isSuperAdmin = false,
+  isGuest = false,
 }: {
   authenticated?: boolean;
   orgName?: string | null;
@@ -29,6 +30,7 @@ export function AppHeader({
   userEmail?: string | null;
   memberships?: Array<{ name: string; slug: string; role?: string }>;
   isSuperAdmin?: boolean;
+  isGuest?: boolean;
 }) {
   const homeHref = orgSlug ? orgHomePath(orgSlug) : "/";
   const navItems = [
@@ -40,7 +42,10 @@ export function AppHeader({
     { href: "/usage", label: "Usage" },
     { href: "/brand", label: "Brand profile" },
     { href: "/settings", label: "Settings" },
-  ].filter((item) => isSuperAdmin || !SUPER_ADMIN_NAV.has(item.label));
+  ].filter((item) => {
+    if (isGuest) return item.label === "Overview" || item.label === "Rankings";
+    return isSuperAdmin || !SUPER_ADMIN_NAV.has(item.label);
+  });
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -67,6 +72,14 @@ export function AppHeader({
 
   async function logOut() {
     setLoggingOut(true);
+    if (isGuest && orgSlug) {
+      await fetch(`/api/org/dashboard-access?slug=${encodeURIComponent(orgSlug)}`, {
+        method: "DELETE",
+      });
+      router.replace("/");
+      router.refresh();
+      return;
+    }
     await createClient().auth.signOut();
     router.replace("/");
     router.refresh();
@@ -86,8 +99,10 @@ export function AppHeader({
         <span className="text-[12px] text-[#6c6c6c]">Public</span>
       ) : (
         <div className="flex items-center gap-2.5">
-          <WhatsAppStatusWidget canManage={isSuperAdmin} />
-          {orgSlug && !isPublicOrgSlug(orgSlug) ? <TeamAccess orgSlug={orgSlug} /> : null}
+          <WhatsAppStatusWidget canManage={isSuperAdmin && !isGuest} />
+          {orgSlug && !isPublicOrgSlug(orgSlug) && !isGuest ? (
+            <TeamAccess orgSlug={orgSlug} />
+          ) : null}
           <div ref={menuRef} className="relative">
           <button
             type="button"
@@ -153,7 +168,7 @@ export function AppHeader({
                   className="flex w-full items-center gap-2 rounded-[7px] px-3 py-2 text-left text-[12px] text-[#919191] transition hover:bg-[#0c0c0c] hover:text-white disabled:cursor-progress disabled:opacity-50"
                 >
                   {loggingOut ? <Spinner /> : null}
-                  {loggingOut ? "Logging out…" : "Log out"}
+                  {loggingOut ? "Logging out…" : isGuest ? "Exit workspace" : "Log out"}
                 </button>
               </div>
             </div>
