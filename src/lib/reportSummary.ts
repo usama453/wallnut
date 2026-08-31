@@ -470,22 +470,22 @@ function formatHumanWhatsAppReply(
   issues: SummaryIssue[],
   context?: WhatsAppReplyContext,
 ): string {
+  const typoLines = getTypoCorrections(issues);
+  if (typoLines.length) {
+    const tip = pickTopTip(issues);
+    const typoPart = formatTypoSummary(typoLines);
+    if (!tip) return clampHumanReply(typoPart);
+    return clampHumanReply(`${typoPart} ${tip}`);
+  }
+
   const generated = context?.humanReply?.trim() || context?.summary?.trim();
   if (generated) return clampHumanReply(generated);
 
-  const typoLines = getTypoCorrections(issues);
   const tip = pickTopTip(issues);
-
-  if (!typoLines.length) {
-    if (tip) return clampHumanReply(tip);
-    if (!issues.length) return "No typos or copy errors found.";
-    const summary = summarizeIssues(issues.filter(isCopyErrorIssue));
-    return clampHumanReply(summary ? `${summary}.` : "Worth a quick look on the copy.");
-  }
-
-  const typoPart = formatTypoSummary(typoLines);
-  if (!tip) return clampHumanReply(typoPart);
-  return clampHumanReply(`${typoPart} ${tip}`);
+  if (tip) return clampHumanReply(tip);
+  if (!issues.length) return "No typos or copy errors found.";
+  const summary = summarizeIssues(issues.filter(isCopyErrorIssue));
+  return clampHumanReply(summary ? `${summary}.` : "Worth a quick look on the copy.");
 }
 
 function formatTypoSummary(typoLines: CorrectionLine[]): string {

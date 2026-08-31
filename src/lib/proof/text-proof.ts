@@ -118,7 +118,21 @@ function appendSpellcheckIssues(
   });
 
   for (const f of findings) {
-    if (f.words?.length) continue;
+    if (f.words?.length) {
+      for (const word of f.words) {
+        if (!word || alreadyFlagged.has(word.toLowerCase())) continue;
+        report.issues.push(
+          spellcheckIssue({
+            word,
+            count: 1,
+            context: f.context,
+            severity: f.severity,
+            suggestions: [],
+          }),
+        );
+      }
+      continue;
+    }
     const lower = f.word.toLowerCase();
     if (alreadyFlagged.has(lower)) continue;
 
