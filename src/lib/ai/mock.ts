@@ -180,7 +180,10 @@ export class MockProvider implements AiProvider {
     return "Let me know if you want something proofed — send an image or PDF and I'll score it.";
   }
 
-  async generateHumanReply(report: RawReport): Promise<string> {
+  async generateHumanReply(
+    report: RawReport,
+    _options?: import("./types").HumanReplyOptions,
+  ): Promise<string> {
     await delay(200);
     const typoIssues = report.issues.filter((issue) => /^Misspelled "/i.test(issue.title));
     if (typoIssues.length) {

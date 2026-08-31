@@ -33,6 +33,26 @@ export function resolveTextToProof(ctx: WhatsAppMentionContext): string | null {
   return null;
 }
 
+/** Text to proof in WhatsApp — explicit proof-read in groups; pasted copy in DMs. */
+export function resolveWhatsAppTextToProof(
+  ctx: WhatsAppMentionContext,
+  groupId?: string,
+): string | null {
+  const explicit = resolveTextToProof(ctx);
+  if (explicit) return explicit;
+  if (groupId) return null;
+  if (ctx.quotedMessage?.trim()) return null;
+
+  const user = ctx.userMessage.trim();
+  if (user.length < 20) return null;
+  if (user.endsWith("?")) return null;
+  if (/^(how|what|why|when|where|who|can you|could you|is there|are there|do you|does|hi|hello|hey)\b/i.test(user)) {
+    return null;
+  }
+
+  return user;
+}
+
 export function buildMentionChatInput(
   ctx: WhatsAppMentionContext,
   groupId?: string,
@@ -58,7 +78,9 @@ export function buildMentionChatInput(
   }
 
   parts.push(
-    "Answer their actual question using the quoted context when relevant. If they want proofing, be specific — do not tell them to send a file when the text is already above.",
+    groupId
+      ? "Answer their actual question using the quoted context when relevant. If they want proofing, be specific — do not tell them to send a file when the text is already above."
+      : "This is a direct WhatsApp DM. Your reply IS the complete answer — list any copy corrections inline. Never mention a proof report on the way, a dashboard link, or any follow-up message.",
   );
 
   return parts.join("\n\n");

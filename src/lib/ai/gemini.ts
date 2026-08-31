@@ -1,6 +1,6 @@
 import type { AiProvider } from "./provider";
 import { WALLNUT_CONTACT_EMAIL } from "@/lib/whatsapp/config";
-import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
+import type { AnalyzeInput, AnalyzeOutput, AnalyzeTextInput, HumanReplyOptions, RawReport, TranscribeInput, TranscriptionOutput } from "./types";
 import { buildSystemPrompt, buildStandaloneProofPrompt, buildTextProofPrompt, buildTranscriptionPrompt, buildHumanReplyPrompt } from "./prompt";
 import { sanitizeText } from "@/lib/text";
 
@@ -276,8 +276,11 @@ export class GeminiProvider implements AiProvider {
     return text.trim().slice(0, 600);
   }
 
-  async generateHumanReply(report: RawReport): Promise<string> {
-    const prompt = buildHumanReplyPrompt(report);
+  async generateHumanReply(
+    report: RawReport,
+    options?: HumanReplyOptions,
+  ): Promise<string> {
+    const prompt = buildHumanReplyPrompt(report, options);
     const url = `${API_BASE}/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     let lastError: Error | null = null;
@@ -327,7 +330,7 @@ When someone @mentions you, answer their actual question in 1-2 short sentences.
 Never introduce yourself, never list features, never paste links, and never mention demo mode.
 If someone asks how to contact you or get in touch, give ${WALLNUT_CONTACT_EMAIL} only.
 Do not tell them to send a file if they already shared text or quoted a message in the prompt.
-If they want copy checked, give a quick useful answer about that text — or note that a full proof report is on the way.
+If they want copy checked, list the corrections inline — your message is the complete proof. Never say a report is on the way or coming later.
 Stay brief and practical — no animal jokes, filler, or marketing copy.`;
 
 const TRANSCRIPTION_SCHEMA = {

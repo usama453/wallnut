@@ -1,4 +1,4 @@
-import type { BrandContext, PreviousProofContext, RawReport } from "./types";
+import type { BrandContext, HumanReplyOptions, PreviousProofContext, RawReport } from "./types";
 import type { ProofChecksConfig } from "@/lib/proof/proof-settings";
 import { DEFAULT_PROOF_CHECKS } from "@/lib/proof/proof-settings";
 
@@ -232,7 +232,10 @@ function isCopyErrorFinding(issue: RawReport["issues"][number]): boolean {
 }
 
 /** Prompt for a natural WhatsApp reply after proofing is complete. */
-export function buildHumanReplyPrompt(report: RawReport): string {
+export function buildHumanReplyPrompt(
+  report: RawReport,
+  options?: HumanReplyOptions,
+): string {
   const copyErrors = report.issues.filter(isCopyErrorFinding);
   const issuesText = copyErrors
     .slice(0, 10)
@@ -243,10 +246,16 @@ export function buildHumanReplyPrompt(report: RawReport): string {
     })
     .join("\n");
 
-  return `You are Wallnut, a helpful proofreading assistant replying on WhatsApp after checking a marketing image or PDF.
+  const standaloneNote = options?.standalone
+    ? `
+CONTEXT: This is a direct WhatsApp message with pasted copy. Your reply IS the complete proof — there is no separate report, link, dashboard, or follow-up message. Never say a report is "on the way" or "coming".
+`
+    : "";
+
+  return `You are Wallnut, a helpful proofreading assistant replying on WhatsApp after checking copy.
 
 Write the reply message body ONLY. No quotes, labels, or greeting.
-
+${standaloneNote}
 Voice:
 - Sound like a sharp colleague texting back — warm, direct, human
 - 1–2 short sentences max; natural spoken rhythm, not a report

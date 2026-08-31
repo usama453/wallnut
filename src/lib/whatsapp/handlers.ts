@@ -5,7 +5,7 @@ import { stripWhatsAppMentions, wallnutChatReply } from "@/lib/ai/chat";
 import { proofPlainText } from "@/lib/proof/text-proof";
 import {
   buildMentionChatInput,
-  resolveTextToProof,
+  resolveWhatsAppTextToProof,
   wantsTextProof,
   type WhatsAppMentionContext,
 } from "./mention-context";
@@ -212,40 +212,45 @@ async function dispatchMessage(
       quotedHasMedia: message.quoted?.hasMedia,
     };
 
-    if (wantsTextProof(mentionCtx.userMessage) || wantsTextProof(body)) {
-      if (mentionCtx.quotedHasMedia && !mentionCtx.quotedMessage?.trim()) {
-        await sendTextWaha(
-          from,
-          "I can see you're replying to a file — @mention me on the image or PDF directly and I'll proof it.",
-          message.id,
-        );
-        return { handled: true, action: "text" };
-      }
+    const wantsProof =
+      wantsTextProof(mentionCtx.userMessage) || wantsTextProof(body);
 
-      const textToProof = resolveTextToProof(mentionCtx);
-      if (textToProof) {
-        const admin = await createAdminClient();
-        const sender = message.attributedSender ?? message.sender ?? from;
-        const resolvedOrg = orgId ?? (await resolveOrgId(sender, admin));
-        const report = await proofPlainText(textToProof, resolvedOrg);
-        const responseStyle = resolvedOrg
-          ? await getProofResponseStyle(resolvedOrg)
-          : DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle;
-        const reply = formatWhatsAppReply(report.issues, responseStyle, {
-          humanReply: report.humanReply,
-          summary: report.summary,
-        });
-        await sendTextWaha(from, reply, message.id);
-        logUsage({
-          direction: "outbound",
-          msg_type: "text",
-          to_phone: from,
-          group_id: groupId,
-          status: "text-proof",
-        });
-        return { handled: true, action: "text" };
-      }
+    if (wantsProof && mentionCtx.quotedHasMedia && !mentionCtx.quotedMessage?.trim()) {
+      await sendTextWaha(
+        from,
+        "I can see you're replying to a file — @mention me on the image or PDF directly and I'll proof it.",
+        message.id,
+      );
+      return { handled: true, action: "text" };
+    }
 
+    const textToProof = resolveWhatsAppTextToProof(mentionCtx, groupId);
+    if (textToProof) {
+      const admin = await createAdminClient();
+      const sender = message.attributedSender ?? message.sender ?? from;
+      const resolvedOrg = orgId ?? (await resolveOrgId(sender, admin));
+      const report = await proofPlainText(textToProof, resolvedOrg, {
+        standalone: !groupId,
+      });
+      const responseStyle = resolvedOrg
+        ? await getProofResponseStyle(resolvedOrg)
+        : DEFAULT_PROOF_ADMIN_SETTINGS.responseStyle;
+      const reply = formatWhatsAppReply(report.issues, responseStyle, {
+        humanReply: report.humanReply,
+        summary: report.summary,
+      });
+      await sendTextWaha(from, reply, message.id);
+      logUsage({
+        direction: "outbound",
+        msg_type: "text",
+        to_phone: from,
+        group_id: groupId,
+        status: "text-proof",
+      });
+      return { handled: true, action: "text" };
+    }
+
+    if (wantsProof) {
       await sendTextWaha(
         from,
         "Reply to the message you want proofed, then @mention me with “proof read”. I read the quoted text — not messages above it in the chat.",

@@ -24,6 +24,12 @@ export interface RawReport {
   humanReply?: string;
 }
 
+/** Options for short WhatsApp-style closing lines after proofing. */
+export interface HumanReplyOptions {
+  /** DM text proof — this chat message is the entire reply (no report link follows). */
+  standalone?: boolean;
+}
+
 export interface BrandContext {
   company_name?: string | null;
   colors?: { name: string; hex: string }[];

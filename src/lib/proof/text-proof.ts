@@ -12,6 +12,7 @@ import { sanitizeText } from "@/lib/text";
 export async function proofPlainText(
   text: string,
   orgId?: string | null,
+  options?: { standalone?: boolean },
 ): Promise<RawReport> {
   const source = sanitizeText(text.trim());
   if (!source) {
@@ -47,7 +48,9 @@ export async function proofPlainText(
   finalizeReport(report);
 
   try {
-    report.humanReply = await provider.generateHumanReply(report);
+    report.humanReply = await provider.generateHumanReply(report, {
+      standalone: options?.standalone,
+    });
   } catch (err) {
     console.error(
       `[text-proof] human reply failed: ${err instanceof Error ? err.message : err}`,

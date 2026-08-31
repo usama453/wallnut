@@ -2,6 +2,7 @@ import type {
   AnalyzeInput,
   AnalyzeOutput,
   AnalyzeTextInput,
+  HumanReplyOptions,
   RawReport,
   TranscribeInput,
   TranscriptionOutput,
@@ -23,7 +24,7 @@ export interface AiProvider {
   /** Casual chat reply in the bot's persona (short, characterful). */
   chat(message: string): Promise<string>;
   /** Short WhatsApp reply after proofing, based on the finalized report. */
-  generateHumanReply(report: RawReport): Promise<string>;
+  generateHumanReply(report: RawReport, options?: HumanReplyOptions): Promise<string>;
 }
 
 export type AiProviderId = "gemini" | "mock";
