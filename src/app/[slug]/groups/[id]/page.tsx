@@ -17,10 +17,10 @@ import {
   isWhatsAppDirectChat,
 } from "@/lib/groups-presentation";
 import { phoneDigits } from "@/lib/whatsapp/jid";
+import { getOrgScopedClient } from "@/lib/org-data-client";
 import { requireOrgPageAccess, resolveOrgAccess } from "@/lib/org-access";
 import { isPublicOrgSlug, orgHomePath } from "@/lib/org-paths";
 import { canCreateWhatsAppGroup } from "@/lib/roles";
-import { createClient } from "@/lib/supabase/server";
 import type { Group, GroupPlatform } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function OrgGroupReportsPage({
   const access = await resolveOrgAccess(slug);
   if (!requireOrgPageAccess(access)) return null;
 
-  const supabase = await createClient();
+  const supabase = await getOrgScopedClient(access.isGuest);
   const { data: group } = await supabase
     .from("groups")
     .select("id, name, platform, external_id, created_at")

@@ -9,7 +9,7 @@ import { WALLNUT_PANEL } from "@/components/wallnut/panel";
 import { getOrgBySlug } from "@/lib/org-membership";
 import { ORG_COOKIE, PUBLIC_ORG_SLUG } from "@/lib/org-paths";
 import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
-import { getDashboardPasswordConfigured } from "@/lib/dashboard-password-store";
+import { getDashboardPassword, getDashboardPasswordConfigured } from "@/lib/dashboard-password-store";
 import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
 import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
 import { requireSuperAdmin } from "@/lib/super-admin-access";
@@ -28,6 +28,7 @@ export default async function SettingsPage() {
   const dashboardPasswordConfigured = org
     ? await getDashboardPasswordConfigured(org.id)
     : false;
+  const dashboardPassword = org ? await getDashboardPassword(org.id) : "";
   const aiProvider = process.env.AI_PROVIDER ?? "gemini";
   const model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
   const wahaConfigured = Boolean(
@@ -63,6 +64,7 @@ export default async function SettingsPage() {
         <DashboardPasswordPanel
           orgSlug={orgSlug}
           initialConfigured={dashboardPasswordConfigured}
+          initialPassword={dashboardPassword}
         />
       </Reveal>
 

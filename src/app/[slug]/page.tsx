@@ -32,8 +32,8 @@ export default async function OrganizationHome({
     ? await getProofAdminSettings(access.org.id)
     : undefined;
   const [data, rankings] = await Promise.all([
-    getDashboardData(access.org.id),
-    isPublic ? Promise.resolve(null) : getStats(access.org.id),
+    getDashboardData(access.org.id, access.isGuest),
+    isPublic ? Promise.resolve(null) : getStats(access.org.id, access.isGuest),
   ]);
   if (!data || data.orgSlug !== slug) notFound();
   if (!isPublic && !rankings) notFound();

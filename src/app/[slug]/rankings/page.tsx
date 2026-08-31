@@ -14,7 +14,7 @@ export default async function OrgRankingsPage({
   const access = await resolveOrgAccess(slug);
   if (!requireOrgPageAccess(access)) return null;
 
-  const stats = await getStats(access.org.id);
+  const stats = await getStats(access.org.id, access.isGuest);
   if (!stats) notFound();
 
   return (

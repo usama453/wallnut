@@ -1,21 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Spinner } from "@/components/wallnut/icons";
 import { WALLNUT_PANEL } from "@/components/wallnut/panel";
 
 export function DashboardPasswordPanel({
   orgSlug,
   initialConfigured,
+  initialPassword = "",
 }: {
   orgSlug: string;
   initialConfigured: boolean;
+  initialPassword?: string;
 }) {
   const [configured, setConfigured] = useState(initialConfigured);
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(initialPassword);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const response = await fetch(`/api/settings/dashboard-password?org=${encodeURIComponent(orgSlug)}`, {
+        cache: "no-store",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || cancelled) return;
+      setConfigured(Boolean(body?.configured));
+      if (typeof body?.password === "string") setPassword(body.password);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgSlug]);
 
   async function savePassword(event: React.FormEvent) {
     event.preventDefault();
@@ -34,7 +52,7 @@ export function DashboardPasswordPanel({
         throw new Error(body?.error ?? "Failed to save password");
       }
       setConfigured(Boolean(body?.configured));
-      setPassword("");
+      if (typeof body?.password === "string") setPassword(body.password);
       setMessage(configured ? "Password updated." : "Password saved.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Failed to save password");
@@ -93,12 +111,12 @@ export function DashboardPasswordPanel({
 
         <form onSubmit={savePassword}>
           <label htmlFor="dashboard-password" className="text-[11px] text-[#919191]">
-            {configured ? "New password" : "Password"}
+            Password
           </label>
           <input
             id="dashboard-password"
-            type="password"
-            autoComplete="new-password"
+            type="text"
+            autoComplete="off"
             minLength={4}
             required
             value={password}
@@ -108,8 +126,8 @@ export function DashboardPasswordPanel({
               setError(null);
               setMessage(null);
             }}
-            placeholder={configured ? "Enter a new password" : "Set a guest password"}
-            className="mt-2 w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#1a1a1a] focus:outline-none disabled:opacity-60"
+            placeholder="Set a guest password"
+            className="mt-2 w-full rounded-[8px] border border-[#111111] bg-[#060606] px-3.5 py-3 font-mono text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#1a1a1a] focus:outline-none disabled:opacity-60"
           />
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -151,8 +169,9 @@ export function DashboardPasswordPanel({
           <p className="mt-3 text-[11px] text-[#a7d7bd]">{message}</p>
         ) : (
           <p className="mt-3 text-[11px] leading-relaxed text-[#555]">
-            Report viewers use the &ldquo;Open workspace&rdquo; button, then enter this password
-            to see Overview and Rankings.
+            This password is visible here so you can share it with clients. Report viewers use
+            the &ldquo;Open workspace&rdquo; button, then enter it to see Overview and
+            Rankings.
           </p>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { Group } from "@/types";
 import type { GroupCard, ReportRow } from "./groups-presentation";
 import {
@@ -36,18 +36,23 @@ export {
  * Fetch the org's groups together with each group's latest proofreading
  * reports (thumbnails, issue counts, timestamps) plus org stats.
  */
-export async function getDashboardData(orgIdOverride?: string) {
-  const supabase = await createClient();
+export async function getDashboardData(orgIdOverride?: string, isGuest = false) {
+  const supabaseUser = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  } = await supabaseUser.auth.getUser();
+  if (!user && !isGuest) return null;
+  if (isGuest && !orgIdOverride) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id, organizations(name, slug)")
-    .eq("id", user.id)
-    .maybeSingle();
+  const supabase = isGuest ? await createAdminClient() : supabaseUser;
+
+  const { data: profile } = user
+    ? await supabaseUser
+        .from("profiles")
+        .select("org_id, organizations(name, slug)")
+        .eq("id", user.id)
+        .maybeSingle()
+    : { data: null };
 
   const orgId = orgIdOverride ?? (profile?.org_id as string | undefined);
   if (orgId) await ensurePlaceholderWhatsAppGroups(orgId);

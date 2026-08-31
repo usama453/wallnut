@@ -101,14 +101,13 @@ export async function getPublicOrganization(slug: string) {
 }
 
 export async function getOrganizationForLogin(slug: string) {
-  const published = await getPublicOrganization(slug);
-  if (published) return published;
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.SUPABASE_SERVICE_ROLE_KEY
   ) {
-    return null;
+    return getPublicOrganization(slug);
   }
+
   const admin = await createAdminClient();
   const { data } = await admin
     .from("organizations")

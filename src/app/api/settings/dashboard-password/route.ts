@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   clearDashboardPassword,
+  getDashboardPassword,
   getDashboardPasswordConfigured,
   setDashboardPassword,
 } from "@/lib/dashboard-password-store";
@@ -24,7 +25,8 @@ export async function GET(req: NextRequest) {
   if (auth.error) return auth.error;
 
   const configured = await getDashboardPasswordConfigured(auth.orgId);
-  return NextResponse.json({ configured });
+  const password = configured ? await getDashboardPassword(auth.orgId) : "";
+  return NextResponse.json({ configured, password });
 }
 
 export async function POST(request: NextRequest) {
@@ -45,7 +47,10 @@ export async function POST(request: NextRequest) {
     }
 
     await setDashboardPassword(auth.orgId, body.password);
-    return NextResponse.json({ configured: true });
+    return NextResponse.json({
+      configured: true,
+      password: body.password.trim(),
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to save password" },

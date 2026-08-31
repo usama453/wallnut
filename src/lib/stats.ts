@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { resolveConnection } from "@/lib/whatsapp/connection";
 import { fetchWahaContactName } from "@/lib/whatsapp/client";
 import {
@@ -45,18 +45,23 @@ export interface PersonStats {
  * pile updates as soon as a group is synced, even before they upload.
  * Assets not tied to a phone are grouped under "Dashboard".
  */
-export async function getStats(orgIdOverride?: string | null) {
-  const supabase = await createClient();
+export async function getStats(orgIdOverride?: string | null, isGuest = false) {
+  const supabaseUser = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  } = await supabaseUser.auth.getUser();
+  if (!user && !isGuest) return null;
+  if (isGuest && !orgIdOverride) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id, organizations(name, slug)")
-    .eq("id", user.id)
-    .maybeSingle();
+  const supabase = isGuest ? await createAdminClient() : supabaseUser;
+
+  const { data: profile } = user
+    ? await supabaseUser
+        .from("profiles")
+        .select("org_id, organizations(name, slug)")
+        .eq("id", user.id)
+        .maybeSingle()
+    : { data: null };
   const organization = Array.isArray(profile?.organizations)
     ? profile.organizations[0] ?? null
     : profile?.organizations ?? null;

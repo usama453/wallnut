@@ -10,6 +10,16 @@ export async function getDashboardPasswordConfigured(orgId: string) {
   return orgHasDashboardPassword(orgId);
 }
 
+export async function getDashboardPassword(orgId: string) {
+  const admin = await createAdminClient();
+  const { data } = await admin
+    .from("organizations")
+    .select("dashboard_password")
+    .eq("id", orgId)
+    .maybeSingle();
+  return data?.dashboard_password ?? "";
+}
+
 export async function setDashboardPassword(orgId: string, password: string) {
   const trimmed = password.trim();
   if (trimmed.length < 4) {
@@ -19,7 +29,10 @@ export async function setDashboardPassword(orgId: string, password: string) {
   const admin = await createAdminClient();
   const { error } = await admin
     .from("organizations")
-    .update({ dashboard_password_hash: hashDashboardPassword(trimmed) })
+    .update({
+      dashboard_password: trimmed,
+      dashboard_password_hash: hashDashboardPassword(trimmed),
+    })
     .eq("id", orgId);
 
   if (error) throw new Error(error.message);
@@ -29,7 +42,10 @@ export async function clearDashboardPassword(orgId: string) {
   const admin = await createAdminClient();
   const { error } = await admin
     .from("organizations")
-    .update({ dashboard_password_hash: null })
+    .update({
+      dashboard_password: null,
+      dashboard_password_hash: null,
+    })
     .eq("id", orgId);
 
   if (error) throw new Error(error.message);

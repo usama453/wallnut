@@ -37,21 +37,33 @@ async function getOrgPasswordHash(orgId: string) {
   const admin = await createAdminClient();
   const { data } = await admin
     .from("organizations")
-    .select("dashboard_password_hash")
+    .select("dashboard_password_hash, dashboard_password")
     .eq("id", orgId)
     .maybeSingle();
-  return data?.dashboard_password_hash ?? null;
+  return data ?? null;
 }
 
 export async function orgHasDashboardPassword(orgId: string) {
-  const hash = await getOrgPasswordHash(orgId);
-  return Boolean(hash);
+  const row = await getOrgPasswordHash(orgId);
+  return Boolean(row?.dashboard_password_hash || row?.dashboard_password);
 }
 
 export async function verifyDashboardPassword(orgId: string, password: string) {
-  const hash = await getOrgPasswordHash(orgId);
-  if (!hash) return false;
-  return verifyPasswordHash(password, hash);
+  const row = await getOrgPasswordHash(orgId);
+  if (!row) return false;
+
+  if (row.dashboard_password) {
+    const a = Buffer.from(password);
+    const b = Buffer.from(row.dashboard_password);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  }
+
+  if (row.dashboard_password_hash) {
+    return verifyPasswordHash(password, row.dashboard_password_hash);
+  }
+
+  return false;
 }
 
 function cookieName(orgId: string) {
