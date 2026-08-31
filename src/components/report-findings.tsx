@@ -22,11 +22,13 @@ export function ReportFindings({
   reportedAt = null,
   activeIndex = null,
   onSelectIssue,
+  className = "",
 }: {
   issues: ProofIssue[];
   reportedAt?: string | null;
   activeIndex?: number | null;
   onSelectIssue?: (index: number | null) => void;
+  className?: string;
 }) {
   const corrections = getCorrectionLines(issues as SummaryIssue[]);
   const typoIds = new Set(
@@ -39,7 +41,10 @@ export function ReportFindings({
   }
 
   return (
-    <article className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
+    <article
+      className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${className}`}
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto">
       {corrections.length > 0 ? (
         <section>
           <FindingsSectionHeader
@@ -100,6 +105,7 @@ export function ReportFindings({
           </div>
         </section>
       ) : null}
+      </div>
     </article>
   );
 }

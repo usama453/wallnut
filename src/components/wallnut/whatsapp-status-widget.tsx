@@ -3,10 +3,17 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-export function WhatsAppStatusWidget({ canManage = false }: { canManage?: boolean }) {
-  const [status, setStatus] = useState<string | null>(null);
+export function WhatsAppStatusWidget({
+  canManage = false,
+  initialStatus,
+}: {
+  canManage?: boolean;
+  initialStatus?: string;
+}) {
+  const [status, setStatus] = useState<string | null>(initialStatus ?? null);
 
   const refresh = useCallback(async () => {
+    if (!canManage) return;
     try {
       const response = await fetch("/api/whatsapp/session", { cache: "no-store" });
       const data = await response.json();
@@ -14,14 +21,18 @@ export function WhatsAppStatusWidget({ canManage = false }: { canManage?: boolea
     } catch {
       setStatus(null);
     }
-  }, []);
+  }, [canManage]);
 
   useEffect(() => {
+    if (!canManage) {
+      setStatus(initialStatus ?? null);
+      return;
+    }
     void refresh();
     const delay = status === "WORKING" ? 30_000 : 10_000;
     const timer = window.setInterval(() => void refresh(), delay);
     return () => window.clearInterval(timer);
-  }, [refresh, status]);
+  }, [canManage, initialStatus, refresh, status]);
 
   const online = status === "WORKING";
   const label = online ? "Online" : "Offline";

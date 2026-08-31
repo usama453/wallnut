@@ -22,6 +22,7 @@ export function ReportPreview({
   issues,
   activeIndex = null,
   onSelectIssue,
+  className = "",
 }: {
   title: string;
   kind: "image" | "pdf";
@@ -30,12 +31,15 @@ export function ReportPreview({
   issues: ProofIssue[];
   activeIndex?: number | null;
   onSelectIssue?: (index: number | null) => void;
+  className?: string;
 }) {
   const interactive = typeof onSelectIssue === "function";
 
   return (
-    <section className="overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)]">
-      <div className="relative bg-[#080808]">
+    <section
+      className={`flex min-h-0 flex-col overflow-hidden rounded-[8px] border border-[#111111] bg-[#060606] shadow-[0_24px_36px_rgba(0,0,0,0.48)] ${className}`}
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[#080808]">
         {previewMeta?.pages?.length ? (
           <div className="space-y-1">
             {previewMeta.pages.map((page, pageIndex) => {
@@ -107,7 +111,7 @@ export function ReportPreview({
             })}
           </div>
         ) : kind === "pdf" ? (
-          <iframe src={`${url}#toolbar=0`} title={title} className="block h-[min(70vh,640px)] w-full" />
+          <iframe src={`${url}#toolbar=0`} title={title} className="block h-full min-h-[280px] w-full" />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt={title} className="block w-full" />

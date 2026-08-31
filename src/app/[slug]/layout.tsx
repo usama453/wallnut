@@ -3,6 +3,7 @@ import { DashboardAccessForm } from "@/components/dashboard-access-form";
 import { OrgAccessDenied } from "@/components/org-access-denied";
 import { AppHeader } from "@/components/wallnut/app-header";
 import { resolveOrgAccess } from "@/lib/org-access";
+import { getWahaSessionState } from "@/lib/whatsapp/session";
 
 export default async function OrgLayout({
   children,
@@ -50,6 +51,10 @@ export default async function OrgLayout({
 
   if (access.status !== "ok") notFound();
 
+  const whatsappStatus = access.isGuest
+    ? (await getWahaSessionState(false)).status
+    : undefined;
+
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">
         <AppHeader
@@ -61,6 +66,7 @@ export default async function OrgLayout({
           memberships={access.memberships}
           isSuperAdmin={access.isSuperAdmin}
           isGuest={access.isGuest}
+          whatsappStatus={whatsappStatus}
         />
       <main className="min-h-[calc(100vh-3.5rem)] px-4 py-6 sm:px-6">{children}</main>
     </div>

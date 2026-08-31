@@ -22,6 +22,7 @@ export function AppHeader({
   memberships = [],
   isSuperAdmin = false,
   isGuest = false,
+  whatsappStatus,
 }: {
   authenticated?: boolean;
   orgName?: string | null;
@@ -31,6 +32,8 @@ export function AppHeader({
   memberships?: Array<{ name: string; slug: string; role?: string }>;
   isSuperAdmin?: boolean;
   isGuest?: boolean;
+  /** Server-rendered status for viewers who cannot call /api/whatsapp/session. */
+  whatsappStatus?: string;
 }) {
   const homeHref = orgSlug ? orgHomePath(orgSlug) : "/";
   const navItems = [
@@ -99,7 +102,10 @@ export function AppHeader({
         <span className="text-[12px] text-[#6c6c6c]">Public</span>
       ) : (
         <div className="flex items-center gap-2.5">
-          <WhatsAppStatusWidget canManage={isSuperAdmin && !isGuest} />
+          <WhatsAppStatusWidget
+            canManage={isSuperAdmin && !isGuest}
+            initialStatus={whatsappStatus}
+          />
           {orgSlug && !isPublicOrgSlug(orgSlug) && !isGuest ? (
             <TeamAccess orgSlug={orgSlug} />
           ) : null}
