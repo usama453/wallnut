@@ -99,9 +99,8 @@ export function Rankings({
             <Reveal delayMs={120}>
               <Leaderboard
                 title="Typos Rank"
-                rows={byTypos.slice(1)}
+                rows={byTypos}
                 value={(person) => `${person.typos} typo${person.typos === 1 ? "" : "s"}`}
-                startRank={2}
               />
             </Reveal>
             <Reveal delayMs={220}>

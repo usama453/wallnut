@@ -41,7 +41,9 @@ export interface PersonStats {
  *     → assets → asset_versions → proofs → proof_issues
  *
  * Uploads + typos are counted for every distinct phone that sent a design in
- * for proofing. Assets not tied to a phone are grouped under "Dashboard".
+ * for proofing. Linked WhatsApp group members are also listed so the team
+ * pile updates as soon as a group is synced, even before they upload.
+ * Assets not tied to a phone are grouped under "Dashboard".
  */
 export async function getStats(orgIdOverride?: string | null) {
   const supabase = await createClient();
@@ -152,7 +154,18 @@ export async function getStats(orgIdOverride?: string | null) {
     const key = personKey(contact.phone, aliasMap);
     if (key === "__dashboard__") continue;
     const existing = byPerson.get(key);
-    if (!existing) continue;
+    if (!existing) {
+      byPerson.set(key, {
+        key,
+        phone: canonicalPersonPhone(contact.phone, aliasMap, contacts),
+        display: contact.display_name?.trim() || formatPhone(contact.phone, aliasMap),
+        avatarUrl: null,
+        uploads: 0,
+        typos: 0,
+        avgScore: null,
+      });
+      continue;
+    }
     if (contact.display_name && looksLikePhoneLabel(existing.display)) {
       existing.display = contact.display_name;
     }
@@ -166,7 +179,7 @@ export async function getStats(orgIdOverride?: string | null) {
     aliasMap,
     buildCanonicalNameIndex(contacts, aliasMap),
   );
-  const visible = people.filter((person) => person.phone && person.uploads > 0);
+  const visible = people.filter((person) => person.phone);
   const byName = (a: PersonStats, b: PersonStats) => a.display.localeCompare(b.display);
 
   const byUploads = [...visible].sort(

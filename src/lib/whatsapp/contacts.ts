@@ -402,10 +402,25 @@ export function buildCanonicalNameIndex(
     const digits = phoneDigits(contact.phone);
     if (!digits) continue;
     const canonical = aliasMap.get(digits) ?? digits;
-    names.set(canonical, name);
-    names.set(digits, name);
+    const current = names.get(canonical);
+    if (!current || preferContactName(name, current)) {
+      names.set(canonical, name);
+      names.set(digits, name);
+    } else if (!names.has(digits)) {
+      names.set(digits, current);
+    }
   }
   return names;
+}
+
+function preferContactName(next: string, current: string) {
+  const a = next.trim();
+  const b = current.trim();
+  if (!b) return true;
+  if (a.toLowerCase() === b.toLowerCase()) return a.length > b.length;
+  if (a.toLowerCase().startsWith(`${b.toLowerCase()} `)) return true;
+  if (b.toLowerCase().startsWith(`${a.toLowerCase()} `)) return false;
+  return a.length > b.length;
 }
 
 function isNonUserJid(jid: string) {
