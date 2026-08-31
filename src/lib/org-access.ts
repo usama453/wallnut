@@ -17,6 +17,45 @@ import {
 import { isReservedOrgSlug } from "@/lib/org-paths";
 import { userIsSuperAdmin } from "@/lib/roles";
 
+type OrgRecord = { id: string; name: string; slug: string };
+
+async function resolveGuestOrgAccess(
+  org: OrgRecord | null,
+  slug: string,
+): Promise<Extract<OrgAccess, { status: "ok" | "password_required" }> | null> {
+  if (org) {
+    if (await hasDashboardAccess(org.id)) {
+      return {
+        status: "ok",
+        slug: org.slug,
+        user: { id: GUEST_USER_ID },
+        org: { id: org.id, name: org.name, slug: org.slug },
+        profile: { full_name: "Guest", role: "viewer" },
+        isSuperAdmin: false,
+        isGuest: true,
+        memberships: [],
+      };
+    }
+    return { status: "password_required", slug: org.slug, orgName: org.name };
+  }
+
+  const published = await getPublicOrganization(slug);
+  if (!published) return null;
+  if (await hasDashboardAccess(published.id)) {
+    return {
+      status: "ok",
+      slug: published.slug,
+      user: { id: GUEST_USER_ID },
+      org: { id: published.id, name: published.name, slug: published.slug },
+      profile: { full_name: "Guest", role: "viewer" },
+      isSuperAdmin: false,
+      isGuest: true,
+      memberships: [],
+    };
+  }
+  return { status: "password_required", slug: published.slug, orgName: published.name };
+}
+
 export type OrgAccess =
   | { status: "reserved" }
   | { status: "unknown" }
@@ -55,42 +94,21 @@ export const resolveOrgAccess = cache(async function resolveOrgAccess(
   const org = await getOrgBySlug(slug);
 
   if (!user) {
-    if (org) {
-      if (await hasDashboardAccess(org.id)) {
-        return {
-          status: "ok",
-          slug: org.slug,
-          user: { id: GUEST_USER_ID },
-          org: { id: org.id, name: org.name, slug: org.slug },
-          profile: { full_name: "Guest", role: "viewer" },
-          isSuperAdmin: false,
-          isGuest: true,
-          memberships: [],
-        };
-      }
-      return { status: "password_required", slug: org.slug, orgName: org.name };
-    }
-    const published = await getPublicOrganization(slug);
-    if (!published) return { status: "unknown" };
-    if (await hasDashboardAccess(published.id)) {
-      return {
-        status: "ok",
-        slug: published.slug,
-        user: { id: GUEST_USER_ID },
-        org: { id: published.id, name: published.name, slug: published.slug },
-        profile: { full_name: "Guest", role: "viewer" },
-        isSuperAdmin: false,
-        isGuest: true,
-        memberships: [],
-      };
-    }
-    return { status: "password_required", slug: published.slug, orgName: published.name };
+    const guest = await resolveGuestOrgAccess(org, slug);
+    if (!guest) return { status: "unknown" };
+    return guest;
+  }
+
+  const isSuperAdmin = await userIsSuperAdmin(user.id, user.email);
+  if (!isSuperAdmin) {
+    const guest = await resolveGuestOrgAccess(org, slug);
+    if (!guest) return { status: "unknown" };
+    return guest;
   }
 
   if (!org) return { status: "unknown" };
 
   const memberships = await listUserMemberships(user.id);
-  const isSuperAdmin = await userIsSuperAdmin(user.id, user.email);
   const allowed = isSuperAdmin || (await userCanAccessOrg(user.id, org.slug));
   if (!allowed) {
     const { data: profile } = await supabase

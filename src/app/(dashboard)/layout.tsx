@@ -18,6 +18,9 @@ export default async function DashboardLayout({
   const user = data.user;
   if (!user) redirect("/");
 
+  const isSuperAdmin = await userIsSuperAdmin(user.id, user.email);
+  if (!isSuperAdmin) redirect("/");
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, org_id, organizations(name, slug)")
@@ -34,7 +37,6 @@ export default async function DashboardLayout({
     ?? null;
   const orgName = active?.name ?? organization?.name ?? "My workspace";
   const orgSlug = active?.slug ?? organization?.slug ?? null;
-  const isSuperAdmin = await userIsSuperAdmin(user.id, user.email);
 
   return (
     <div className="min-h-screen bg-black text-[#fbfbfb]">

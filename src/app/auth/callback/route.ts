@@ -66,11 +66,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(failureUrl(origin, expectedOrg, next));
     }
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      const response = NextResponse.redirect(failureUrl(origin, expectedOrg, next));
+      copyCookies(pending, response);
+      return response;
+    }
+
+    const { userIsSuperAdmin } = await import("@/lib/roles");
+    if (!(await userIsSuperAdmin(user.id, user.email))) {
+      await supabase.auth.signOut();
+      const failTarget = expectedOrg
+        ? scopedLoginUrl(origin, expectedOrg, "admin_only", next)
+        : (() => {
+            const url = new URL("/login", origin);
+            url.searchParams.set("error", "admin_only");
+            url.searchParams.set("redirect", next);
+            return url;
+          })();
+      const response = NextResponse.redirect(failTarget);
+      copyCookies(pending, response);
+      return response;
+    }
+
     if (expectedOrg) {
       const {
-        data: { user },
+        data: { user: orgUser },
       } = await supabase.auth.getUser();
-      if (!user) {
+      if (!orgUser) {
         const response = NextResponse.redirect(
           scopedLoginUrl(origin, expectedOrg, "profile_not_ready", next),
         );
@@ -81,9 +106,9 @@ export async function GET(request: NextRequest) {
       const { listUserMemberships, userCanAccessOrg } = await import(
         "@/lib/org-membership"
       );
-      const allowed = await userCanAccessOrg(user.id, expectedOrg);
+      const allowed = await userCanAccessOrg(orgUser.id, expectedOrg);
       if (!allowed) {
-        const memberships = await listUserMemberships(user.id);
+        const memberships = await listUserMemberships(orgUser.id);
         const fallback = memberships.find((membership) => membership.isPublic)?.slug;
         if (fallback) {
           const response = NextResponse.redirect(new URL(`/${fallback}`, origin));

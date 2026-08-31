@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOrgContext } from "@/lib/org-membership";
 import { createClient } from "@/lib/supabase/server";
+import { userIsSuperAdmin } from "@/lib/roles";
 
 export async function GET() {
   const supabase = await createClient();
@@ -9,6 +10,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
+  const isSuperAdmin = await userIsSuperAdmin(user.id, user.email);
   const ctx = await requireOrgContext();
   if (ctx.error) {
     const { data: profile } = await supabase
@@ -22,6 +24,7 @@ export async function GET() {
     return NextResponse.json({
       org_id: profile?.org_id ?? null,
       role: profile?.role ?? null,
+      is_super_admin: isSuperAdmin,
       organization,
       memberships: [],
     });

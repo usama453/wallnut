@@ -1,40 +1,18 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import LoginForm from "@/components/login-form";
-import { AppHeader } from "@/components/wallnut/app-header";
-import { getOrganizationForLogin } from "@/lib/organizations";
+import { redirect } from "next/navigation";
+import { orgHomePath } from "@/lib/org-paths";
 
-export const dynamic = "force-dynamic";
-
-export async function generateMetadata({
+export default async function OrganizationLoginRedirect({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
-  const organization = await getOrganizationForLogin(slug);
-  return { title: organization ? `Sign in to ${organization.name}` : "Organization not found" };
-}
-
-export default async function OrganizationLoginPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const organization = await getOrganizationForLogin(slug);
-  if (!organization) notFound();
-
-  return (
-    <div className="min-h-screen bg-black">
-      <AppHeader />
-      <LoginForm
-        organization={{
-          name: organization.name,
-          slug: organization.slug,
-          accentColor: organization.accentColor,
-        }}
-      />
-    </div>
-  );
+  const query = await searchParams;
+  const url = new URL("/login", "https://wallnut.local");
+  url.searchParams.set("redirect", orgHomePath(slug));
+  const error = query.error;
+  if (typeof error === "string") url.searchParams.set("error", error);
+  redirect(`${url.pathname}${url.search}`);
 }

@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Spinner } from "@/components/wallnut/icons";
 import { Reveal } from "@/components/wallnut/reveal";
-import { orgLoginPath } from "@/lib/org-paths";
 
 export function DashboardAccessForm({
   orgSlug,
@@ -91,16 +89,6 @@ export function DashboardAccessForm({
             {loading ? "Checking…" : "Open workspace"}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-[11px] text-[#6c6c6c]">
-          Team member?{" "}
-          <Link
-            href={orgLoginPath(orgSlug)}
-            className="text-[#bdbdbd] underline-offset-2 hover:underline"
-          >
-            Sign in with email
-          </Link>
-        </p>
       </Reveal>
     </main>
   );

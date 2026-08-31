@@ -23,12 +23,8 @@ export default async function LandingPage() {
           </h1>
         </Reveal>
         <Reveal delayMs={80}>
-          <div className="mt-3 flex items-center gap-4 text-[13px] text-[#919191]">
-            <span>
-              {organizations.length} public organization
-              {organizations.length === 1 ? "" : "s"}
-            </span>
-            <span>Sign in to continue</span>
+          <div className="mt-3 text-[13px] text-[#919191]">
+            Select an organization and enter its workspace password.
           </div>
         </Reveal>
 
@@ -53,12 +49,9 @@ export default async function LandingPage() {
 
         <Reveal delayMs={260}>
           <p className="mt-8 text-center text-[12px] text-[#6c6c6c]">
-            Starting something new?{" "}
-            <Link
-              href="/login?mode=signup"
-              className="text-[#bdbdbd] transition hover:text-white"
-            >
-              Create a private workspace
+            Platform admin?{" "}
+            <Link href="/login" className="text-[#bdbdbd] transition hover:text-white">
+              Sign in
             </Link>
           </p>
         </Reveal>
