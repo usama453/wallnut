@@ -6,7 +6,7 @@ import { getProofPipelineMode, type ProofPipelineMode } from "./pipeline-mode-st
 import { getProofAdminSettings } from "./proof-settings-store";
 import { filterIssuesByChecks } from "./issue-checks";
 import { hasEnabledProofChecks, type ProofChecksConfig } from "./proof-settings";
-import { spellcheck, findSmoothedBrokenWords, preferBrokenSpellingText } from "./spellcheck";
+import { spellcheck, findSmoothedBrokenWords, preferBrokenSpellingText, stripOcrNoise, isOcrNoiseLine } from "./spellcheck";
 import { detectRomanUrduLines } from "./roman-urdu";
 import {
   enrichIssueLocations,
@@ -136,23 +136,22 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
     };
     modelLabel = `${provider.name} · direct`;
   } else {
+    const ocrHint = stripOcrNoise(ocr.text || "");
     const transcription = await provider.transcribeAsset({
       imageBase64: normalized.base64,
       mimeType: normalized.mimeType,
-      ocrText: ocr.text,
+      ocrText: ocrHint,
       brand,
     });
     const geminiText = sanitizeText((transcription.extractedText || "").trim());
     const canonicalText = sanitizeText(
-      preferBrokenSpellingText(geminiText, ocr.text || "").trim() ||
-        ocr.text ||
-        geminiText,
+      preferBrokenSpellingText(geminiText, ocrHint).trim() || geminiText || ocrHint,
     );
 
     const analyzed = await provider.analyzeAsset({
       imageBase64: normalized.base64,
       mimeType: normalized.mimeType,
-      ocrText: ocr.text,
+      ocrText: ocrHint,
       brand,
       previous,
       extractedText: canonicalText,
@@ -178,7 +177,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
         brand,
         asset.name,
         locationContext,
-        ocr.text,
+        ocrHint,
         geminiText,
       );
       if (!hasTypoIssues(report.issues)) {
@@ -205,6 +204,7 @@ export async function runProof(assetVersionId: string): Promise<RunProofResult> 
 
   if (pipelineMode !== "gemini_only") {
     report.issues = filterIssuesByChecks(report.issues, enabledChecks);
+    report.issues = dropOcrArtifactIssues(report.issues, report.extractedText ?? "");
     if (!hasEnabledProofChecks(enabledChecks)) {
       report.issues = [];
     }
@@ -428,6 +428,27 @@ function wordAppearsInText(word: string, haystack: string): boolean {
   return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
 }
 
+function dropOcrArtifactIssues(issues: RawIssue[], canonicalText: string): RawIssue[] {
+  return issues.filter((issue) => {
+    const hay = `${issue.title} ${issue.description ?? ""} ${issue.suggestion ?? ""}`;
+    const foundIn = /Found in:\s*"([^"]+)"/i.exec(issue.description ?? "");
+    if (foundIn && isOcrNoiseLine(foundIn[1] ?? "")) return false;
+    if (isOcrNoiseLine(issue.title) || isOcrNoiseLine(issue.description ?? "")) return false;
+    const quoted = extractQuotedWords(issue);
+    if (
+      quoted.length &&
+      quoted.every((word) => word.length <= 3) &&
+      !quoted.some((word) => wordAppearsInText(word, canonicalText.toLowerCase()))
+    ) {
+      return false;
+    }
+    if (/broken link|invalid url/i.test(hay) && !/\bhttps?:\/\/|www\.|\.com\b|\.pk\b|@/i.test(`${canonicalText} ${hay}`)) {
+      return false;
+    }
+    return true;
+  });
+}
+
 function finalizeReport(report: RawReport) {
   const hasHigh = report.issues.some((issue) => issue.severity === "high");
   const penalty = report.issues.reduce((sum, issue) => {
@@ -480,11 +501,9 @@ function mergeSpellcheck(
   }
 
   const sources = [source];
-  const ocr = sanitizeText(ocrText.trim());
-  if (ocr && ocr !== source) sources.push(ocr);
 
   const findings = [
-    ...findSmoothedBrokenWords(geminiText || source, ocr),
+    ...findSmoothedBrokenWords(geminiText || source, ocrText),
     ...sources.flatMap((text) =>
       spellcheck(text, {
         allow,

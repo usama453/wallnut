@@ -24,7 +24,7 @@ export default async function LandingPage() {
         </Reveal>
         <Reveal delayMs={80}>
           <div className="mt-3 text-[13px] text-[#919191]">
-            Select an organization and enter its workspace password.
+            Select an organization and enter its admin password.
           </div>
         </Reveal>
 

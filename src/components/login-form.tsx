@@ -118,7 +118,7 @@ export default function LoginForm() {
         </Reveal>
 
         <p className="mt-7 text-center text-[11px] leading-relaxed text-[#555]">
-          Workspace viewers should use the password on each organization page.
+          Organization admins should use the password on each organization page.
         </p>
       </div>
     </main>
@@ -152,7 +152,7 @@ function safePath(value: string | null, fallback: string) {
 
 function callbackErrorMessage(error: string) {
   if (error === "admin_only") {
-    return "Sign-in is limited to platform administrators. Use the workspace password instead.";
+    return "Sign-in is limited to platform administrators. Use the organization admin password instead.";
   }
   if (error === "google_disabled") {
     return "Google sign-in is disabled. Use your admin email and password.";

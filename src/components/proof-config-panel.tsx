@@ -17,15 +17,15 @@ import type { ProofPipelineMode } from "@/lib/proof/pipeline-mode";
 export function ProofConfigPanel({
   orgSlug,
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
-  pipelineMode = "split",
+  pipelineMode: initialPipelineMode = "split",
 }: {
   orgSlug: string;
   initialSettings?: ProofAdminSettings;
   pipelineMode?: ProofPipelineMode;
 }) {
+  const { settings, pipelineMode, busy, error, toggleCheck, selectStyle, toggleRomanUrdu } =
+    useProofConfig(orgSlug, initialSettings, initialPipelineMode);
   const checksDisabled = pipelineMode === "gemini_only";
-  const { settings, busy, error, toggleCheck, selectStyle, toggleRomanUrdu } =
-    useProofConfig(orgSlug, initialSettings);
 
   return (
     <article className={WALLNUT_PANEL}>
@@ -112,12 +112,12 @@ export function ProofConfigPanel({
           <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
             {ROMAN_URDU_PROOF_LABEL.description}
           </p>
-          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-[6px] border border-[#222222] px-3 py-2.5 transition hover:bg-[#0c0c0c]">
+          <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-[6px] border border-[#222222] px-3 py-2.5 transition hover:bg-[#0c0c0c] ${checksDisabled ? "pointer-events-none opacity-45" : ""}`}>
             <input
               type="checkbox"
               className="mt-0.5"
               checked={settings.allowSlangRomanUrdu}
-              disabled={busy}
+              disabled={busy || checksDisabled}
               onChange={() => toggleRomanUrdu()}
             />
             <span className="min-w-0">
@@ -144,7 +144,7 @@ export function ProofConfigPanel({
         ) : (
           <p className="mt-3 text-[11px] leading-relaxed text-[#555]">
             {checksDisabled
-              ? "Switch back to Split pipeline to configure individual proof checks."
+              ? "Switch back to Split pipeline in Wallnut's settings on the organization page to configure individual proof checks."
               : "Changes apply to the next proof. Enabled checks are stored on each report in "}
             {!checksDisabled ? (
               <>

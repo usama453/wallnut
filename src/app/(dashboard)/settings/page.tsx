@@ -2,7 +2,6 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { WhatsAppAccess } from "@/components/whatsapp-access";
 import { DashboardPasswordPanel } from "@/components/dashboard-password-panel";
-import { ProofPipelineToggle } from "@/components/proof-pipeline-toggle";
 import { ProofConfigPanel } from "@/components/proof-config-panel";
 import { Reveal } from "@/components/wallnut/reveal";
 import { WALLNUT_PANEL } from "@/components/wallnut/panel";
@@ -50,10 +49,6 @@ export default async function SettingsPage() {
             AI pipeline, WhatsApp access, and platform configuration.
           </p>
         </header>
-      </Reveal>
-
-      <Reveal dramatic delayMs={120}>
-        <ProofPipelineToggle orgSlug={orgSlug} initialMode={proofPipelineMode} />
       </Reveal>
 
       <Reveal dramatic delayMs={140}>

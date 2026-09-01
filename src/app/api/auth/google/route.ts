@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { publicOrigin, safeAuthPath } from "@/lib/auth-origin";
 
 /**
- * Google OAuth temporarily disabled — use email/password or workspace password.
+ * Google OAuth temporarily disabled — use email/password or the organization admin password.
  *
  * Start Google OAuth on the server so the PKCE verifier is stored in a real
  * Set-Cookie header before the browser leaves for Google.

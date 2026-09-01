@@ -23,17 +23,27 @@ const LIST_ROW =
 export function ProofConfigWidget({
   orgSlug,
   initialSettings = DEFAULT_PROOF_ADMIN_SETTINGS,
-  pipelineMode = "split",
+  pipelineMode: initialPipelineMode = "split",
 }: {
   orgSlug: string;
   initialSettings?: ProofAdminSettings;
   pipelineMode?: ProofPipelineMode;
 }) {
-  const checksDisabled = pipelineMode === "gemini_only";
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const { settings, busy, error, loaded, toggleCheck, selectStyle, toggleRomanUrdu } =
-    useProofConfig(orgSlug, initialSettings);
+  const {
+    settings,
+    pipelineMode,
+    envLocked,
+    busy,
+    error,
+    loaded,
+    toggleCheck,
+    selectStyle,
+    toggleRomanUrdu,
+    selectPipeline,
+  } = useProofConfig(orgSlug, initialSettings, initialPipelineMode);
+  const checksDisabled = pipelineMode === "gemini_only";
 
   useEffect(() => {
     if (!open) return;
@@ -64,8 +74,41 @@ export function ProofConfigWidget({
         <div
           role="dialog"
           aria-label="Wallnut's settings"
-          className="wallnut-reveal absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-[min(calc(100vw-2rem),480px)] -translate-x-1/2 rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="wallnut-reveal absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-[min(calc(100vw-2rem),520px)] -translate-x-1/2 rounded-[8px] border border-[#222222] bg-[#060606] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
+          <div className="border-b border-[#222222] px-3 py-3">
+            <SectionTitle>Proof pipeline</SectionTitle>
+            <div
+              role="radiogroup"
+              aria-label="Proof pipeline"
+              className="flex overflow-hidden rounded-[6px] border border-[#222222]"
+            >
+              <PipelineOption
+                active={pipelineMode === "split"}
+                disabled={busy || envLocked}
+                onClick={() => void selectPipeline("split")}
+                title="Split pipeline"
+                description="Transcribe → QA → local spellcheck"
+              />
+              <PipelineOption
+                active={pipelineMode === "gemini_only"}
+                disabled={busy || envLocked}
+                onClick={() => void selectPipeline("gemini_only")}
+                title="Gemini only"
+                description="One direct prompt — no proof checks"
+                borderLeft
+              />
+            </div>
+            {envLocked ? (
+              <p className="mt-2 text-[10px] leading-snug text-[#555]">
+                Locked by environment. Proof checks stay disabled in Gemini only.
+              </p>
+            ) : (
+              <p className="mt-2 text-[10px] leading-snug text-[#555]">
+                Applies to the next proof. Gemini only turns off checks below.
+              </p>
+            )}
+          </div>
           <div className="grid grid-cols-2 divide-x divide-[#222222]">
             <section className="px-3 py-3">
               <SectionTitle>Wallnut&apos;s reply</SectionTitle>
@@ -154,6 +197,40 @@ function SectionTitle({ children }: { children: ReactNode }) {
     <h3 className="mb-2 text-[10px] font-medium uppercase tracking-[0.04em] text-[#6c6c6c]">
       {children}
     </h3>
+  );
+}
+
+function PipelineOption({
+  active,
+  disabled,
+  onClick,
+  title,
+  description,
+  borderLeft = false,
+}: {
+  active: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+  borderLeft?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={`min-w-0 flex-1 px-2.5 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        borderLeft ? "border-l border-[#222222]" : ""
+      } ${active ? "bg-[#0d0d0d]" : "hover:bg-[#0c0c0c]"}`}
+    >
+      <span className={`block text-[12px] leading-none ${active ? "font-bold text-white" : "text-[#bdbdbd]"}`}>
+        {title}
+      </span>
+      <span className="mt-1 block text-[10px] leading-snug text-[#555]">{description}</span>
+    </button>
   );
 }
 

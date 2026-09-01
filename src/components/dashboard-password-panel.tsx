@@ -78,7 +78,7 @@ export function DashboardPasswordPanel({
       }
       setConfigured(false);
       setPassword("");
-      setMessage("Password removed. Guest dashboard access is disabled.");
+      setMessage("Password removed. Admin password access is disabled.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Failed to remove password");
     } finally {
@@ -89,10 +89,10 @@ export function DashboardPasswordPanel({
   return (
     <article className={WALLNUT_PANEL}>
       <div className="border-b border-[#222222] px-4 py-3">
-        <h2 className="text-[12px] font-bold text-[#fbfbfb]">Guest dashboard password</h2>
+        <h2 className="text-[12px] font-bold text-[#fbfbfb]">Admin password</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">
-          Lets people open this workspace from a public report without signing in. Applies to
-          this organization only.
+          Organization admins enter this password on the workspace page. Applies to this
+          organization only.
         </p>
       </div>
 
@@ -126,7 +126,7 @@ export function DashboardPasswordPanel({
               setError(null);
               setMessage(null);
             }}
-            placeholder="Set a guest password"
+            placeholder="Set an admin password"
             className="mt-2 w-full rounded-[8px] border border-[#222222] bg-[#060606] px-3.5 py-3 font-mono text-[13px] text-[#fbfbfb] placeholder:text-[#6c6c6c] focus:border-[#2e2e2e] focus:outline-none disabled:opacity-60"
           />
 
@@ -169,9 +169,9 @@ export function DashboardPasswordPanel({
           <p className="mt-3 text-[11px] text-[#a7d7bd]">{message}</p>
         ) : (
           <p className="mt-3 text-[11px] leading-relaxed text-[#555]">
-            This password is visible here so you can share it with clients. Report viewers use
-            the &ldquo;Open workspace&rdquo; button, then enter it to see Overview and
-            Rankings.
+            This password is visible here so you can share it with admins. They open the
+            organization, enter it, and manage the workspace — including Wallnut&apos;s
+            settings.
           </p>
         )}
       </div>

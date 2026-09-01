@@ -70,14 +70,15 @@ Your ONLY job is to read the image and return JSON with two fields:
 
 CRITICAL RULES:
 - Read systematically: top to bottom, left to right. Do not skip regions.
-- Copy ONLY text you can actually see. Never invent words, slogans, or corrections.
+- Copy ONLY text you can actually see printed as copy. Never invent words, slogans, or corrections.
+- Ignore furniture, photos, decorative serif flourishes, logos-as-shapes, and OCR gibberish that is not clearly readable type.
 - If a word is unclear, transcribe your best reading of the pixels — do NOT guess an alternative spelling.
 - If letters are visibly split by a space inside one word (e.g. "b st" on screen instead of "best"), transcribe WITH the space exactly. Never merge split letters into a corrected English word.
-- When OCR shows a gap inside a word, preserve that gap even if you think you know the intended word.
+- OCR below is noisy. Use it only to confirm a split you can also see on the image. Do not copy OCR tokens that are not clearly printed.
 - Do NOT report issues, typos, or quality problems. Transcription only.
 - Roman Urdu (Urdu in Latin script) should be copied exactly as printed — do not anglicize or "correct" it to English words.
 
-${ocrText ? `OCR HINT (trust OCR for letter-level splits and gaps; use vision for layout and Urdu script):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : "No OCR hint provided."}
+${ocrText ? `OCR HINT (unreliable on stylized fonts — never copy gibberish from here):\n"""\n${ocrText.slice(0, 6000)}\n"""\n` : "No OCR hint provided."}
 
 ${brand?.company_name ? `Brand context: artwork is for ${brand.company_name}.` : ""}`;
 }
@@ -121,6 +122,7 @@ RULES:
 - Keep the report concise: list at most the 8 most important issues. Instead of many trivial cosmetic nits, group them into a single low-severity item. Do not pad the list.
 - Severity: high = blocks publishing (errors, wrong facts, broken layout), medium = should fix, low = nice to have.
 - Do NOT invent issues that are not present. If a word is not in the canonical text, do not claim it appears in the artwork.
+- Do NOT report broken links, emails, or phone numbers unless that URL/email/number is actually visible in the image or canonical text.
 - If the artwork looks clean, report a high score with an empty (or near-empty) issues list.
 - Score 0-100. status must be "passed" (score >= 90 and no high issues), "needs_review" (>= 70), or "errors" (< 70 or any blocking error).
 
@@ -326,7 +328,8 @@ Rules:
 - Compare letter-by-letter what is PRINTED on the image.
 - Flag misspellings, missing letters, and spaces inside a word (e.g. image shows "b st" → correction "best").
 - Do NOT flag Roman Urdu variant spellings (mein/main, bohat/bahut) or intentional slang.
-- Do NOT flag design/font styling unless a letter is clearly missing or split.
+- Do NOT flag decorative type, interior photos, or letters you cannot clearly read.
+- Do NOT invent typos that are not printed on the image.
 - If the image text matches a reasonable reading of the transcription, return an empty issues list.
 
 ${brand?.company_name ? `Brand: ${brand.company_name}` : ""}

@@ -23,7 +23,7 @@ export default async function OrganizationHome({
 
   const isPublic = isPublicOrgSlug(slug);
   const canManageProof = access.isGuest
-    ? false
+    ? true
     : await canManageProofConfigForOrg(
         access.user.id,
         access.org.id,
@@ -59,9 +59,10 @@ export default async function OrganizationHome({
 
   if (!rankings) notFound();
 
-  const canAddGroup = access.isGuest
-    ? false
-    : canCreateWhatsAppGroup(access.profile.role, access.isSuperAdmin);
+  const canAddGroup = canCreateWhatsAppGroup(
+    access.profile.role,
+    access.isSuperAdmin,
+  );
 
   return (
     <div className="mx-auto max-w-5xl">

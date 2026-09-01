@@ -170,7 +170,7 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
 
   const typos = findings.filter((f) => f.severity === "medium");
   const broken = findBrokenSpacedWords(text).filter(
-    (f) => !seen.has(f.word.toLowerCase()),
+    (f) => !seen.has(f.word.toLowerCase()) && !isOcrNoiseLine(f.context),
   );
   typos.push(...broken);
   // Short unknown tokens (2-3 chars) are almost always OCR noise from logos,
@@ -199,6 +199,32 @@ export function spellcheck(text: string, options: SpellcheckOptions = {}): Spell
   return capped;
 }
 
+/** Drop Tesseract junk from decorative type, furniture, and UI chrome. */
+export function isOcrNoiseLine(line: string): boolean {
+  const text = line.trim();
+  if (!text) return true;
+  const letters = (text.match(/[A-Za-z]/g) ?? []).length;
+  const symbols = (text.match(/[|=~_<>*^`\\]/g) ?? []).length;
+  if (symbols >= 2 && symbols * 3 >= letters) return true;
+  const tokens = text.split(/\s+/).filter(Boolean);
+  const shortTokens = tokens.filter((token) => token.replace(/[^A-Za-z]/g, "").length <= 2);
+  if (tokens.length >= 2 && shortTokens.length / tokens.length >= 0.75 && letters < 18) {
+    return true;
+  }
+  if (tokens.length <= 3 && letters <= 6 && /[|=~]/.test(text)) return true;
+  return false;
+}
+
+export function stripOcrNoise(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !isOcrNoiseLine(line))
+    .join("\n")
+    .trim();
+}
+
+const ENGLISH_SINGLE_LETTERS = new Set(["a", "i"]);
+
 /**
  * Visible gap inside a word (e.g. "b st" printed as two tokens for "best").
  * Single-letter tokens are skipped by normal spellcheck (`{2,}` regex).
@@ -212,13 +238,17 @@ export function findBrokenSpacedWords(text: string): SpellcheckFinding[] {
   ] as const;
 
   for (const line of lines) {
+    if (isOcrNoiseLine(line)) continue;
     for (const re of patterns) {
       re.lastIndex = 0;
       let match: RegExpExecArray | null;
       while ((match = re.exec(line)) !== null) {
-        const before = `${match[1]} ${match[2]}`;
-        const correction = guessMergedWord(match[1]!, match[2]!);
-        if (!correction || correction === `${match[1]}${match[2]}`.toLowerCase()) continue;
+        const left = match[1]!;
+        const right = match[2]!;
+        if (!isPlausibleBrokenWord(left, right)) continue;
+        const before = `${left} ${right}`;
+        const correction = guessMergedWord(left, right);
+        if (!correction || correction === `${left}${right}`.toLowerCase()) continue;
         if (!COMMON.has(correction)) continue;
 
         findings.push({
@@ -235,44 +265,65 @@ export function findBrokenSpacedWords(text: string): SpellcheckFinding[] {
   return findings;
 }
 
+function isPlausibleBrokenWord(left: string, right: string): boolean {
+  const a = left.toLowerCase();
+  const b = right.toLowerCase();
+  const single = a.length === 1 ? a : b.length === 1 ? b : "";
+  const rest = a.length === 1 ? b : a;
+  // "a new", "Ape I", "Ss I" — English particles / whole words, not split letters.
+  if (ENGLISH_SINGLE_LETTERS.has(single)) return false;
+  if (rest.length >= 3 && (COMMON.has(rest) || ACCEPTED.has(rest))) return false;
+  return true;
+}
+
+function wordInText(word: string, text: string): boolean {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(text);
+}
+
 /** Prefer OCR wording when it preserves split-letter typos Gemini smoothed over. */
 export function preferBrokenSpellingText(geminiText: string, ocrText: string): string {
   const gemini = geminiText.trim();
-  const ocr = ocrText.trim();
+  const ocr = stripOcrNoise(ocrText);
   if (!ocr) return gemini;
   if (!gemini) return ocr;
 
   const geminiLines = gemini.split("\n");
   const ocrLines = ocr.split("\n");
-  const merged = geminiLines.map((line, index) => {
-    const ocrLine = ocrLines[index] ?? "";
-    const ocrBroken = findBrokenSpacedWords(ocrLine);
-    const geminiBroken = findBrokenSpacedWords(line);
-    if (ocrBroken.length && !geminiBroken.length) return ocrLine;
-    return line;
-  });
-
-  if (ocrLines.length > geminiLines.length) {
-    for (const extra of ocrLines.slice(geminiLines.length)) {
-      if (findBrokenSpacedWords(extra).length) merged.push(extra);
-    }
-  }
-
-  return merged.join("\n").trim() || gemini || ocr;
+  return geminiLines
+    .map((line, index) => {
+      const ocrLine = ocrLines[index] ?? "";
+      if (!ocrLine || isOcrNoiseLine(ocrLine)) return line;
+      const ocrBroken = findBrokenSpacedWords(ocrLine);
+      if (!ocrBroken.length || findBrokenSpacedWords(line).length) return line;
+      const matchesGemini = ocrBroken.some((finding) =>
+        finding.suggestions.some((suggestion) => wordInText(suggestion, line)),
+      );
+      return matchesGemini ? ocrLine : line;
+    })
+    .join("\n")
+    .trim() || gemini;
 }
 
 /**
  * Broken-word typos OCR caught but the AI transcription auto-corrected away.
+ * Only keep splits whose intended word is already in Gemini's reading of the art.
  */
 export function findSmoothedBrokenWords(geminiText: string, ocrText: string): SpellcheckFinding[] {
-  const ocrBroken = findBrokenSpacedWords(ocrText);
+  const ocrBroken = findBrokenSpacedWords(stripOcrNoise(ocrText));
   if (!ocrBroken.length) return [];
 
   const geminiBroken = new Set(
     findBrokenSpacedWords(geminiText).map((finding) => finding.word.toLowerCase()),
   );
 
-  return ocrBroken.filter((finding) => !geminiBroken.has(finding.word.toLowerCase()));
+  return ocrBroken.filter((finding) => {
+    if (geminiBroken.has(finding.word.toLowerCase())) return false;
+    if (isOcrNoiseLine(finding.context)) return false;
+    const suggestion = finding.suggestions[0];
+    if (!suggestion || !wordInText(suggestion, geminiText)) return false;
+    return !wordInText(finding.word, geminiText);
+  });
 }
 
 function guessMergedWord(a: string, b: string): string | null {

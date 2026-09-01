@@ -11,6 +11,7 @@ import {
   isPublicOrgSlug,
 } from "@/lib/org-paths";
 import { userIsSuperAdmin } from "@/lib/roles";
+import { GUEST_USER_ID, hasDashboardAccess } from "@/lib/dashboard-access";
 
 export interface OrgRecord {
   id: string;
@@ -128,6 +129,7 @@ export async function userCanAccessOrg(userId: string, slug: string) {
 }
 
 export async function activateOrgForUser(userId: string, orgId: string) {
+  if (userId === GUEST_USER_ID) return;
   const admin = await createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
@@ -156,9 +158,6 @@ export async function requireOrgContext(requestedSlug?: string | null): Promise<
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
-  }
 
   const cookieStore = await cookies();
   const slug =
@@ -169,6 +168,29 @@ export async function requireOrgContext(requestedSlug?: string | null): Promise<
   if (!org) {
     return { error: NextResponse.json({ error: "No organization" }, { status: 400 }) };
   }
+
+  if (!user) {
+    if (await hasDashboardAccess(org.id)) {
+      return {
+        userId: GUEST_USER_ID,
+        orgId: org.id,
+        role: "admin",
+        isSuperAdmin: false,
+        org,
+        memberships: [
+          {
+            orgId: org.id,
+            name: org.name,
+            slug: org.slug,
+            role: "admin",
+            isPublic: org.isPublic,
+          },
+        ],
+      };
+    }
+    return { error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
+  }
+
   if (!(await userCanAccessOrg(user.id, org.slug))) {
     return {
       error: NextResponse.json(

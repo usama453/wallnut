@@ -45,10 +45,10 @@ export function DashboardAccessForm({
     <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-[360px] flex-col justify-center px-4 py-14">
       <Reveal className="text-center" delayMs={60}>
         <h1 className="text-[27px] font-bold leading-none tracking-[-0.72px] text-white">
-          Enter workspace password
+          Admin password
         </h1>
         <p className="mt-2.5 text-[12px] text-[#919191]">
-          View the {orgName} dashboard
+          Access {orgName} as an admin
         </p>
       </Reveal>
 
