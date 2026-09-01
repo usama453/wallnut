@@ -32,7 +32,6 @@ export function DashboardGrid({
   isSuperAdmin = false,
   canManageProofConfig = false,
   proofAdminSettings,
-  proofPipelineMode = "split",
 }: {
   orgName: string;
   orgSlug: string;
@@ -50,7 +49,6 @@ export function DashboardGrid({
   isSuperAdmin?: boolean;
   canManageProofConfig?: boolean;
   proofAdminSettings?: import("@/lib/proof/proof-settings").ProofAdminSettings;
-  proofPipelineMode?: import("@/lib/proof/pipeline-mode").ProofPipelineMode;
 }) {
   const router = useRouter();
   const [createdInvites, setCreatedInvites] = useState<PendingWhatsAppInvite[]>([]);
@@ -221,11 +219,10 @@ export function DashboardGrid({
         {canManageProofConfig ? (
           <Reveal dramatic delayMs={760}>
             <div className="flex justify-center pt-1">
-              <ProofConfigWidget
-                orgSlug={orgSlug}
-                initialSettings={proofAdminSettings}
-                pipelineMode={proofPipelineMode}
-              />
+            <ProofConfigWidget
+              orgSlug={orgSlug}
+              initialSettings={proofAdminSettings}
+            />
             </div>
           </Reveal>
         ) : null}

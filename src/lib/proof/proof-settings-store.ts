@@ -136,22 +136,13 @@ export async function setProofAdminSettings(
 ): Promise<void> {
   const admin = await createAdminClient();
   const normalized = normalizeProofAdminSettings(settings);
-  const { data: existing } = await admin
-    .from("org_proof_settings")
-    .select("pipeline_mode")
-    .eq("org_id", orgId)
-    .maybeSingle();
-  const pipelineMode =
-    existing?.pipeline_mode === "gemini_only" || existing?.pipeline_mode === "split"
-      ? existing.pipeline_mode
-      : "split";
   const now = new Date().toISOString();
   const { error } = await admin.from("org_proof_settings").upsert(
     {
       org_id: orgId,
       checks: normalized.checks,
       response_style: normalized.responseStyle,
-      pipeline_mode: pipelineMode,
+      pipeline_mode: "gemini_only",
       updated_at: now,
     },
     { onConflict: "org_id" },

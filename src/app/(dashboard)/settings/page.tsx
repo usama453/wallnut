@@ -7,7 +7,6 @@ import { Reveal } from "@/components/wallnut/reveal";
 import { WALLNUT_PANEL } from "@/components/wallnut/panel";
 import { getOrgBySlug } from "@/lib/org-membership";
 import { ORG_COOKIE, PUBLIC_ORG_SLUG } from "@/lib/org-paths";
-import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
 import { getDashboardPassword, getDashboardPasswordConfigured } from "@/lib/dashboard-password-store";
 import { getProofAdminSettings } from "@/lib/proof/proof-settings-store";
 import { DEFAULT_PROOF_ADMIN_SETTINGS } from "@/lib/proof/proof-settings";
@@ -20,7 +19,6 @@ export default async function SettingsPage() {
   const cookieStore = await cookies();
   const orgSlug = cookieStore.get(ORG_COOKIE)?.value ?? PUBLIC_ORG_SLUG;
   const org = await getOrgBySlug(orgSlug);
-  const proofPipelineMode = org ? await getProofPipelineMode(org.id) : "split";
   const proofAdminSettings = org
     ? await getProofAdminSettings(org.id)
     : DEFAULT_PROOF_ADMIN_SETTINGS;
@@ -52,7 +50,7 @@ export default async function SettingsPage() {
       </Reveal>
 
       <Reveal dramatic delayMs={140}>
-        <ProofConfigPanel orgSlug={orgSlug} initialSettings={proofAdminSettings} pipelineMode={proofPipelineMode} />
+        <ProofConfigPanel orgSlug={orgSlug} initialSettings={proofAdminSettings} />
       </Reveal>
 
       <Reveal dramatic delayMs={150}>

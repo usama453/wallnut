@@ -6,6 +6,8 @@ import { Spinner } from "@/components/wallnut/icons";
 import { WALLNUT_BUTTON, WALLNUT_PANEL } from "@/components/wallnut/panel";
 import type { GroupCard } from "@/lib/groups-presentation";
 
+const COLLAPSE_KEY = "wallnut-onboarding-collapsed";
+
 export function OnboardingChecklist({
   cards,
   hasInvite,
@@ -23,6 +25,7 @@ export function OnboardingChecklist({
 }) {
   const [whatsappStatus, setWhatsappStatus] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +43,14 @@ export function OnboardingChecklist({
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(COLLAPSE_KEY) === "1") setOpen(false);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const whatsappConnected = whatsappStatus === "WORKING";
@@ -104,48 +115,99 @@ export function OnboardingChecklist({
   const completedCount = steps.filter((step) => step.done).length;
   if (hasReports) return null;
 
+  function toggleOpen() {
+    setOpen((value) => {
+      const next = !value;
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, next ? "0" : "1");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
   return (
     <article className={WALLNUT_PANEL}>
-      <div className="border-b border-[#222222] px-4 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#6c6c6c]">
-          Getting started
-        </p>
-        <h2 className="mt-1 text-[13px] font-bold text-white">Set up your first report</h2>
-        <p className="mt-1 text-[11px] text-[#6c6c6c]">
-          {completedCount} of {steps.length} steps complete
-          {loadingStatus && !whatsappConnected ? " · checking WhatsApp…" : ""}
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={toggleOpen}
+        aria-expanded={open}
+        className={`flex w-full items-start justify-between gap-3 px-4 py-4 text-left transition hover:bg-[#0a0a0a] ${
+          open ? "border-b border-[#222222]" : ""
+        }`}
+      >
+        <span className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#6c6c6c]">
+            Getting started
+          </p>
+          <h2 className="mt-1 text-[13px] font-bold text-white">Set up your first report</h2>
+          <p className="mt-1 text-[11px] text-[#6c6c6c]">
+            {completedCount} of {steps.length} steps complete
+            {loadingStatus && !whatsappConnected ? " · checking WhatsApp…" : ""}
+          </p>
+        </span>
+        <span
+          aria-hidden
+          className={`mt-1 shrink-0 text-[#6c6c6c] transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+        >
+          <ChevronIcon />
+        </span>
+      </button>
 
-      <ol className="divide-y divide-[#222222]">
-        {steps.map((step, index) => (
-          <li key={step.title} className="flex gap-3 px-4 py-4">
-            <span
-              aria-hidden
-              className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                step.done
-                  ? "bg-[#1a2e1f] text-[#4ade80]"
-                  : index === completedCount
-                    ? "border border-[#2e2e2e] bg-[#0a0a0a] text-[#bdbdbd]"
-                    : "border border-[#222222] bg-[#050505] text-[#555]"
-              }`}
-            >
-              {step.done ? "✓" : index + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p
-                className={`text-[12px] font-bold ${
-                  step.done ? "text-[#6c6c6c] line-through" : "text-[#fbfbfb]"
-                }`}
-              >
-                {step.title}
-              </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">{step.description}</p>
-              {step.action ? <div className="mt-3">{step.action}</div> : null}
-            </div>
-          </li>
-        ))}
-      </ol>
+      <div
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden" inert={open ? undefined : true}>
+          <ol className="divide-y divide-[#222222]">
+            {steps.map((step, index) => (
+              <li key={step.title} className="flex gap-3 px-4 py-4">
+                <span
+                  aria-hidden
+                  className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+                    step.done
+                      ? "bg-[#1a2e1f] text-[#4ade80]"
+                      : index === completedCount
+                        ? "border border-[#2e2e2e] bg-[#0a0a0a] text-[#bdbdbd]"
+                        : "border border-[#222222] bg-[#050505] text-[#555]"
+                  }`}
+                >
+                  {step.done ? "✓" : index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={`text-[12px] font-bold ${
+                      step.done ? "text-[#6c6c6c] line-through" : "text-[#fbfbfb]"
+                    }`}
+                  >
+                    {step.title}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#6c6c6c]">{step.description}</p>
+                  {step.action ? <div className="mt-3">{step.action}</div> : null}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
     </article>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path
+        d="M3.5 5.25 7 8.75l3.5-3.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

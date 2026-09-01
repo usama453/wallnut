@@ -1,20 +1,13 @@
-import { createAdminClient } from "@/lib/supabase/server";
 import { getProvider } from "@/lib/ai";
-import type { BrandContext, RawIssue, RawReport } from "@/lib/ai";
+import type { RawReport } from "@/lib/ai";
 import { isAllGoodDirectResponse, sanitizeDirectProofResponse } from "@/lib/proof/direct-response";
-import { getProofPipelineMode } from "@/lib/proof/pipeline-mode-store";
-import { getProofAdminSettings } from "./proof-settings-store";
-import { filterIssuesByChecks } from "./issue-checks";
-import { DEFAULT_PROOF_ADMIN_SETTINGS, hasEnabledProofChecks } from "./proof-settings";
-import { spellcheck } from "./spellcheck";
-import { detectRomanUrduLines } from "./roman-urdu";
 import { sanitizeText } from "@/lib/text";
 
 /** Run a lightweight proof pass on plain text (WhatsApp messages, quoted replies). */
 export async function proofPlainText(
   text: string,
-  orgId?: string | null,
-  options?: { standalone?: boolean },
+  _orgId?: string | null,
+  _options?: { standalone?: boolean },
 ): Promise<RawReport> {
   const source = sanitizeText(text.trim());
   if (!source) {
@@ -26,154 +19,17 @@ export async function proofPlainText(
     };
   }
 
-  const pipelineMode = orgId ? await getProofPipelineMode(orgId) : "split";
   const provider = getProvider();
-
-  if (pipelineMode === "gemini_only") {
-    const { rawText } = await provider.proofTextDirect({ text: source });
-    const directResponse = sanitizeDirectProofResponse(sanitizeText(rawText.trim()));
-    const allGood = isAllGoodDirectResponse(directResponse);
-    return {
-      score: allGood ? 100 : 70,
-      status: allGood ? "passed" : "needs_review",
-      summary: directResponse,
-      issues: [],
-      directResponse,
-      humanReply: directResponse,
-      extractedText: source,
-    };
-  }
-
-  const settings = orgId
-    ? await getProofAdminSettings(orgId)
-    : { ...DEFAULT_PROOF_ADMIN_SETTINGS };
-  const admin = await createAdminClient();
-  const brand = orgId ? await loadBrand(admin, orgId) : null;
-
-  const { report } = await provider.analyzeText({
-    text: source,
-    brand,
-    enabledChecks: settings.checks,
-  });
-
-  appendSpellcheckIssues(report, source, brand);
-  report.issues = filterIssuesByChecks(report.issues, settings.checks);
-  if (!hasEnabledProofChecks(settings.checks)) {
-    report.issues = [];
-  }
-  finalizeReport(report);
-
-  try {
-    report.humanReply = await provider.generateHumanReply(report, {
-      standalone: options?.standalone,
-    });
-  } catch (err) {
-    console.error(
-      `[text-proof] human reply failed: ${err instanceof Error ? err.message : err}`,
-    );
-  }
-
-  return report;
-}
-
-async function loadBrand(admin: Awaited<ReturnType<typeof createAdminClient>>, orgId: string): Promise<BrandContext | null> {
-  const { data } = await admin
-    .from("brand_profiles")
-    .select("*")
-    .eq("org_id", orgId)
-    .maybeSingle();
-  if (!data) return null;
-
+  const { rawText } = await provider.proofTextDirect({ text: source });
+  const directResponse = sanitizeDirectProofResponse(sanitizeText(rawText.trim()));
+  const allGood = isAllGoodDirectResponse(directResponse);
   return {
-    company_name: data.company_name,
-    colors: data.colors ?? [],
-    fonts: data.fonts ?? [],
-    tone_of_voice: data.tone_of_voice,
-    preferred_terminology: data.preferred_terminology ?? [],
-    banned_words: data.banned_words ?? [],
-    style_guide: data.style_guide,
-    allow_slang_roman_urdu: data.allow_slang_roman_urdu ?? false,
-  };
-}
-
-function finalizeReport(report: RawReport) {
-  const hasHigh = report.issues.some((issue) => issue.severity === "high");
-  const penalty = report.issues.reduce((sum, issue) => {
-    if (issue.severity === "high") return sum + 15;
-    if (issue.severity === "medium") return sum + 8;
-    return sum + 3;
-  }, 0);
-  report.score = Math.max(0, Math.round(100 - penalty));
-  if (report.score >= 90 && !hasHigh) report.status = "passed";
-  else if (report.score >= 70) report.status = "needs_review";
-  else report.status = "errors";
-}
-
-function appendSpellcheckIssues(
-  report: RawReport,
-  sourceText: string,
-  brand: BrandContext | null,
-) {
-  if (brand?.allow_slang_roman_urdu) return;
-
-  const allow = [
-    brand?.company_name ?? "",
-    ...(brand?.preferred_terminology ?? []),
-    ...(brand?.fonts ?? []),
-  ].filter(Boolean);
-
-  const alreadyFlagged = new Set<string>();
-  for (const issue of report.issues) {
-    const hay = `${issue.title} ${issue.description ?? ""} ${issue.suggestion ?? ""}`.toLowerCase();
-    for (const word of hay.split(/[^a-z']+/i)) {
-      if (word.length >= 2) alreadyFlagged.add(word.toLowerCase());
-    }
-  }
-
-  const findings = spellcheck(sourceText, {
-    allow,
-    skipLineIndices: detectRomanUrduLines(sourceText),
-  });
-
-  for (const f of findings) {
-    if (f.words?.length) {
-      for (const word of f.words) {
-        if (!word || alreadyFlagged.has(word.toLowerCase())) continue;
-        report.issues.push(
-          spellcheckIssue({
-            word,
-            count: 1,
-            context: f.context,
-            severity: f.severity,
-            suggestions: [],
-          }),
-        );
-      }
-      continue;
-    }
-    const lower = f.word.toLowerCase();
-    if (alreadyFlagged.has(lower)) continue;
-
-    report.issues.push(spellcheckIssue(f));
-  }
-}
-
-function spellcheckIssue(f: {
-  word: string;
-  count: number;
-  context?: string;
-  severity: RawIssue["severity"];
-  suggestions: string[];
-}): RawIssue {
-  return {
-    category: "typography",
-    severity: f.severity,
-    title: `Misspelled "${f.word}"${f.count > 1 ? ` (×${f.count})` : ""}`,
-    description: f.context ? `Found in: "${f.context}"` : `Appears ${f.count}× in the text.`,
-    suggestion:
-      f.suggestions.length > 0
-        ? `Did you mean: ${f.suggestions.join(", ")}?`
-        : "Verify the intended spelling.",
-    location: null,
+    score: allGood ? 100 : 70,
+    status: allGood ? "passed" : "needs_review",
+    summary: directResponse,
+    issues: [],
+    directResponse,
+    humanReply: directResponse,
+    extractedText: source,
   };
 }
